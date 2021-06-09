@@ -1,0 +1,9 @@
+[package]
+name = "roc-build"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+notify = "4"
+meowhash = "0.3"
+digest = "0.9"
