@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::io;
 use std::path::Path;
 
+#[derive(Default, Debug)]
 pub struct Deps<'a> {
     /// For each root, what are its dependencies?
     by_root: HashMap<FileId, HashSet<FileId>>,

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 /// A number which can be given to an Interns table to obtain a Path.
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FileId(usize);
 
 impl FileId {
@@ -15,6 +15,7 @@ impl FileId {
 /// A table mapping Path values to FileId values. This allows for using
 /// FileId integers in things like repeated equality comparisons and hashing
 /// operations, instead of having to hash or compare lots of full Path strings.
+#[derive(Debug)]
 pub struct Interns<'a> {
     by_path: HashMap<&'a Path, FileId>,
     by_id: HashMap<FileId, &'a Path>,
