@@ -10,12 +10,12 @@ pub struct ContentHash {
     ///
     /// This 128-bit hash is designed to never have collisions in practice, and
     /// to run super fast on files of substantial size. Exactly what we want!
-    hash: u128,
+    bits: u128,
 }
 
 impl ContentHash {
     /// Read the contents of a file and translate them into a ContentHash
-    pub fn from_file(path: &Path) -> io::Result<Self> {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let mut reader = BufReader::new(File::open(path)?);
         let mut hasher = MeowHasher::new();
         let mut buffer = [0; 1024];
@@ -30,8 +30,8 @@ impl ContentHash {
             }
         }
 
-        let hash = hasher.finalise().as_u128();
+        let bits = hasher.finalise().as_u128();
 
-        Ok(Self { hash })
+        Ok(Self { bits })
     }
 }
