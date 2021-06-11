@@ -1,7 +1,22 @@
 use notify::{raw_watcher, RecursiveMode, Watcher};
 use std::sync::mpsc::channel;
 
-pub fn run() {
+use crate::cache::Cache;
+use crate::deps::Deps;
+use std::io;
+
+pub fn run() -> io::Result<()> {
+    // TODO this is just so we don't get unused warnings.
+    {
+        use std::path::Path;
+
+        let mut deps = Deps::default();
+        let mut cache = Cache::default();
+
+        deps.add(Path::new("blah"), &|_| &[]);
+        deps.find_changed(&mut cache)?;
+    }
+
     let path = "../roc"; // TODO read from CLI args, default to cwd()
 
     // Create a channel to receive the events.

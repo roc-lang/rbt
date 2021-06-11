@@ -4,6 +4,6 @@ mod content_hash;
 mod deps;
 mod interns;
 
-fn main() {
-    cli::run();
+fn main() -> std::io::Result<()> {
+    cli::run()
 }

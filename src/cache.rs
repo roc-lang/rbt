@@ -20,12 +20,12 @@ struct MetaKey {
 }
 
 impl MetaKey {
-    pub fn persist(&self, path: &Path) -> io::Result<()> {
+    pub fn persist(&self, _path: &Path) -> io::Result<()> {
         // TODO store a (Path => MetaKey) dictionary entry on disk.
         todo!();
     }
 
-    pub fn stored(path: &Path) -> io::Result<Self> {
+    pub fn stored(_path: &Path) -> io::Result<Self> {
         // TODO store a (Path => MetaKey) dictionary on disk, and look up the
         // previous MetaKey from it.
         todo!();
@@ -54,6 +54,7 @@ impl MetaKey {
     }
 }
 
+#[derive(Default)]
 pub struct Cache {
     hashes: HashMap<FileId, ContentHash>,
 }
@@ -160,7 +161,7 @@ impl Cache {
         }
     }
 
-    fn lookup_on_disk(path: &Path) -> io::Result<Option<ContentHash>> {
+    fn lookup_on_disk(_path: &Path) -> io::Result<Option<ContentHash>> {
         // first, look up the given path in the
         // (Path => (FileMetadata, ContentHash)) cache. If we have an entry,
         // then compare the file metadata to that file's current metadata; if
@@ -169,7 +170,7 @@ impl Cache {
         todo!();
     }
 
-    fn persist(path: &Path, hash: ContentHash) -> io::Result<()> {
+    fn persist(_path: &Path, _hash: ContentHash) -> io::Result<()> {
         // TODO convert the path to be relative to the cache dir itself,
         // so you don't lose everything if you rename the project directory -
         // and also on a build server you can copy it to different builds in

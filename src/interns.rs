@@ -7,7 +7,7 @@ pub struct FileId(usize);
 
 impl FileId {
     /// FileId 0 is reserved for NULL
-    pub const NULL: FileId = FileId(0);
+    pub const _NULL: FileId = FileId(0);
 
     const FIRST_NON_RESERVED_ID: FileId = FileId(1);
 }
@@ -33,12 +33,14 @@ impl<'a> Default for Interns<'a> {
 }
 
 impl<'a> Interns<'a> {
+    // clippy thinks this is unused, even though it is used in Deps. Go figure.
+    #[allow(dead_code)]
     pub fn get_id(&self, path: &'a Path) -> Option<FileId> {
-        self.by_path.get(path).map(|file_id| *file_id)
+        self.by_path.get(path).copied()
     }
 
     pub fn get_path(&self, file_id: FileId) -> Option<&'a Path> {
-        self.by_id.get(&file_id).map(|path| *path)
+        self.by_id.get(&file_id).copied()
     }
 
     pub fn get_or_add(&mut self, path: &'a Path) -> FileId {
