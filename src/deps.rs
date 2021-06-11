@@ -58,3 +58,68 @@ impl<'a> Deps<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod test_hash {
+    use super::Deps;
+    use std::collections::HashSet;
+    use std::path::Path;
+
+    #[test]
+    fn add_secondary_deps() {
+        let mut deps = Deps::default();
+        let root = Path::new("tests/fixtures/entry.txt");
+        let secondary_deps = &[
+            Path::new("tests/fixtures/alice.txt"),
+            Path::new("tests/fixtures/small.txt"),
+        ];
+        let secondary_deps_set = {
+            let mut set: HashSet<&Path> = HashSet::default();
+
+            for path in secondary_deps.iter() {
+                set.insert(path);
+            }
+
+            set
+        };
+
+        deps.add(root, &|path| {
+            if path == root {
+                secondary_deps
+            } else {
+                &[]
+            }
+        });
+
+        assert_eq!(deps.by_root.len(), 3);
+        assert_eq!(deps.by_dep.len(), 2);
+        assert_eq!(deps.all.len(), 3);
+
+        // The original root should have the expected 2 dependencies
+        {
+            let root_id = deps.interns.get_id(root).unwrap();
+            let mut set = HashSet::default();
+
+            for id in deps.by_root.get(&root_id).unwrap() {
+                set.insert(deps.interns.get_path(*id).unwrap());
+            }
+
+            assert_eq!(set, secondary_deps_set);
+        }
+
+        // The root's dependencies should have no other dependencies
+        {
+            let original_root_id = deps.interns.get_id(root).unwrap();
+            for root_id in deps.all {
+                if root_id != original_root_id {
+                    assert_eq!(0, deps.by_root.get(&root_id).unwrap().len());
+
+                    let id_set = deps.by_dep.get(&root_id).unwrap();
+
+                    assert_eq!(id_set.len(), 1);
+                    assert!(id_set.contains(&original_root_id));
+                }
+            }
+        }
+    }
+}

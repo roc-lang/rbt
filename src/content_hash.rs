@@ -35,3 +35,35 @@ impl ContentHash {
         Ok(Self { bits })
     }
 }
+
+#[cfg(test)]
+mod test_hash {
+    use super::ContentHash;
+
+    #[test]
+    fn same_content_same_hash() {
+        let paths = [
+            "tests/fixtures/empty.txt",
+            "tests/fixtures/small.txt",
+            "tests/fixtures/alice.txt",
+        ];
+
+        for path in paths.iter() {
+            let hash1 = ContentHash::from_file(path).unwrap();
+            let hash2 = ContentHash::from_file(path).unwrap();
+
+            assert_eq!(hash1, hash2);
+        }
+    }
+
+    #[test]
+    fn different_content_different_hash() {
+        let empty = ContentHash::from_file("tests/fixtures/empty.txt").unwrap();
+        let small = ContentHash::from_file("tests/fixtures/small.txt").unwrap();
+        let alice = ContentHash::from_file("tests/fixtures/alice.txt").unwrap();
+
+        assert_ne!(empty, small);
+        assert_ne!(empty, alice);
+        assert_ne!(alice, small);
+    }
+}
