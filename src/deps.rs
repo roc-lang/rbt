@@ -27,23 +27,28 @@ impl<'a> Deps<'a> {
     }
 
     /// Given a root, recursively add everything that depends on it.
-    pub fn add_deps<F: Fn(&Path) -> &'a [&'a Path]>(&mut self, root: &'a Path, get_deps: &F) {
+    pub fn add<F: Fn(&Path) -> &'a [&'a Path]>(&mut self, root: &'a Path, get_deps: &F) {
         let deps = get_deps(root);
 
-        self.register_deps(root, deps);
+        self.register(root, deps);
 
         for dep in deps {
-            self.add_deps(dep, get_deps);
+            self.add(dep, get_deps);
         }
     }
 
-    fn register_deps(&mut self, root: &'a Path, depends_on: &[&'a Path]) {
+    fn register(&mut self, root: &'a Path, depends_on: &[&'a Path]) {
         let interns = &mut self.interns;
         let root_id = interns.get_or_add(root);
         let deps_set = self.by_root.entry(root_id).or_default();
+        let all = &mut self.all;
+
+        all.insert(root_id);
 
         for dep in depends_on {
             let dep_id = interns.get_or_add(dep);
+
+            all.insert(dep_id);
 
             deps_set.insert(dep_id);
 
