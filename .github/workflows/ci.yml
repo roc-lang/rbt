@@ -1,0 +1,40 @@
+on: [pull_request]
+
+name: CI
+
+env:
+  RUST_BACKTRACE: 1
+
+jobs:
+  build-fmt-clippy-test:
+    name: fmt, clippy, test --release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      FORCE_COLOR: 1
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          clean: "true"
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - name: cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
+
+      - name: cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --release
