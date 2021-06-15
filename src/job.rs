@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::io;
-use std::process::Command;
+use std::process::{Command, Output};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Job {
@@ -10,8 +10,8 @@ pub struct Job {
 }
 
 impl Job {
-    pub fn run(&self) -> io::Result<()> {
-        match Command::new(self.command.as_str())
+    pub fn run(&self) -> io::Result<Output> {
+        Command::new(self.command.as_str())
             .args(
                 self.arguments
                     .iter()
@@ -19,11 +19,7 @@ impl Job {
                     .collect::<Vec<&str>>()
                     .as_slice(),
             )
-            .status()
-        {
-            Ok(_) => Ok(()),
-            Err(_) => todo!(),
-        }
+            .output()
     }
 }
 
@@ -47,12 +43,22 @@ mod test_job {
             environment: HashMap::default(),
         };
 
-        assert_eq!(job.run().unwrap(), ());
+        let output = job.run().unwrap();
+        assert_eq!(output.status.success(), true);
 
         let contents = std::fs::read_to_string(dest).unwrap();
         assert_eq!(contents.as_str(), "Hello, World\n");
     }
 
-    // fn reports_a_problem() {
-    // }
+    #[test]
+    fn reports_a_problem() {
+        let job = Job {
+            command: "bash".to_string(),
+            arguments: vec!["-c".to_string(), "exit 1".to_string()],
+            environment: HashMap::default(),
+        };
+
+        let output = job.run().unwrap();
+        assert_eq!(output.status.success(), false);
+    }
 }
