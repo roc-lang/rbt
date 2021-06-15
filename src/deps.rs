@@ -60,7 +60,7 @@ impl<'a> Deps<'a> {
 }
 
 #[cfg(test)]
-mod test_hash {
+mod test_deps {
     use super::Deps;
     use std::collections::HashSet;
     use std::path::Path;
