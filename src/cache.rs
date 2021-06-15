@@ -26,8 +26,7 @@ impl MetaKey {
     }
 
     pub fn stored(_path: &Path) -> io::Result<Self> {
-        // TODO store a (Path => MetaKey) dictionary on disk, and look up the
-        // previous MetaKey from it.
+        // TODO get the stored MetaKey from the (Path => MetaKey) dictionary on disk
         todo!();
     }
 
