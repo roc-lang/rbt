@@ -51,6 +51,21 @@ mod test_job {
     }
 
     #[test]
+    fn captures_stdout() {
+        let job = Job {
+            command: "echo".to_string(),
+            arguments: vec!["Hello, Stdout!".to_string()],
+            environment: HashMap::default(),
+        };
+
+        let output = job.run().unwrap();
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap(),
+            "Hello, Stdout!\n".to_string()
+        );
+    }
+
+    #[test]
     fn reports_a_problem() {
         let job = Job {
             command: "bash".to_string(),
