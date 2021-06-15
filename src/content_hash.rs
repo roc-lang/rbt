@@ -10,7 +10,7 @@ pub struct ContentHash {
     ///
     /// This 128-bit hash is designed to never have collisions in practice, and
     /// to run super fast on files of substantial size. Exactly what we want!
-    bits: u128,
+    bits: [u8; 128],
 }
 
 impl ContentHash {
@@ -30,7 +30,7 @@ impl ContentHash {
             }
         }
 
-        let bits = hasher.finalise().as_u128();
+        let bits = hasher.finalise().into_bytes();
 
         Ok(Self { bits })
     }
