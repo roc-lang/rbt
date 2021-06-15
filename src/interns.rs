@@ -67,3 +67,18 @@ impl<'a> Interns<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod test_interns {
+    use super::Interns;
+    use std::path::Path;
+
+    #[test]
+    fn get_or_add_then_get() {
+        let path = Path::new(".");
+        let mut interns = Interns::default();
+        let id = interns.get_or_add(&path);
+
+        assert_eq!(Some(path), interns.get_path(id));
+    }
+}
