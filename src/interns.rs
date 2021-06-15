@@ -74,11 +74,17 @@ mod test_interns {
     use std::path::Path;
 
     #[test]
-    fn get_or_add_then_get() {
-        let path = Path::new(".");
-        let mut interns = Interns::default();
-        let id = interns.get_or_add(&path);
+    fn multiple_get_or_add() {
+        let path1 = Path::new(".");
+        let path2 = Path::new("./blah");
 
-        assert_eq!(Some(path), interns.get_path(id));
+        let mut interns = Interns::default();
+        let id1 = interns.get_or_add(&path1);
+        let id2 = interns.get_or_add(&path2);
+
+        assert_eq!(Some(path1), interns.get_path(id1));
+        assert_eq!(Some(path2), interns.get_path(id2));
+        assert_ne!(id1, id2);
+        assert_ne!(path1, path2);
     }
 }
