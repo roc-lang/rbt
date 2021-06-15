@@ -66,6 +66,21 @@ mod test_job {
     }
 
     #[test]
+    fn captures_stderr() {
+        let job = Job {
+            command: "bash".to_string(),
+            arguments: vec!["-c".to_string(), "echo 'Hello, Stderr!' 1>&2".to_string()],
+            environment: HashMap::default(),
+        };
+
+        let output = job.run().unwrap();
+        assert_eq!(
+            String::from_utf8(output.stderr).unwrap(),
+            "Hello, Stderr!\n".to_string()
+        );
+    }
+
+    #[test]
     fn reports_a_problem() {
         let job = Job {
             command: "bash".to_string(),
