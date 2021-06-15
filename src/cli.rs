@@ -3,6 +3,8 @@ use std::sync::mpsc::channel;
 
 use crate::cache::Cache;
 use crate::deps::Deps;
+use crate::job;
+use std::collections::HashMap;
 use std::io;
 
 pub fn run() -> io::Result<()> {
@@ -28,6 +30,14 @@ pub fn run() -> io::Result<()> {
     // Add a path to be watched. All files and directories at that path and
     // below will be monitored for changes.
     watcher.watch(path, RecursiveMode::Recursive).unwrap();
+
+    // Run a random command to get clippy to let us keep Job.run (for now.)
+    let job = job::Job {
+        command: "echo".to_string(),
+        arguments: vec![],
+        environment: HashMap::default(),
+    };
+    job.run().unwrap();
 
     loop {
         match rx.recv() {
