@@ -1,7 +1,10 @@
 use std::collections::HashMap;
+use std::fs;
 use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Output};
+use symlink;
+use tempfile::TempDir;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Job {
@@ -13,7 +16,24 @@ pub struct Job {
 
 impl Job {
     pub fn run(&self) -> io::Result<Output> {
-        Command::new(self.command.as_str())
+        let work_dir = TempDir::new()?;
+
+        for input in &self.inputs {
+            let meta = fs::metadata(input)?;
+
+            // the distinction between file and directory matters on windows
+            // (which is why we're using a third-party crate for this; it wraps
+            // up the cfg stuff for us.)
+            if meta.is_dir() {
+                symlink::symlink_dir(input, &work_dir.path().join(input))?;
+            } else {
+                symlink::symlink_file(input, &work_dir.path().join(input))?;
+            }
+
+            println!("{}", input.display());
+        }
+
+        let output = Command::new(self.command.as_str())
             .args(
                 self.arguments
                     .iter()
@@ -21,11 +41,15 @@ impl Job {
                     .collect::<Vec<&str>>()
                     .as_slice(),
             )
+            .current_dir(&work_dir)
             // TODO: this is going to have to retain some environment variables
             // for software to work correctly. For example, we'll probably need
             // to provide a fake HOME the way Nix does.
             .env_clear()
-            .output()
+            .output();
+
+        drop(work_dir);
+        output
     }
 }
 
