@@ -20,14 +20,15 @@ impl Job {
 
         for input in &self.inputs {
             let meta = fs::metadata(input)?;
+            let dest = &work_dir.path().join(input);
 
             // the distinction between file and directory matters on windows
             // (which is why we're using a third-party crate for this; it wraps
             // up the cfg stuff for us.)
             if meta.is_dir() {
-                symlink::symlink_dir(input, &work_dir.path().join(input))?;
+                symlink::symlink_dir(input, dest)?;
             } else {
-                symlink::symlink_file(input, &work_dir.path().join(input))?;
+                symlink::symlink_file(input, dest)?;
             }
 
             println!("{}", input.display());
