@@ -19,6 +19,7 @@ impl Job {
                     .collect::<Vec<&str>>()
                     .as_slice(),
             )
+            .env_clear()
             .output()
     }
 }
@@ -90,5 +91,17 @@ mod test_job {
 
         let output = job.run().unwrap();
         assert_eq!(output.status.success(), false);
+    }
+
+    #[test]
+    fn isolates_environment() {
+        let job = Job {
+            command: "env".to_string(),
+            arguments: vec![],
+            environment: HashMap::default(),
+        };
+
+        let output = job.run().unwrap();
+        assert_eq!(String::from_utf8(output.stderr).unwrap(), "".to_string());
     }
 }
