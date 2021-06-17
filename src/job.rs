@@ -19,6 +19,9 @@ impl Job {
                     .collect::<Vec<&str>>()
                     .as_slice(),
             )
+            // TODO: this is going to have to retain some environment variables
+            // for software to work correctly. For example, we'll probably need
+            // to provide a fake HOME the way Nix does.
             .env_clear()
             .output()
     }
