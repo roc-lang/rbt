@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -19,10 +19,12 @@ impl Job {
     pub fn run(&self) -> Result<Output> {
         let work_dir = Builder::new()
             .prefix(format!("job-{}", self.command).as_str())
-            .tempdir()?;
+            .tempdir()
+            .context("while creating a temporary working directory for the job")?;
 
         for input in &self.inputs {
-            let meta = fs::metadata(input)?;
+            let meta = fs::metadata(input)
+                .with_context(|| format!("while reading metadata for {}", input.display()))?;
 
             let dest = if let Ok(relative) = input.strip_prefix(&self.working_directory) {
                 work_dir.path().join(relative)
@@ -39,9 +41,21 @@ impl Job {
             // (which is why we're using a third-party crate for this; it wraps
             // up the cfg stuff for us.)
             if meta.is_dir() {
-                symlink::symlink_dir(input, dest)?;
+                symlink::symlink_dir(&input, &dest).with_context(|| {
+                    format!(
+                        "while symlinking {} to {}",
+                        &input.display(),
+                        &dest.display()
+                    )
+                })?;
             } else {
-                symlink::symlink_file(input, dest)?;
+                symlink::symlink_file(&input, &dest).with_context(|| {
+                    format!(
+                        "while symlinking {} to {}",
+                        &input.display(),
+                        &dest.display()
+                    )
+                })?;
             }
 
             println!("{}", input.display());
@@ -60,9 +74,12 @@ impl Job {
             // for software to work correctly. For example, we'll probably need
             // to provide a fake HOME the way Nix does.
             .env_clear()
-            .output();
+            .output()
+            .context("while running the job");
 
-        work_dir.close()?;
+        work_dir
+            .close()
+            .context("while cleaning up temporary working directory")?;
 
         Ok(output?)
     }
