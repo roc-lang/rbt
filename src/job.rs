@@ -11,7 +11,7 @@ pub struct Job {
     pub command: String,
     pub arguments: Vec<String>,
     pub environment: HashMap<String, String>,
-    pub input_root: PathBuf,
+    pub working_directory: PathBuf,
     pub inputs: Vec<PathBuf>,
 }
 
@@ -24,7 +24,7 @@ impl Job {
         for input in &self.inputs {
             let meta = fs::metadata(input)?;
 
-            let dest = if let Ok(relative) = input.strip_prefix(&self.input_root) {
+            let dest = if let Ok(relative) = input.strip_prefix(&self.working_directory) {
                 work_dir.path().join(relative)
             } else if input.is_relative() {
                 work_dir.path().join(input)
@@ -86,7 +86,7 @@ mod test_job {
                 format!("echo Hello, World > {}", dest.to_str().unwrap()),
             ],
             environment: HashMap::default(),
-            input_root: PathBuf::from("."),
+            working_directory: PathBuf::from("."),
             inputs: vec![],
         };
 
@@ -103,7 +103,7 @@ mod test_job {
             command: "echo".to_string(),
             arguments: vec!["Hello, Stdout!".to_string()],
             environment: HashMap::default(),
-            input_root: PathBuf::from("."),
+            working_directory: PathBuf::from("."),
             inputs: vec![],
         };
 
@@ -120,7 +120,7 @@ mod test_job {
             command: "bash".to_string(),
             arguments: vec!["-c".to_string(), "echo 'Hello, Stderr!' 1>&2".to_string()],
             environment: HashMap::default(),
-            input_root: PathBuf::from("."),
+            working_directory: PathBuf::from("."),
             inputs: vec![],
         };
 
@@ -137,7 +137,7 @@ mod test_job {
             command: "bash".to_string(),
             arguments: vec!["-c".to_string(), "exit 1".to_string()],
             environment: HashMap::default(),
-            input_root: PathBuf::from("."),
+            working_directory: PathBuf::from("."),
             inputs: vec![],
         };
 
@@ -151,7 +151,7 @@ mod test_job {
             command: "env".to_string(),
             arguments: vec![],
             environment: HashMap::default(),
-            input_root: PathBuf::from("."),
+            working_directory: PathBuf::from("."),
             inputs: vec![],
         };
 
@@ -173,7 +173,7 @@ mod test_job {
             command: "find".to_string(),
             arguments: vec![".".to_string()],
             environment: HashMap::default(),
-            input_root: temp.path().to_path_buf(),
+            working_directory: temp.path().to_path_buf(),
             inputs: vec![visible],
         };
 

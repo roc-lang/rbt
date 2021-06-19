@@ -37,7 +37,7 @@ pub fn run() -> io::Result<()> {
         command: "echo".to_string(),
         arguments: vec![],
         environment: HashMap::default(),
-        input_root: PathBuf::from("."),
+        working_directory: PathBuf::from("."),
         inputs: vec![],
     };
     job.run().unwrap();
