@@ -1,6 +1,6 @@
+use anyhow::{bail, Result};
 use std::collections::HashMap;
 use std::fs;
-use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use symlink;
@@ -16,7 +16,7 @@ pub struct Job {
 }
 
 impl Job {
-    pub fn run(&self) -> io::Result<Output> {
+    pub fn run(&self) -> Result<Output> {
         let work_dir = Builder::new()
             .prefix(format!("job-{}", self.command).as_str())
             .tempdir()?;
@@ -29,9 +29,10 @@ impl Job {
             } else if input.is_relative() {
                 work_dir.path().join(input)
             } else {
-                // we can't isolate this file. We'll need a special error case
-                // for this.
-                todo!();
+                bail!(
+                    "We can't isolate {} because it's outside the working directory.",
+                    input.display()
+                );
             };
 
             // the distinction between file and directory matters on windows
@@ -62,7 +63,8 @@ impl Job {
             .output();
 
         work_dir.close()?;
-        output
+
+        Ok(output?)
     }
 }
 
