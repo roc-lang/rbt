@@ -49,7 +49,7 @@ impl Job {
             .env_clear()
             .output();
 
-        drop(work_dir);
+        work_dir.close()?;
         output
     }
 }
