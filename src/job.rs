@@ -4,23 +4,35 @@ use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use symlink;
-use tempfile::TempDir;
+use tempfile::Builder;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Job {
     pub command: String,
     pub arguments: Vec<String>,
     pub environment: HashMap<String, String>,
+    pub input_root: PathBuf,
     pub inputs: Vec<PathBuf>,
 }
 
 impl Job {
     pub fn run(&self) -> io::Result<Output> {
-        let work_dir = TempDir::new()?;
+        let work_dir = Builder::new()
+            .prefix(format!("job-{}", self.command).as_str())
+            .tempdir()?;
 
         for input in &self.inputs {
             let meta = fs::metadata(input)?;
-            let dest = &work_dir.path().join(input);
+
+            let dest = if let Ok(relative) = input.strip_prefix(&self.input_root) {
+                work_dir.path().join(relative)
+            } else if input.is_relative() {
+                work_dir.path().join(input)
+            } else {
+                // we can't isolate this file. We'll need a special error case
+                // for this.
+                todo!();
+            };
 
             // the distinction between file and directory matters on windows
             // (which is why we're using a third-party crate for this; it wraps
@@ -58,7 +70,6 @@ impl Job {
 mod test_job {
     use super::Job;
     use std::collections::HashMap;
-    use std::env;
     use std::fs::File;
     use std::path::PathBuf;
     use tempfile::tempdir;
@@ -75,6 +86,7 @@ mod test_job {
                 format!("echo Hello, World > {}", dest.to_str().unwrap()),
             ],
             environment: HashMap::default(),
+            input_root: PathBuf::from("."),
             inputs: vec![],
         };
 
@@ -91,6 +103,7 @@ mod test_job {
             command: "echo".to_string(),
             arguments: vec!["Hello, Stdout!".to_string()],
             environment: HashMap::default(),
+            input_root: PathBuf::from("."),
             inputs: vec![],
         };
 
@@ -107,6 +120,7 @@ mod test_job {
             command: "bash".to_string(),
             arguments: vec!["-c".to_string(), "echo 'Hello, Stderr!' 1>&2".to_string()],
             environment: HashMap::default(),
+            input_root: PathBuf::from("."),
             inputs: vec![],
         };
 
@@ -123,6 +137,7 @@ mod test_job {
             command: "bash".to_string(),
             arguments: vec!["-c".to_string(), "exit 1".to_string()],
             environment: HashMap::default(),
+            input_root: PathBuf::from("."),
             inputs: vec![],
         };
 
@@ -136,6 +151,7 @@ mod test_job {
             command: "env".to_string(),
             arguments: vec![],
             environment: HashMap::default(),
+            input_root: PathBuf::from("."),
             inputs: vec![],
         };
 
@@ -145,18 +161,19 @@ mod test_job {
 
     #[test]
     fn only_inputs_are_visible() {
-        let temp = EnterTempDir::start();
+        let temp = tempdir().unwrap();
 
-        let visible = PathBuf::from("visible.txt");
+        let visible = temp.path().join("visible.txt");
         File::create(&visible).unwrap();
 
-        let hidden = PathBuf::from("hidden.txt");
+        let hidden = temp.path().join("hidden.txt");
         File::create(hidden).unwrap();
 
         let job = Job {
             command: "find".to_string(),
             arguments: vec![".".to_string()],
             environment: HashMap::default(),
+            input_root: temp.path().to_path_buf(),
             inputs: vec![visible],
         };
 
@@ -167,29 +184,5 @@ mod test_job {
         );
 
         drop(temp);
-    }
-
-    // helper: move into a temporary directory for the duration of the test
-    struct EnterTempDir {
-        original: PathBuf,
-        new: tempfile::TempDir,
-    }
-
-    impl EnterTempDir {
-        fn start() -> EnterTempDir {
-            let original = env::current_dir().unwrap();
-            let new = tempdir().unwrap();
-
-            env::set_current_dir(new.path()).unwrap();
-
-            EnterTempDir { original, new }
-        }
-    }
-
-    impl Drop for EnterTempDir {
-        fn drop(&mut self) {
-            env::set_current_dir(&self.original).unwrap();
-            drop(&self.new)
-        }
     }
 }

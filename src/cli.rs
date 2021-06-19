@@ -6,6 +6,7 @@ use crate::deps::Deps;
 use crate::job;
 use std::collections::HashMap;
 use std::io;
+use std::path::PathBuf;
 
 pub fn run() -> io::Result<()> {
     // TODO this is just so we don't get unused warnings.
@@ -36,6 +37,7 @@ pub fn run() -> io::Result<()> {
         command: "echo".to_string(),
         arguments: vec![],
         environment: HashMap::default(),
+        input_root: PathBuf::from("."),
         inputs: vec![],
     };
     job.run().unwrap();
