@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
-use symlink;
 use tempfile::Builder;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -48,15 +47,15 @@ impl Job {
         Ok(output?)
     }
 
-    fn prepare_workspace(&self, destination: &Path) -> Result<()> {
+    fn prepare_workspace(&self, work_dir: &Path) -> Result<()> {
         for input in &self.inputs {
             let meta = fs::metadata(input)
                 .with_context(|| format!("while reading metadata for {}", input.display()))?;
 
             let dest = if let Ok(relative) = input.strip_prefix(&self.working_directory) {
-                destination.join(relative)
+                work_dir.join(relative)
             } else if input.is_relative() {
-                destination.join(input)
+                work_dir.join(input)
             } else {
                 bail!(
                     "We can't isolate {} because it's outside the working directory.",
@@ -64,24 +63,20 @@ impl Job {
                 );
             };
 
-            // the distinction between file and directory matters on windows
-            // (which is why we're using a third-party crate for this; it wraps
-            // up the cfg stuff for us.)
+            // Copy all the files over. Note that we can't just create symlinks
+            // to the files in all cases because that would allow the job code
+            // to modify source files on disk as a side effect. We probably want
+            // to allow at least directory symlinks in the future (for caches,
+            // for instance) and we'll need to extend the `inputs` concept then.
             if meta.is_dir() {
-                symlink::symlink_dir(&input, &dest).with_context(|| {
-                    format!(
-                        "while symlinking {} to {}",
-                        &input.display(),
-                        &dest.display()
-                    )
-                })?;
+                todo!();
             } else {
-                symlink::symlink_file(&input, &dest).with_context(|| {
-                    format!(
-                        "while symlinking {} to {}",
-                        &input.display(),
-                        &dest.display()
-                    )
+                match dest.parent() {
+                    Some(parent) => fs::create_dir_all(parent).with_context(|| format!("while making the parent directories for {}", dest.display()))?,
+                    None => bail!("We couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.", dest.display())
+                };
+                fs::copy(&input, &dest).with_context(|| {
+                    format!("while copying {} to {}", input.display(), dest.display())
                 })?;
             }
         }
