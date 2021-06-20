@@ -19,10 +19,10 @@ impl Job {
         let work_dir = Builder::new()
             .prefix(format!("job-{}", self.command).as_str())
             .tempdir()
-            .context("while creating a temporary working directory for the job")?;
+            .context("couldn't create a temporary directory for the job")?;
 
         self.prepare_workspace(work_dir.path())
-            .context("while preparing the temporary working directory")?;
+            .context("couldn't prepare files in the working directory")?;
 
         let output = Command::new(self.command.as_str())
             .args(
@@ -38,11 +38,11 @@ impl Job {
             // to provide a fake HOME the way Nix does.
             .env_clear()
             .output()
-            .context("while running the job");
+            .context("couldn't run the job");
 
         work_dir
             .close()
-            .context("while cleaning up temporary working directory")?;
+            .context("couldn't clean up the job's temporary directory")?;
 
         Ok(output?)
     }
@@ -50,7 +50,7 @@ impl Job {
     fn prepare_workspace(&self, work_dir: &Path) -> Result<()> {
         for input in &self.inputs {
             let meta = fs::metadata(input)
-                .with_context(|| format!("while reading metadata for {}", input.display()))?;
+                .with_context(|| format!("couldn't read metadata for {}", input.display()))?;
 
             let dest = if let Ok(relative) = input.strip_prefix(&self.working_directory) {
                 work_dir.join(relative)
@@ -58,8 +58,9 @@ impl Job {
                 work_dir.join(input)
             } else {
                 bail!(
-                    "We can't isolate {} because it's outside the working directory.",
-                    input.display()
+                    "couldn't isolate {} because it's outside the working directory ({})",
+                    input.display(),
+                    self.working_directory.display(),
                 );
             };
 
@@ -72,11 +73,11 @@ impl Job {
                 todo!();
             } else {
                 match dest.parent() {
-                    Some(parent) => fs::create_dir_all(parent).with_context(|| format!("while making the parent directories for {}", dest.display()))?,
-                    None => bail!("We couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.", dest.display())
+                    Some(parent) => fs::create_dir_all(parent).with_context(|| format!("couldn't make the parent directories for {}", dest.display()))?,
+                    None => bail!("couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.", dest.display())
                 };
                 fs::copy(&input, &dest).with_context(|| {
-                    format!("while copying {} to {}", input.display(), dest.display())
+                    format!("couldn't copy {} to {}", input.display(), dest.display())
                 })?;
             }
         }
