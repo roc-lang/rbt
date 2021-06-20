@@ -1,7 +1,7 @@
 use anyhow::{bail, Context, Result};
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use symlink;
 use tempfile::Builder;
@@ -22,14 +22,41 @@ impl Job {
             .tempdir()
             .context("while creating a temporary working directory for the job")?;
 
+        self.prepare_workspace(work_dir.path())
+            .context("while preparing the temporary working directory")?;
+
+        let output = Command::new(self.command.as_str())
+            .args(
+                self.arguments
+                    .iter()
+                    .map(|arg| arg.as_str())
+                    .collect::<Vec<&str>>()
+                    .as_slice(),
+            )
+            .current_dir(&work_dir)
+            // TODO: this is going to have to retain some environment variables
+            // for software to work correctly. For example, we'll probably need
+            // to provide a fake HOME the way Nix does.
+            .env_clear()
+            .output()
+            .context("while running the job");
+
+        work_dir
+            .close()
+            .context("while cleaning up temporary working directory")?;
+
+        Ok(output?)
+    }
+
+    fn prepare_workspace(&self, destination: &Path) -> Result<()> {
         for input in &self.inputs {
             let meta = fs::metadata(input)
                 .with_context(|| format!("while reading metadata for {}", input.display()))?;
 
             let dest = if let Ok(relative) = input.strip_prefix(&self.working_directory) {
-                work_dir.path().join(relative)
+                destination.join(relative)
             } else if input.is_relative() {
-                work_dir.path().join(input)
+                destination.join(input)
             } else {
                 bail!(
                     "We can't isolate {} because it's outside the working directory.",
@@ -57,31 +84,9 @@ impl Job {
                     )
                 })?;
             }
-
-            println!("{}", input.display());
         }
 
-        let output = Command::new(self.command.as_str())
-            .args(
-                self.arguments
-                    .iter()
-                    .map(|arg| arg.as_str())
-                    .collect::<Vec<&str>>()
-                    .as_slice(),
-            )
-            .current_dir(&work_dir)
-            // TODO: this is going to have to retain some environment variables
-            // for software to work correctly. For example, we'll probably need
-            // to provide a fake HOME the way Nix does.
-            .env_clear()
-            .output()
-            .context("while running the job");
-
-        work_dir
-            .close()
-            .context("while cleaning up temporary working directory")?;
-
-        Ok(output?)
+        Ok(())
     }
 }
 
