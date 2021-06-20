@@ -4,6 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use tempfile::Builder;
+use walkdir::WalkDir;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Job {
@@ -52,26 +53,48 @@ impl Job {
             let meta = fs::metadata(input)
                 .with_context(|| format!("couldn't read metadata for {}", input.display()))?;
 
-            let dest = if let Ok(relative) = input.strip_prefix(&self.working_directory) {
-                work_dir.join(relative)
-            } else if input.is_relative() {
-                work_dir.join(input)
-            } else {
-                bail!(
-                    "couldn't isolate {} because it's outside the working directory ({})",
-                    input.display(),
-                    self.working_directory.display(),
-                );
-            };
-
             // Copy all the files over. Note that we can't just create symlinks
             // to the files in all cases because that would allow the job code
             // to modify source files on disk as a side effect. We probably want
             // to allow at least directory symlinks in the future (for caches,
             // for instance) and we'll need to extend the `inputs` concept then.
             if meta.is_dir() {
-                todo!();
+                for item in WalkDir::new(input) {
+                    let entry =
+                        item.with_context(|| format!("couldn't walk through {}", input.display()))?;
+
+                    let dest = self
+                        .path_in_workspace(work_dir, &entry.path().to_path_buf())
+                        .with_context(|| {
+                            format!(
+                                "couldn't get a path to {} in the workspace",
+                                input.display()
+                            )
+                        })?;
+
+                    if entry.file_type().is_dir() {
+                        fs::create_dir(&dest)
+                            .with_context(|| format!("couldn't create {}", dest.display()))?
+                    } else {
+                        // assuming file or symlink
+                        fs::copy(entry.path(), &dest).with_context(|| {
+                            format!(
+                                "couldn't copy {} to {}",
+                                entry.path().display(),
+                                dest.display()
+                            )
+                        })?;
+                    }
+                }
             } else {
+                // it's a file, or maybe a symlink
+                let dest = self.path_in_workspace(work_dir, input).with_context(|| {
+                    format!(
+                        "couldn't get a path to {} in the workspace",
+                        input.display()
+                    )
+                })?;
+
                 match dest.parent() {
                     Some(parent) => fs::create_dir_all(parent).with_context(|| format!("couldn't make the parent directories for {}", dest.display()))?,
                     None => bail!("couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.", dest.display())
@@ -84,12 +107,27 @@ impl Job {
 
         Ok(())
     }
+
+    fn path_in_workspace(&self, work_dir: &Path, input: &PathBuf) -> Result<PathBuf> {
+        if let Ok(relative) = input.strip_prefix(&self.working_directory) {
+            Ok(work_dir.join(relative))
+        } else if input.is_relative() {
+            Ok(work_dir.join(input))
+        } else {
+            bail!(
+                "couldn't isolate {} because it's outside the working directory ({})",
+                input.display(),
+                self.working_directory.display(),
+            );
+        }
+    }
 }
 
 #[cfg(test)]
 mod test_job {
     use super::Job;
     use std::collections::HashMap;
+    use std::fs;
     use std::fs::File;
     use std::path::PathBuf;
     use tempfile::tempdir;
@@ -204,6 +242,30 @@ mod test_job {
         );
 
         drop(temp);
+    }
+
+    #[test]
+    fn files_in_input_directories_are_visible() {
+        let temp = tempdir().unwrap();
+
+        let dir = temp.path().join("visible");
+        fs::create_dir(&dir).unwrap();
+        File::create(&dir.join("a.txt")).unwrap();
+        File::create(&dir.join("b.txt")).unwrap();
+
+        let job = Job {
+            command: "find".to_string(),
+            arguments: vec![".".to_string(), "-type".to_string(), "file".to_string()],
+            environment: HashMap::default(),
+            working_directory: temp.path().to_path_buf(),
+            inputs: vec![dir],
+        };
+
+        let output = job.run().unwrap();
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap(),
+            "./visible/b.txt\n./visible/a.txt\n".to_string()
+        )
     }
 
     #[test]
