@@ -204,4 +204,23 @@ mod test_job {
 
         drop(temp);
     }
+
+    #[test]
+    fn absolute_paths_outside_the_working_directory_are_not_allowed() {
+        let temp = tempdir().unwrap();
+
+        let visible = temp.path().join("outside.txt");
+        File::create(&visible).unwrap();
+
+        let job = Job {
+            command: "find".to_string(),
+            arguments: vec![".".to_string()],
+            environment: HashMap::default(),
+            working_directory: PathBuf::from("."),
+            inputs: vec![visible],
+        };
+
+        let output = job.run();
+        assert_eq!(output.is_err(), true);
+    }
 }
