@@ -80,20 +80,16 @@ impl Job {
                 }
             } else {
                 // it's a file, or maybe a symlink
-                let dest = self.path_in_workspace(work_dir, input).with_context(|| {
-                    format!(
-                        "couldn't get a path to {} in the workspace",
-                        input.display()
-                    )
-                })?;
-
-                match dest.parent() {
-                    Some(parent) => fs::create_dir_all(parent).with_context(|| format!("couldn't make the parent directories for {}", dest.display()))?,
-                    None => bail!("couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.", dest.display())
-                };
-                fs::copy(&input, &dest).with_context(|| {
-                    format!("couldn't copy {} to {}", input.display(), dest.display())
-                })?;
+                self.copy_creating_directories(
+                    input.to_path_buf(),
+                    self.path_in_workspace(work_dir, input).with_context(|| {
+                        format!(
+                            "couldn't get a path to {} in the workspace",
+                            input.display()
+                        )
+                    })?,
+                )
+                .with_context(|| format!("couldn't isolate {}", input.display()))?;
             }
         }
 
@@ -120,22 +116,24 @@ impl Job {
 
     fn tear_down_workspace(&self, work_dir: &Path) -> Result<()> {
         for output in &self.outputs {
-            let source = self
-                .path_in_workspace(work_dir, &output)
-                .context("couldn't determine path for output")?;
-
-            let dest = self.working_directory.join(output);
-
-            match dest.parent() {
-                    Some(parent) => fs::create_dir_all(parent).with_context(|| format!("couldn't make the parent directories for {}", dest.display()))?,
-                    None => bail!("couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.", dest.display())
-                };
-            fs::copy(&source, &dest).with_context(|| {
-                format!("couldn't copy {} to {}", source.display(), dest.display())
-            })?;
+            self.copy_creating_directories(
+                self.path_in_workspace(work_dir, &output)
+                    .context("couldn't determine path for output")?,
+                self.working_directory.join(output),
+            )
+            .context("couldn't retrieve output")?;
         }
 
         Ok(())
+    }
+
+    fn copy_creating_directories(&self, source: PathBuf, dest: PathBuf) -> Result<u64> {
+        match dest.parent() {
+                    Some(parent) => fs::create_dir_all(parent).with_context(|| format!("couldn't make the parent directories for {}", dest.display()))?,
+                    None => bail!("couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.", dest.display())
+                };
+        fs::copy(&source, &dest)
+            .with_context(|| format!("couldn't copy {} to {}", source.display(), dest.display()))
     }
 
     fn path_in_workspace(&self, work_dir: &Path, input: &PathBuf) -> Result<PathBuf> {
