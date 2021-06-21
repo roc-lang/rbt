@@ -13,6 +13,7 @@ pub struct Job {
     pub environment: HashMap<String, String>,
     pub working_directory: PathBuf,
     pub inputs: Vec<PathBuf>,
+    pub outputs: Vec<PathBuf>,
 }
 
 impl Job {
@@ -28,6 +29,9 @@ impl Job {
         let output = self
             .run_job(work_dir.path())
             .context("couldn't run the job")?;
+
+        self.tear_down_workspace(work_dir.path())
+            .context("couldn't tear down the workspace")?;
 
         work_dir
             .close()
@@ -114,6 +118,26 @@ impl Job {
             .context("couldn't run the command")
     }
 
+    fn tear_down_workspace(&self, work_dir: &Path) -> Result<()> {
+        for output in &self.outputs {
+            let source = self
+                .path_in_workspace(work_dir, &output)
+                .context("couldn't determine path for output")?;
+
+            let dest = self.working_directory.join(output);
+
+            match dest.parent() {
+                    Some(parent) => fs::create_dir_all(parent).with_context(|| format!("couldn't make the parent directories for {}", dest.display()))?,
+                    None => bail!("couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.", dest.display())
+                };
+            fs::copy(&source, &dest).with_context(|| {
+                format!("couldn't copy {} to {}", source.display(), dest.display())
+            })?;
+        }
+
+        Ok(())
+    }
+
     fn path_in_workspace(&self, work_dir: &Path, input: &PathBuf) -> Result<PathBuf> {
         if let Ok(relative) = input.strip_prefix(&self.working_directory) {
             Ok(work_dir.join(relative))
@@ -152,6 +176,7 @@ mod test_job {
             environment: HashMap::default(),
             working_directory: PathBuf::from("."),
             inputs: vec![],
+            outputs: vec![],
         };
 
         let output = job.run().unwrap();
@@ -169,6 +194,7 @@ mod test_job {
             environment: HashMap::default(),
             working_directory: PathBuf::from("."),
             inputs: vec![],
+            outputs: vec![],
         };
 
         let output = job.run().unwrap();
@@ -186,6 +212,7 @@ mod test_job {
             environment: HashMap::default(),
             working_directory: PathBuf::from("."),
             inputs: vec![],
+            outputs: vec![],
         };
 
         let output = job.run().unwrap();
@@ -203,6 +230,7 @@ mod test_job {
             environment: HashMap::default(),
             working_directory: PathBuf::from("."),
             inputs: vec![],
+            outputs: vec![],
         };
 
         let output = job.run().unwrap();
@@ -217,6 +245,7 @@ mod test_job {
             environment: HashMap::default(),
             working_directory: PathBuf::from("."),
             inputs: vec![],
+            outputs: vec![],
         };
 
         let output = job.run().unwrap();
@@ -239,6 +268,7 @@ mod test_job {
             environment: HashMap::default(),
             working_directory: temp.path().to_path_buf(),
             inputs: vec![visible],
+            outputs: vec![],
         };
 
         let output = job.run().unwrap();
@@ -265,6 +295,7 @@ mod test_job {
             environment: HashMap::default(),
             working_directory: temp.path().to_path_buf(),
             inputs: vec![dir],
+            outputs: vec![],
         };
 
         let output = job.run().unwrap();
@@ -287,9 +318,30 @@ mod test_job {
             environment: HashMap::default(),
             working_directory: PathBuf::from("."),
             inputs: vec![visible],
+            outputs: vec![],
         };
 
         let output = job.run();
         assert_eq!(output.is_err(), true);
     }
+
+    #[test]
+    fn outputs_are_copied_out() {
+        let temp = tempdir().unwrap();
+
+        let job = Job {
+            command: "touch".to_string(),
+            arguments: vec!["test.txt".to_string()],
+            environment: HashMap::default(),
+            working_directory: temp.path().to_path_buf(),
+            inputs: vec![],
+            outputs: vec![PathBuf::from("test.txt")],
+        };
+
+        job.run().unwrap();
+        assert_eq!(temp.path().join("test.txt").exists(), true);
+    }
+
+    // todo: new-but-untracked files are warnings
+    // todo: changed-but-untracked files are warnings
 }

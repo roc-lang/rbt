@@ -39,6 +39,7 @@ pub fn run() -> io::Result<()> {
         environment: HashMap::default(),
         working_directory: PathBuf::from("."),
         inputs: vec![],
+        outputs: vec![],
     };
     job.run().unwrap();
 
