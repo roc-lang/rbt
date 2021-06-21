@@ -25,27 +25,15 @@ impl Job {
         self.prepare_workspace(work_dir.path())
             .context("couldn't prepare files in the working directory")?;
 
-        let output = Command::new(self.command.as_str())
-            .args(
-                self.arguments
-                    .iter()
-                    .map(|arg| arg.as_str())
-                    .collect::<Vec<&str>>()
-                    .as_slice(),
-            )
-            .current_dir(&work_dir)
-            // TODO: this is going to have to retain some environment variables
-            // for software to work correctly. For example, we'll probably need
-            // to provide a fake HOME the way Nix does.
-            .env_clear()
-            .output()
-            .context("couldn't run the job");
+        let output = self
+            .run_job(work_dir.path())
+            .context("couldn't run the job")?;
 
         work_dir
             .close()
             .context("couldn't clean up the job's temporary directory")?;
 
-        Ok(output?)
+        Ok(output)
     }
 
     fn prepare_workspace(&self, work_dir: &Path) -> Result<()> {
@@ -106,6 +94,24 @@ impl Job {
         }
 
         Ok(())
+    }
+
+    fn run_job(&self, work_dir: &Path) -> Result<Output> {
+        Command::new(self.command.as_str())
+            .args(
+                self.arguments
+                    .iter()
+                    .map(|arg| arg.as_str())
+                    .collect::<Vec<&str>>()
+                    .as_slice(),
+            )
+            .current_dir(&work_dir)
+            // TODO: this is going to have to retain some environment variables
+            // for software to work correctly. For example, we'll probably need
+            // to provide a fake HOME the way Nix does.
+            .env_clear()
+            .output()
+            .context("couldn't run the command")
     }
 
     fn path_in_workspace(&self, work_dir: &Path, input: &PathBuf) -> Result<PathBuf> {
