@@ -136,7 +136,7 @@ impl Job {
             .with_context(|| format!("couldn't copy {} to {}", source.display(), dest.display()))
     }
 
-    fn path_in_workspace(&self, work_dir: &Path, input: &PathBuf) -> Result<PathBuf> {
+    fn path_in_workspace(&self, work_dir: &Path, input: &Path) -> Result<PathBuf> {
         if let Ok(relative) = input.strip_prefix(&self.working_directory) {
             Ok(work_dir.join(relative))
         } else if input.is_relative() {
