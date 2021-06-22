@@ -197,8 +197,8 @@ mod test_job {
 
         let output = job.run().unwrap();
         assert_eq!(
-            String::from_utf8(output.stdout).unwrap(),
-            "Hello, Stdout!\n".to_string()
+            std::str::from_utf8(&output.stdout).unwrap(),
+            "Hello, Stdout!\n"
         );
     }
 
@@ -215,8 +215,8 @@ mod test_job {
 
         let output = job.run().unwrap();
         assert_eq!(
-            String::from_utf8(output.stderr).unwrap(),
-            "Hello, Stderr!\n".to_string()
+            std::str::from_utf8(&output.stderr).unwrap(),
+            "Hello, Stderr!\n"
         );
     }
 
@@ -247,7 +247,7 @@ mod test_job {
         };
 
         let output = job.run().unwrap();
-        assert_eq!(String::from_utf8(output.stderr).unwrap(), "".to_string());
+        assert_eq!(std::str::from_utf8(&output.stderr).unwrap(), "");
     }
 
     #[test]
@@ -271,8 +271,8 @@ mod test_job {
 
         let output = job.run().unwrap();
         assert_eq!(
-            String::from_utf8(output.stdout).unwrap(),
-            ".\n./visible.txt\n".to_string()
+            std::str::from_utf8(&output.stdout).unwrap(),
+            ".\n./visible.txt\n"
         );
 
         drop(temp);
@@ -298,8 +298,8 @@ mod test_job {
 
         let output = job.run().unwrap();
         assert_eq!(
-            String::from_utf8(output.stdout).unwrap(),
-            "./visible/b.txt\n./visible/a.txt\n".to_string()
+            std::str::from_utf8(&output.stdout).unwrap(),
+            "visible/a.txt visible/b.txt\n"
         )
     }
 
