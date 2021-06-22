@@ -288,8 +288,8 @@ mod test_job {
         File::create(&dir.join("b.txt")).unwrap();
 
         let job = Job {
-            command: "find".to_string(),
-            arguments: vec![".".to_string(), "-type".to_string(), "file".to_string()],
+            command: "bash".to_string(),
+            arguments: vec!["-c".to_string(), "echo visible/*".to_string()],
             environment: HashMap::default(),
             working_directory: temp.path().to_path_buf(),
             inputs: vec![dir],
