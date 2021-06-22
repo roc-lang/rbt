@@ -30,7 +30,7 @@ impl Job {
             .run_job(work_dir.path())
             .context("couldn't run the job")?;
 
-        self.tear_down_workspace(work_dir.path())
+        self.sync_workspace(work_dir.path())
             .context("couldn't tear down the workspace")?;
 
         work_dir
@@ -114,7 +114,7 @@ impl Job {
             .context("couldn't run the command")
     }
 
-    fn tear_down_workspace(&self, work_dir: &Path) -> Result<()> {
+    fn sync_workspace(&self, work_dir: &Path) -> Result<()> {
         for output in &self.outputs {
             self.copy_creating_directories(
                 self.path_in_workspace(work_dir, &output)
