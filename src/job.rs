@@ -322,6 +322,31 @@ mod test_job {
     }
 
     #[test]
+    fn files_below_the_root_in_inputs_are_visible() {
+        let temp = tempdir().unwrap();
+
+        let dir = temp.path().join("visible");
+        let file = dir.join("a.txt");
+        fs::create_dir(&dir).unwrap();
+        File::create(&file).unwrap();
+
+        let job = Job {
+            command: "bash".to_string(),
+            arguments: vec!["-c".to_string(), "echo visible/*".to_string()],
+            environment: HashMap::default(),
+            working_directory: temp.path().to_path_buf(),
+            inputs: vec![file],
+            outputs: vec![],
+        };
+
+        let output = job.run().unwrap();
+        assert_eq!(
+            std::str::from_utf8(&output.stdout).unwrap(),
+            "visible/a.txt\n"
+        )
+    }
+
+    #[test]
     fn absolute_paths_outside_the_working_directory_are_not_allowed() {
         let temp = tempdir().unwrap();
 
