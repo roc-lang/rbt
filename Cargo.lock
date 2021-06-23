@@ -3,6 +3,12 @@
 version = 3
 
 [[package]]
+name = "anyhow"
+version = "1.0.41"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15af2628f6890fe2609a3b91bef4c83450512802e59489f9c1cb1fa5df064a61"
+
+[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -306,10 +312,12 @@ dependencies = [
 name = "roc-build"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "digest",
  "meowhash",
  "notify",
  "tempfile",
+ "walkdir",
 ]
 
 [[package]]

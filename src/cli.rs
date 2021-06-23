@@ -36,6 +36,9 @@ pub fn run() -> io::Result<()> {
         command: "echo".to_string(),
         arguments: vec![],
         environment: HashMap::default(),
+        working_directory: std::env::current_dir()?,
+        inputs: vec![],
+        outputs: vec![],
     };
     job.run().unwrap();
 

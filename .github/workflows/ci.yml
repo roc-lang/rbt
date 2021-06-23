@@ -8,7 +8,12 @@ env:
 jobs:
   build-fmt-clippy-test:
     name: fmt, clippy, test --release
-    runs-on: ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
     timeout-minutes: 90
     env:
       FORCE_COLOR: 1
