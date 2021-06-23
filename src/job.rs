@@ -8,9 +8,17 @@ use walkdir::WalkDir;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Job {
+    // What should we run? This can either be an absolute path or just a
+    // command name (in which case we'll search in PATH)
     pub command: String,
     pub arguments: Vec<String>,
+
+    // What environment variables does this job require? Note that `Job`
+    // will remove all environment variables other than what you specify here.
     pub environment: HashMap<String, String>,
+
+    // What should be visible to the job? We isolate the build in the filesystem,
+    // only copying in `inputs` and copying out `outputs`.
     pub working_directory: PathBuf,
     pub inputs: Vec<PathBuf>,
     pub outputs: Vec<PathBuf>,
