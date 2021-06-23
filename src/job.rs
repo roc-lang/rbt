@@ -86,8 +86,7 @@ impl Job {
                         })?;
                     }
                 }
-            } else {
-                // it's a file, or maybe a symlink
+            } else if meta.is_file() {
                 self.copy_creating_directories(
                     input.to_path_buf(),
                     self.path_in_workspace(work_dir, input).with_context(|| {
@@ -98,6 +97,11 @@ impl Job {
                     })?,
                 )
                 .with_context(|| format!("couldn't isolate {}", input.display()))?;
+            } else if meta.file_type().is_symlink() {
+                bail!("symlinks aren't allowed right now because we can't make sure that they will be totally isolated on the filesystem. Sorry!")
+            } else {
+                // could be a socket, block device, etc
+                bail!("I don't know how to thandle the filetype of {}. I know about directories, files, and symlinks.", input.display());
             }
         }
 
