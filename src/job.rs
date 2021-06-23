@@ -20,6 +20,11 @@ pub struct Job {
     // What should be visible to the job? We isolate the build in the filesystem,
     // only copying in `inputs` and copying out `outputs`.
     pub working_directory: PathBuf,
+
+    // Rule for inputs: relative paths are best. They'll be interpreted according
+    // to `working_directory`. An absolute path is also fine, as long as it's
+    // inside `working_directory`. However, we *don't* allow absolute paths
+    // outside `working_directory`, because we can't isolate them properly.
     pub inputs: Vec<PathBuf>,
     pub outputs: Vec<PathBuf>,
 }
@@ -148,6 +153,7 @@ impl Job {
             .with_context(|| format!("couldn't copy {} to {}", source.display(), dest.display()))
     }
 
+    // See "rules for inputs" in the struct documentation above.
     fn path_in_workspace(&self, work_dir: &Path, input: &Path) -> Result<PathBuf> {
         if let Ok(relative) = input.strip_prefix(&self.working_directory) {
             Ok(work_dir.join(relative))
