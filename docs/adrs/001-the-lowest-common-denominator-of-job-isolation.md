@@ -1,4 +1,4 @@
-# ADR 001: Job Isolation
+# ADR 001: The Lowest Common Denominator of Job Isolation
 
 When you're running a build, there are a lot of things that can interfere with reproducibility:
 
