@@ -19,7 +19,7 @@ That said, for rbt, we want to stay within these constraints:
 - We shouldn't require elevated privileges to run a build.
 
 That means we're probably limited to doing things like copying files and spawning subprocesses.
-We can't rely on things like `chroot` or isolating the network.
+We can't rely on things like `chroot` or isolating the network, since they usually require either root privileges or are not available on all platforms.
 We may be able to do *some* of these things, *some* of the time, but not when it conflicts with the goals above.
 
 ## Things Other Build Systems Do
