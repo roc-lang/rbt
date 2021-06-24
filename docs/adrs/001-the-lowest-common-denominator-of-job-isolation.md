@@ -89,14 +89,31 @@ I think if we did that we'd want to do a general Docker- or container-based isol
 It may be possible to isolate using some level of virtualization, either with Docker or full-strength VMs.
 This would be really reproducible across supported platforms, and offer a consistent permissions model, but potentially have a high cost to speed.
 
-## Our First Pass
+## The First Pass
 
-So to start off with, we're going to create a baseline level of isolation by:
+Our current code creates a baseline level of isolation by:
 
 - Removing the contents of the environment.
   That means the environment will be explicitly and exactly specified, not inherting anything from the calling environment.
   This avoids problems where things from `LOCALE` or `USER` make their way into the build output.
   However, we recognize that this will probably break a lot of build tools, and we plan on handing the most common cases (like `HOME` and `PATH`) in a friendly way.
+
 - Explicitly tracking input and output files.
   Since we can't rely on using `ftrace` or `strace` or similar across platforms, we can get this by running files in a temporary directory where we explicitly copy input files into and output files out of.
   We recognize that this may cause some build slowdown, but we're going to start here and see if there's are ways to speed it up or more complex/clever approaches if and when it becomes an issue.
+
+## The Next Pass(es)
+
+It seems like at least the Blaze descendants take the approach of making a bunch of symlinks instead of copying files.
+This trades safety for speed (but potentially a lot of speed!)
+In large builds, or in builds with many dependencies, it probably makes sense.
+Switching to that is probably a reasonable next step.
+
+It also seems reasonable to define isolaters for specific platforms, details of which will be in future ADRs.
+
+We also need to define how we'll load programs.
+If we're destroying `PATH` we'll need to specify our own load system somehow.
+
+Finally, we need to work out what we'll do with `HOME` and other common environment variables.
+
+All those are issues for further ADRs!
