@@ -31,12 +31,17 @@ Processes inherit the environment and run in the working directory to create new
 
 ### Blaze Descendants
 
-Build systems derived from Google's Blaze like Bazel, Please, and (I think) Buck do something similar to what we're proposing here.
+Build systems derived from Google's Blaze like Bazel, Please, and Buck isolate the environment and file system, at least a little.
 
-- [Please documents that builds are "hermetic"](https://github.com/thought-machine/please#how-is-it-so-fast).
-- [Bazel uses a FUSE module](https://docs.bazel.build/versions/main/sandboxing.html), [introduced in 2017](https://blog.bazel.build/2017/08/25/introducing-sandboxfs.html), and [improved in 2018](https://blog.bazel.build/2018/04/13/preliminary-sandboxfs-support.html).
-- [Buck has some level of sandboxing](https://buck.build/files-and-dirs/buckconfig.html#sandbox).
-  The docs there make me think it's using the macOS `sandbox` command, although I haven't looked at the implementation.
+[Please documents that builds are "hermetic"](https://github.com/thought-machine/please#how-is-it-so-fast).
+It looks like they [symlink files into a temporary directory](https://github.com/thought-machine/please/blob/6185d5d4f0179fba68d89c6eac294ab7d862d898/src/core/utils.go#L332-L344).
+
+[Bazel uses a FUSE module](https://docs.bazel.build/versions/main/sandboxing.html), [introduced in 2017](https://blog.bazel.build/2017/08/25/introducing-sandboxfs.html), and [improved in 2018](https://blog.bazel.build/2018/04/13/preliminary-sandboxfs-support.html).
+In that 2017 blog post, they mention that they also use symlinks in a temporary directory (but that it can cause problems if build tools try to chase the link to use the "real" path.)
+
+[Buck has some level of sandboxing](https://buck.build/files-and-dirs/buckconfig.html#sandbox).
+The docs imply that they're using the macOS `sandbox` command (because the name and the fact that it's only Darwin) and [it looks like their implementation backs that up](https://github.com/facebook/buck/blob/0acbcbbed7274ba654b64d97414b28183649e51a/src/com/facebook/buck/sandbox/darwin/DarwinSandbox.java).
+There's [a lot of indirection in their general sandbox implementation](https://github.com/facebook/buck/tree/0acbcbbed7274ba654b64d97414b28183649e51a/src/com/facebook/buck/sandbox), and it looks like Darwin/sandbox may be the only real sandboxing implementation (other than the "don't sandbox" implementation.)
 
 ### Nix / NixOS
 
