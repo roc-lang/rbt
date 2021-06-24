@@ -1,17 +1,18 @@
-# ADR 001: The Lowest Common Denominator of Job Isolation
+# ADR 001: Layers of Job Isolation
 
-Decisions:
+Decision: rbt will set two layered targets for build isolation.
 
-- rbt will set two targets for build isolation:
-  - We should run a reasonably isolated build on all supported operating systems without any special configuration or permissions.
-  - We can optionally do nicer things if privileged actions are availble (e.g. launching a container.)
+1. We should run a reasonably isolated build on all supported operating systems without any special configuration or permissions.
+2. We can optionally do nicer things if privileged actions are availble (e.g. launching a container, or having OS-specific functionality available.)
 
-- For process isolation, the lowest common denominator isolation levels (and therefore the "reasonably isolated" target) consists of:
-  - For the environment, an empty environment.
-  - For the filesystem, copying or symlinking files.
-    (Symlinking is a popular choice, and probably faster than copying.
-    We should explore that.)
-  - For the network, unrestricted network access.
+"Reasonably isolated" in the first layer is defined as the functionality available on all platforms.
+Specifically:
+
+ - Emptying out environment variables (for example, to reduce problems with `LOCALE`.)
+ - Copying or symlinking files into a temporary working directory.
+   (Symlinking is a popular choice, and probably faster than copying.
+   We should explore that.)
+ - Not doing anything at all to restrict network access.
 
 ## Background and Motivation
 
