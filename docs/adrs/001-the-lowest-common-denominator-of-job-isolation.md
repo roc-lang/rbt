@@ -79,7 +79,10 @@ Linux also has `chroot` if we're OK taking the time to set up the entire root (w
 
 ### Windows
 
-I just haven't the foggiest, and as I'm typing this don't have time to research either.
+It seems like there's no one good answer to this on Windows. [Someone asked for this on StackOverflow and got extensive answers](https://stackoverflow.com/questions/135802/put-a-process-in-a-sandbox-where-it-can-do-least-harm), all of which are basically the shrug emoji.
+
+That said, [Windows Containers exist and have several different isolation modes](https://docs.microsoft.com/en-us/virtualization/windowscontainers/manage-containers/hyperv-container).
+I think if we did that we'd want to do a general Docker- or container-based isolator instead of a OS-specific one, but just something to keep in mind.
 
 ### Virtualization
 
