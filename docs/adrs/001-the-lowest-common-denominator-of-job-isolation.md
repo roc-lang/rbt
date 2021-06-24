@@ -26,7 +26,7 @@ We may be able to do *some* of these things, *some* of the time, but not when it
 
 ### Don't Isolate At All
 
-Many common build tools (make, shake, rake) do not isolate anything.
+Many common build tools (make, shake, rake, redo) do not isolate anything.
 Processes inherit the environment and run in the working directory to create new files.
 
 ### Blaze Descendants
