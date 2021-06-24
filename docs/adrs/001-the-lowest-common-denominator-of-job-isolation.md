@@ -2,9 +2,9 @@
 
 Decisions:
 
-- The base requirements for rbt are that it:
-  - Run a reasonably isolated build on all supported operating systems
-  - Run without requiring elevated privileges, but optionally do nicer things if privileged actions are availble (e.g. launching a container.)
+- rbt will set two targets for build isolation:
+  - We should run a reasonably isolated build on all supported operating systems without any special configuration or permissions.
+  - We can optionally do nicer things if privileged actions are availble (e.g. launching a container.)
 
 - For process isolation, the lowest common denominator isolation levels are:
   - For the environment, an empty environment.
