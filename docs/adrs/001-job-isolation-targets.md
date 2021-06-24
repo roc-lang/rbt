@@ -1,4 +1,4 @@
-# ADR 001: Layers of Job Isolation
+# ADR 001: Job Isolation Targets
 
 Decision: rbt will set two layered targets for build isolation.
 
