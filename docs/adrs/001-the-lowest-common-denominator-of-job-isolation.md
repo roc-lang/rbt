@@ -45,9 +45,15 @@ There's [a lot of indirection in their general sandbox implementation](https://g
 
 ### Nix / NixOS
 
-Nix seems to copy files to a temporary directory and remove the environment, the way I'm suggesting we do here.
-When run on NixOS, Nix also seems to have some way to restrict network access.
-Further research may be helpful, as the mechanism seems pretty close to what we want.
+Nix isolates builds (they call it sandboxing) with a few different mechanisms.
+It looks like they create a temporary working directory no matter what platform you're using.
+
+On Linux, they default to sandboxing, which requires root privelegs (and so defaults to `false` on macOS.)
+The [docs on the `sandbox` option](https://nixos.org/manual/nix/stable/#conf-sandbox) say:
+
+> If set to `true` builds will be performed in a *sandboxed* environment, i.e., they’re isolated from the normal file system hierarchy and will only see their dependencies in the Nix store, the temporary build directory, private versions of /proc, /dev, /dev/shm and /dev/pts (on Linux), and the paths configured with the sandbox-paths option.
+> [...]
+> In addition, on Linux, builds run in private PID, mount, network, IPC and UTS namespaces to isolate them from other processes in the system (except that fixed-output derivations do not run in private network namespace to ensure they can access the network).
 
 ## Options We Have in Different Operating Systems
 
