@@ -87,7 +87,7 @@ I think if we did that we'd want to do a general Docker- or container-based isol
 ### Virtualization
 
 It may be possible to isolate using some level of virtualization, either with Docker or full-strength VMs.
-This would be really reproducible, although at a high cost to speed.
+This would be really reproducible across supported platforms, and offer a consistent permissions model, but potentially have a high cost to speed.
 
 ## Our First Pass
 
