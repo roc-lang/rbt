@@ -6,11 +6,11 @@ Decisions:
   - We should run a reasonably isolated build on all supported operating systems without any special configuration or permissions.
   - We can optionally do nicer things if privileged actions are availble (e.g. launching a container.)
 
-- For process isolation, the lowest common denominator isolation levels are:
+- For process isolation, the lowest common denominator isolation levels (and therefore the "reasonably isolated" target) consists of:
   - For the environment, an empty environment.
   - For the filesystem, copying or symlinking files.
-    Symlinking is a popular choice, and probably faster than copying.
-    We should explore that.
+    (Symlinking is a popular choice, and probably faster than copying.
+    We should explore that.)
   - For the network, unrestricted network access.
 
 ## Background and Motivation
