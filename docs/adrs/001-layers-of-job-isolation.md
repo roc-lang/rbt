@@ -85,7 +85,7 @@ macOS also has `chroot` if we're OK taking the time to set up the entire root (w
 
 ### Linux, BSD, etc
 
-These systems can use `fstrace` can see what files a process is reading and writing.
+These systems can use `strace` can see what files a process is reading and writing.
 Using that, we can at least warn if someone accesses or writes a file outside the allowed list.
 I don't remember off the top of my head how much it slows down the process, though.
 
