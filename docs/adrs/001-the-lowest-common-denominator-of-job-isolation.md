@@ -60,8 +60,8 @@ The [docs on the `sandbox` option](https://nixos.org/manual/nix/stable/#conf-san
 ### macOS
 
 macOS has `sandbox` and `sandboxd` to restrict access to various system calls.
-Running `man sandbox-exec` suggests that at least that command is deprecated.
-I need to do more research here.
+`man sandbox-exec` suggests that the command is deprecated, and that developers should use [the App Sandbox features in new apps](https://developer.apple.com/library/archive/documentation/Security/Conceptual/AppSandboxDesignGuide/AboutAppSandbox/AboutAppSandbox.html), which looks like it's exclusively focused on the kinds of apps you get in app stores... so, not really the problem we have.
+Some further research tells me that [Apple might have made this publicly deprecated because the configuration language is undocumented and they want to focus on App Sandboxing](https://developer.apple.com/forums/thread/661939) and that [Bazel does indeed use this, or at least did at one point](https://jmmv.dev/2019/11/macos-sandbox-exec.html).
 
 We can also use `dtrace`, if we're OK with asking people to turn off SIP (we're not.)
 
