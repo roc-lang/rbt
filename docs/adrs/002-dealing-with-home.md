@@ -9,8 +9,8 @@ The directory structure of the working directory will look like this:
 
 ```
 build_working_directory
-├── exec
-└── home
+├── rbt-exec
+└── rbt-home
 ```
 
 Needs thought still:
