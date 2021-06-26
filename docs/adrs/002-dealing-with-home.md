@@ -20,12 +20,13 @@ Needs thought still:
 
 ## Background and Motivation
 
-When we drop the environment, we also get rid of `HOME`.
-That can cause problems if, for example, your build tool relies on reading a file in `~/.config` or storing stuff in `~/.cache`, to say nothing of the tools just store stuff straight in `~`.
+Builds drop the environment to get around things like `LC` and `LOCALE` being set, and to avoid tool mismatches due to differences in `PATH`.
+As a consequence, we also get rid of `HOME`, but having `HOME` unset is unusual and causes problems in some tools.
+For example, if a build tool relies on reading a file in `~/.config` or storing stuff in `~/.cache`, it may assume that `HOME` is set and produce a mysterious error otherwise.
 
-This can be a source of irreproducibility: you cannot know if you've completely specified your dependencies if the tool persists state between runs.
+This can also be a source of irreproducibility: you cannot know if you've completely specified your dependencies if the tool persists state between runs.
 What happens if you remove an input but the result is cached?
-It could work on your computer, but not CI (or your coworker's computer.)
+It could work on your computer, but not CI or your coworker's computer.
 
 ## Things Other Build Systems Do
 
