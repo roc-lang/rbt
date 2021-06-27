@@ -1,5 +1,6 @@
 use anyhow::{bail, Context, Result};
 use std::collections::HashMap;
+use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -103,7 +104,7 @@ impl Job {
                 )
                 .with_context(|| format!("couldn't isolate {}", input.display()))?;
             } else if meta.file_type().is_symlink() {
-                bail!("symlinks aren't allowed right now because we can't make sure that they will be totally isolated on the filesystem. Sorry!")
+                bail!(Problem::NoSymlinksForNow(input.to_path_buf()));
             } else {
                 // could be a socket, block device, etc
                 bail!("I don't know how to thandle the filetype of {}. I know about directories, files, and symlinks.", input.display());
@@ -165,6 +166,24 @@ impl Job {
                 input.display(),
                 self.working_directory.display(),
             );
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Problem {
+    NoSymlinksForNow(PathBuf),
+}
+
+impl fmt::Display for Problem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Problem::NoSymlinksForNow(path) =>
+                write!(
+                    f,
+                    "{} was a symlink, but symlinks aren't allowed right. We can't make sure that they will be totally isolated on the filesystem. Sorry!",
+                    path.display()
+                ),
         }
     }
 }
