@@ -166,11 +166,10 @@ impl Job {
         } else if input.is_relative() {
             Ok(work_dir.join(input))
         } else {
-            bail!(
-                "couldn't isolate {} because it's outside the working directory ({})",
-                input.display(),
-                self.working_directory.display(),
-            );
+            bail!(Problem::InputWasOutsideWorkingDirectory(
+                input.to_path_buf(),
+                self.working_directory.to_path_buf(),
+            ))
         }
     }
 }
@@ -180,6 +179,7 @@ enum Problem {
     NoSymlinksForNow(PathBuf),
     UnhandledFileType(PathBuf),
     TargetHadNoParent(PathBuf),
+    InputWasOutsideWorkingDirectory(PathBuf, PathBuf),
 }
 
 impl fmt::Display for Problem {
@@ -204,6 +204,14 @@ impl fmt::Display for Problem {
                     f,
                     "couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.",
                     path.display(),
+                ),
+
+            Problem::InputWasOutsideWorkingDirectory(path, working_directory) =>
+                write!(
+                    f,
+                    "couldn't isolate {} because it's outside the working directory ({})",
+                    path.display(),
+                    working_directory.display(),
                 ),
         }
     }
