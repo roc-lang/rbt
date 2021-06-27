@@ -147,8 +147,13 @@ impl Job {
 
     fn copy_creating_directories(&self, source: PathBuf, dest: PathBuf) -> Result<u64> {
         match dest.parent() {
-            Some(parent) => fs::create_dir_all(parent).with_context(|| format!("couldn't make the parent directories for {}", dest.display()))?,
-            None => bail!("couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.", dest.display())
+            Some(parent) => fs::create_dir_all(parent).with_context(|| {
+                format!(
+                    "couldn't make the parent directories for {}",
+                    dest.display()
+                )
+            })?,
+            None => bail!(Problem::TargetHadNoParent(dest)),
         }
         fs::copy(&source, &dest)
             .with_context(|| format!("couldn't copy {} to {}", source.display(), dest.display()))
@@ -174,6 +179,7 @@ impl Job {
 enum Problem {
     NoSymlinksForNow(PathBuf),
     UnhandledFileType(PathBuf),
+    TargetHadNoParent(PathBuf),
 }
 
 impl fmt::Display for Problem {
@@ -190,6 +196,13 @@ impl fmt::Display for Problem {
                 write!(
                     f,
                     "I don't know how to handle the file type of {}. I know about directories, files, and symlinks.",
+                    path.display(),
+                ),
+
+            Problem::TargetHadNoParent(path) =>
+                write!(
+                    f,
+                    "couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.",
                     path.display(),
                 ),
         }
