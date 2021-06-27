@@ -107,7 +107,7 @@ impl Job {
                 bail!(Problem::NoSymlinksForNow(input.to_path_buf()));
             } else {
                 // could be a socket, block device, etc
-                bail!("I don't know how to thandle the filetype of {}. I know about directories, files, and symlinks.", input.display());
+                bail!(Problem::UnhandledFileType(input.to_path_buf()));
             }
         }
 
@@ -173,6 +173,7 @@ impl Job {
 #[derive(Debug)]
 enum Problem {
     NoSymlinksForNow(PathBuf),
+    UnhandledFileType(PathBuf),
 }
 
 impl fmt::Display for Problem {
@@ -183,6 +184,13 @@ impl fmt::Display for Problem {
                     f,
                     "{} was a symlink, but symlinks aren't allowed right. We can't make sure that they will be totally isolated on the filesystem. Sorry!",
                     path.display()
+                ),
+
+            Problem::UnhandledFileType(path) =>
+                write!(
+                    f,
+                    "I don't know how to handle the file type of {}. I know about directories, files, and symlinks.",
+                    path.display(),
                 ),
         }
     }
