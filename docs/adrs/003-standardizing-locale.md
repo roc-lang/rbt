@@ -53,6 +53,9 @@ They mention that `LC_ALL=C.UTF-8` is available everywhere.
 
 ### Nix / NixOS
 
+Nix doesn't set any locale information; their environment is blank.
+However, if you run `nix-shell -p locale --pure --run locale` everything ends up as `C` because that's the only locale available.
+
 ### Bazel
 
 Bazel [sets `LC_ALL=C` in some test tooling](https://github.com/bazelbuild/bazel/search?q=LC_ALL) and [request tests to set a bunch of `LC_*` variables](https://docs.bazel.build/versions/main/test-encyclopedia.html#initial-conditions).
