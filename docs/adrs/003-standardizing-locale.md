@@ -80,9 +80,9 @@ However, if you run `nix-shell -p locale --pure --run locale` everything ends up
 
 Bazel [explicitly sets `LC_ALL=C` in some test tooling](https://github.com/bazelbuild/bazel/search?q=LC_ALL) and [requires the test runner to set a bunch of locale information](https://docs.bazel.build/versions/main/test-encyclopedia.html#initial-conditions).
 
-## Appendix A: Diff Between `en_US.UTF-8` and `C.UTF-8`
+## Appendix A: Diff Between `en_US.UTF-8` and `C`
 
-Output produced with `locale -ck LC_ALL` with `LC_ALL` set to either `en_US.UTF-8` or `C.UTF-8`.
+Output produced with `locale -ck LC_ALL` with `LC_ALL` set to either `en_US.UTF-8` or `C`.
 
 ```diff
 --- en_US.UTF-8	2021-06-29 15:07:26.357425141 -0500
