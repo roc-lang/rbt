@@ -1,6 +1,9 @@
 # ADR 004: Symlinking
 
-Decision: ???
+Decision: we're going to set up files in `rbt-workspace` (see [ADR #2](./002-dealing-with-home.md)) using symlinks instead of copying things over.
+This seems to strike a good balance between performance and safety.
+
+We may revisit this eventually (e.g. for a container-based executor.)
 
 ## Background and Motivation
 
