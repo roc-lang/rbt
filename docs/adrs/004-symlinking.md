@@ -7,7 +7,7 @@ We may revisit this eventually (e.g. for a container-based executor.)
 
 ## Background and Motivation
 
-In ADR #1, we decided that we were going to isolate the filesystem.
+In [ADR #1](./001-job-isolation-targets.md), we decided that we were going to isolate the filesystem.
 Our first approach was to copy files.
 However, there's a trade-off we can take: symlinking files will be much faster, but open us up to issues as symlinks cannot be made read-only.
 That means that a tool could modify the source files during a build!
