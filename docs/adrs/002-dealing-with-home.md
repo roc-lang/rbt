@@ -9,14 +9,16 @@ The directory structure of the working directory will look like this:
 
 ```
 build_working_directory
-├── rbt-exec
+├── rbt-workspace
 └── rbt-home
 ```
 
 Needs thought still:
 
 - Should this be a warning or an error?
-- Are `exec` and `home` the right names for these things?
+- Are `rbt-workspace` and `rbt-home` the right names for these things?
+  (Let's just implement them like this and see how they feel.
+  If we decide they are not so good now, we can change them early before a lot of people are using rbt.)
 
 ## Background and Motivation
 
