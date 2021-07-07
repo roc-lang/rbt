@@ -5,11 +5,12 @@ This will result in most builds using the `C` locale.
 If someone needs a specific locale, they can set it themselves and their tools will behave like they expect, since we won't do anything to interfere with that.
 
 `C` uses English date strings and number formats, which may be surprising for some authors.
+It also sets the charmap to `US-ASCII`, which will probably cause problems.
 When we write the docs for `rbt`, we should document how to get un-surprised by this.
 
 ## Background and Motivation
 
-Environment variables like `LC` get set by the system language.
+Locale environment variables (like `LANG`) get set by the system language.
 For example, on my computer, `locale` shows:
 
 ```
