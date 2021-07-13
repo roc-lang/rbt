@@ -1,38 +1,57 @@
 use crate::content_hash::ContentHash;
 use crate::interns::{FileId, Interns};
+use anyhow::{Context, Result};
+use byteorder::LittleEndian;
 use std::collections::HashMap;
 use std::fs::{self, Metadata};
-use std::io;
 use std::path::Path;
+use zerocopy::byteorder::{I64, U32, U64};
+use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
 /// File metadata key, based on https://apenwarr.ca/log/20181113
 ///
 /// TODO: Define a different structure for this on Windows.
-#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
-#[cfg(target_family = "unix")]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
+#[cfg(any(target_family = "unix", target_endian = "little"))]
 struct MetaKey {
-    mtime: i64,
-    size: u64,
-    ino: u64,
-    mode: u32,
-    uid: u32,
-    gid: u32,
+    mtime: I64<LittleEndian>,
+    size: U64<LittleEndian>,
+    ino: U64<LittleEndian>,
+    mode: U32<LittleEndian>,
+    uid: U32<LittleEndian>,
+    gid: U32<LittleEndian>,
 }
 
 impl MetaKey {
-    pub fn persist(&self, _path: &Path) -> io::Result<()> {
-        // TODO store a (Path => MetaKey) dictionary entry on disk.
-        // For now, don't persist at all.
+    pub fn persist(&self, db: &sled::Tree, path: &Path) -> Result<()> {
+        db.insert(
+            path.to_str().context("this path wasn't UTF-8")?.as_bytes(),
+            self.as_bytes(),
+        )?;
+
         Ok(())
     }
 
-    pub fn stored(_path: &Path) -> io::Result<Option<Self>> {
-        // TODO get the stored MetaKey from the (Path => MetaKey) dictionary on disk
-        // For now, assume nothing was stored.
-        Ok(None)
+    pub fn is_same_as_previous(db: &sled::Tree, path: &Path, current: &Self) -> Result<bool> {
+        let entry = db.get(path.to_str().context("this path wasn't UTF-8")?.as_bytes())?;
+
+        match entry {
+            Some(previous_bytes) => {
+                // ref: https://github.com/spacejam/sled/blob/b23da771902c320bfa20b6f552bebf1d1c1be4ff/examples/structured.rs
+                let layout: LayoutVerified<&[u8], MetaKey> =
+                    match LayoutVerified::new_unaligned(&*previous_bytes) {
+                        Some(layout) => layout,
+                        None => panic!("couldn't make a layout from backing bytes"),
+                    };
+
+                Ok(current == layout.into_ref())
+            }
+            None => Ok(false),
+        }
     }
 
-    pub fn current(path: &Path) -> io::Result<Self> {
+    pub fn current(path: &Path) -> Result<Self> {
         // Delegate to an OS-specific internal function.
         Ok(Self::from_metadata(fs::metadata(path)?))
     }
@@ -45,22 +64,35 @@ impl MetaKey {
         use std::os::unix::fs::MetadataExt;
 
         Self {
-            mtime: metadata.mtime(),
-            size: metadata.size(),
-            ino: metadata.ino(),
-            mode: metadata.mode(),
-            uid: metadata.uid(),
-            gid: metadata.gid(),
+            mtime: metadata.mtime().into(),
+            size: metadata.size().into(),
+            ino: metadata.ino().into(),
+            mode: metadata.mode().into(),
+            uid: metadata.uid().into(),
+            gid: metadata.gid().into(),
         }
     }
 }
 
-#[derive(Default)]
 pub struct Cache {
     by_file_id: HashMap<FileId, (MetaKey, ContentHash)>,
+    db: sled::Db,
+    metakeys: sled::Tree,
 }
 
 impl Cache {
+    pub fn new(db_path: &Path) -> Result<Self> {
+        let db = sled::Config::default()
+            .path(db_path)
+            .mode(sled::Mode::HighThroughput)
+            .open()?;
+        Ok(Cache {
+            by_file_id: HashMap::default(),
+            metakeys: db.open_tree("files")?,
+            db,
+        })
+    }
+
     /// Iterate through each of the given FileId entries and call
     /// self.content_changed on them, then return a map of all the files
     /// that changed.
@@ -68,7 +100,7 @@ impl Cache {
         &mut self,
         file_ids: I,
         interns: &Interns,
-    ) -> io::Result<HashMap<FileId, ContentHash>> {
+    ) -> Result<HashMap<FileId, ContentHash>> {
         let mut changed = HashMap::default();
 
         // If any changed, add them to the map.
@@ -98,16 +130,15 @@ impl Cache {
         &mut self,
         file_id: FileId,
         interns: &Interns,
-    ) -> io::Result<Option<ContentHash>> {
+    ) -> Result<Option<ContentHash>> {
         // We should definitely have an Interns entry for this file_id!
         let path = interns.get_path(file_id).unwrap_or_else(|| unreachable!());
 
         // If the file's current metadata is the same as the last one we
         // recorded on disk, then we can reasonably conclude it hasn't changed.
-        let prev_meta_key = MetaKey::stored(path)?;
         let current_meta_key = MetaKey::current(path)?;
 
-        if Some(current_meta_key) == prev_meta_key {
+        if MetaKey::is_same_as_previous(&self.metakeys, path, &current_meta_key)? {
             Ok(None)
         } else {
             // The metadata was different, so the file may have changed.
@@ -160,7 +191,7 @@ impl Cache {
             // early with an io::Err, we should record the new MetaKey. This way,
             // the next time we ask whether this path has changed, we'll be
             // considering it relative to the ContentHash we're about to return.
-            current_meta_key.persist(path)?;
+            current_meta_key.persist(&self.metakeys, path)?;
 
             if Some(current_hash) == prev_hash {
                 // The file's content has not changed.
@@ -172,7 +203,7 @@ impl Cache {
         }
     }
 
-    fn lookup_on_disk(_path: &Path) -> io::Result<Option<ContentHash>> {
+    fn lookup_on_disk(_path: &Path) -> Result<Option<ContentHash>> {
         // first, look up the given path in the
         // (Path => (FileMetadata, ContentHash)) cache. If we have an entry,
         // then compare the file metadata to that file's current metadata; if
@@ -181,7 +212,7 @@ impl Cache {
         Ok(None)
     }
 
-    fn persist(_path: &Path, _hash: ContentHash) -> io::Result<()> {
+    fn persist(_path: &Path, _hash: ContentHash) -> Result<()> {
         // TODO convert the path to be relative to the cache dir itself,
         // so you don't lose everything if you rename the project directory -
         // and also on a build server you can copy it to different builds in

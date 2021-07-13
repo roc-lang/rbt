@@ -1,6 +1,7 @@
 use crate::cache::Cache;
 use crate::content_hash::ContentHash;
 use crate::interns::{FileId, Interns};
+use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 use std::io;
 use std::path::Path;
@@ -22,7 +23,7 @@ pub struct Deps<'a> {
 impl<'a> Deps<'a> {
     /// Among all the known roots - and their dependencies - find all the
     /// individual files that have changes on disk (compared to the cache).
-    pub fn find_changed(&mut self, cache: &mut Cache) -> io::Result<HashMap<FileId, ContentHash>> {
+    pub fn find_changed(&mut self, cache: &mut Cache) -> Result<HashMap<FileId, ContentHash>> {
         cache.find_changed(self.all.iter(), &self.interns)
     }
 

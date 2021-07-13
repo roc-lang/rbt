@@ -4,16 +4,16 @@ use std::sync::mpsc::channel;
 use crate::cache::Cache;
 use crate::deps::Deps;
 use crate::job;
+use anyhow::Result;
 use std::collections::HashMap;
 use std::io;
 
-pub fn run() -> io::Result<()> {
-    // TODO this is just so we don't get unused warnings.
+pub fn run() -> Result<()> {
     {
         use std::path::Path;
 
         let mut deps = Deps::default();
-        let mut cache = Cache::default();
+        let mut cache = Cache::new(Path::new("roc-stuff"))?;
 
         deps.add(Path::new("blah"), &|_| &[]);
         deps.find_changed(&mut cache)?;

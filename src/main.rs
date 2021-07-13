@@ -5,6 +5,8 @@ mod deps;
 mod interns;
 mod job;
 
-fn main() -> std::io::Result<()> {
+use anyhow::Result;
+
+fn main() -> Result<()> {
     cli::run()
 }
