@@ -6,7 +6,6 @@ use crate::deps::Deps;
 use crate::job;
 use anyhow::Result;
 use std::collections::HashMap;
-use std::io;
 
 pub fn run() -> Result<()> {
     {

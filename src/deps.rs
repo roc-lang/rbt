@@ -3,7 +3,6 @@ use crate::content_hash::ContentHash;
 use crate::interns::{FileId, Interns};
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
-use std::io;
 use std::path::Path;
 
 #[derive(Default, Debug)]
