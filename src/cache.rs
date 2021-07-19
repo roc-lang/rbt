@@ -78,6 +78,7 @@ pub struct Cache {
     by_file_id: HashMap<FileId, (MetaKey, ContentHash)>,
     db: sled::Db,
     metakeys: sled::Tree,
+    hashes: sled::Tree,
 }
 
 impl Cache {
@@ -88,7 +89,12 @@ impl Cache {
             .open()?;
         Ok(Cache {
             by_file_id: HashMap::default(),
-            metakeys: db.open_tree("files")?,
+            metakeys: db
+                .open_tree("metakeys")
+                .context("couldn't open metakeys tree")?,
+            hashes: db
+                .open_tree("hashes")
+                .context("couldn't open hashes tree")?,
             db,
         })
     }
@@ -161,7 +167,7 @@ impl Cache {
                 None => {
                     // We don't have this one in memory, so
                     // try the on-disk cache.
-                    match Self::lookup_on_disk(path)? {
+                    match self.get_cached_hash(path)? {
                         Some(hash) => {
                             // Save the on-disk hash in our in-memory cache, so
                             // we don't have to read it from disk again next time.
@@ -176,7 +182,7 @@ impl Cache {
                             // as well as on disk for future runs.
                             self.by_file_id
                                 .insert(file_id, (current_meta_key, current_hash));
-                            Self::persist(path, current_hash)?;
+                            self.persist(path, current_hash)?;
 
                             // We've never seen this content before. This will
                             // have the effect that we end up considering it
@@ -203,16 +209,30 @@ impl Cache {
         }
     }
 
-    fn lookup_on_disk(_path: &Path) -> Result<Option<ContentHash>> {
+    fn get_cached_hash(&self, path: &Path) -> Result<Option<ContentHash>> {
         // first, look up the given path in the
         // (Path => (FileMetadata, ContentHash)) cache. If we have an entry,
         // then compare the file metadata to that file's current metadata; if
         // it's unchanged, then we can use the given ContentHash.
         // If that has an entry, then we have our
-        Ok(None)
+        self.hashes
+            .get(path.to_str().context("this path wasn't UTF-8")?.as_bytes())
+            .map(|entry| {
+                entry.map(|previous_bytes| {
+                    // ref: https://github.com/spacejam/sled/blob/b23da771902c320bfa20b6f552bebf1d1c1be4ff/examples/structured.rs
+                    let layout: LayoutVerified<&[u8], ContentHash> =
+                        match LayoutVerified::new_unaligned(&*previous_bytes) {
+                            Some(layout) => layout,
+                            None => panic!("couldn't make a layout from backing bytes"),
+                        };
+
+                    *layout.into_ref()
+                })
+            })
+            .context("couldn't retrieve the hash from disk")
     }
 
-    fn persist(_path: &Path, _hash: ContentHash) -> Result<()> {
+    fn persist(&self, path: &Path, hash: ContentHash) -> Result<()> {
         // TODO convert the path to be relative to the cache dir itself,
         // so you don't lose everything if you rename the project directory -
         // and also on a build server you can copy it to different builds in
@@ -220,6 +240,11 @@ impl Cache {
         //
         // TODO: how can we make renames efficient without invalidating the old
         // hashes? e.g. so if we switch branches, we don't have to rebuild everything?
+        self.hashes.insert(
+            path.to_str().context("this path wasn't UTF-8")?.as_bytes(),
+            hash.as_bytes(),
+        )?;
+
         Ok(())
     }
 }
