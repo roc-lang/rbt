@@ -76,7 +76,6 @@ impl MetaKey {
 
 pub struct Cache {
     by_file_id: HashMap<FileId, (MetaKey, ContentHash)>,
-    db: sled::Db,
     metakeys: sled::Tree,
     hashes: sled::Tree,
 }
@@ -95,7 +94,6 @@ impl Cache {
             hashes: db
                 .open_tree("hashes")
                 .context("couldn't open hashes tree")?,
-            db,
         })
     }
 
