@@ -1,16 +1,21 @@
+use byteorder::LittleEndian;
 use digest::Digest;
 use meowhash::MeowHasher;
 use std::fs::File;
 use std::io::{self, BufReader, Read};
 use std::path::Path;
+use zerocopy::byteorder::U128;
+use zerocopy::{AsBytes, FromBytes, Unaligned};
 
-#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
+#[cfg(target_endian = "little")]
 pub struct ContentHash {
     /// A MeowHash digest <https://mollyrocket.com/meowhash>
     ///
     /// This 128-bit hash is designed to never have collisions in practice, and
     /// to run super fast on files of substantial size. Exactly what we want!
-    bits: [u8; 128],
+    bits: U128<LittleEndian>,
 }
 
 impl ContentHash {
@@ -30,7 +35,7 @@ impl ContentHash {
             }
         }
 
-        let bits = hasher.finalise().into_bytes();
+        let bits = hasher.finalise().as_u128().into();
 
         Ok(Self { bits })
     }
