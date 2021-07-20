@@ -1,5 +1,6 @@
 use anyhow::{bail, Context, Result};
 use std::collections::HashMap;
+use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -103,10 +104,10 @@ impl Job {
                 )
                 .with_context(|| format!("couldn't isolate {}", input.display()))?;
             } else if meta.file_type().is_symlink() {
-                bail!("symlinks aren't allowed right now because we can't make sure that they will be totally isolated on the filesystem. Sorry!")
+                bail!(Problem::NoSymlinksForNow(input.to_path_buf()));
             } else {
                 // could be a socket, block device, etc
-                bail!("I don't know how to thandle the filetype of {}. I know about directories, files, and symlinks.", input.display());
+                bail!(Problem::UnhandledFileType(input.to_path_buf()));
             }
         }
 
@@ -146,8 +147,13 @@ impl Job {
 
     fn copy_creating_directories(&self, source: PathBuf, dest: PathBuf) -> Result<u64> {
         match dest.parent() {
-            Some(parent) => fs::create_dir_all(parent).with_context(|| format!("couldn't make the parent directories for {}", dest.display()))?,
-            None => bail!("couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.", dest.display())
+            Some(parent) => fs::create_dir_all(parent).with_context(|| {
+                format!(
+                    "couldn't make the parent directories for {}",
+                    dest.display()
+                )
+            })?,
+            None => bail!(Problem::TargetHadNoParent(dest)),
         }
         fs::copy(&source, &dest)
             .with_context(|| format!("couldn't copy {} to {}", source.display(), dest.display()))
@@ -160,11 +166,53 @@ impl Job {
         } else if input.is_relative() {
             Ok(work_dir.join(input))
         } else {
-            bail!(
-                "couldn't isolate {} because it's outside the working directory ({})",
-                input.display(),
-                self.working_directory.display(),
-            );
+            bail!(Problem::InputWasOutsideWorkingDirectory(
+                input.to_path_buf(),
+                self.working_directory.to_path_buf(),
+            ))
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Problem {
+    NoSymlinksForNow(PathBuf),
+    UnhandledFileType(PathBuf),
+    TargetHadNoParent(PathBuf),
+    InputWasOutsideWorkingDirectory(PathBuf, PathBuf),
+}
+
+impl fmt::Display for Problem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Problem::NoSymlinksForNow(path) =>
+                write!(
+                    f,
+                    "{} was a symlink, but symlinks aren't allowed right. We can't make sure that they will be totally isolated on the filesystem. Sorry!",
+                    path.display()
+                ),
+
+            Problem::UnhandledFileType(path) =>
+                write!(
+                    f,
+                    "I don't know how to handle the file type of {}. I know about directories, files, and symlinks.",
+                    path.display(),
+                ),
+
+            Problem::TargetHadNoParent(path) =>
+                write!(
+                    f,
+                    "couldn't create the directories leading to {}. That probably means it's at the filesystem root, but we should have excluded that possibility already. This is a bug and should be reported.",
+                    path.display(),
+                ),
+
+            Problem::InputWasOutsideWorkingDirectory(path, working_directory) =>
+                write!(
+                    f,
+                    "couldn't isolate {} because it's outside the working directory ({})",
+                    path.display(),
+                    working_directory.display(),
+                ),
         }
     }
 }
