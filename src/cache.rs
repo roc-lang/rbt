@@ -13,7 +13,7 @@ use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 /// TODO: Define a different structure for this on Windows.
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-#[cfg(any(target_family = "unix", target_endian = "little"))]
+#[cfg(all(target_family = "unix", target_endian = "little"))]
 struct MetaKey {
     mtime: I64<LittleEndian>,
     size: U64<LittleEndian>,
