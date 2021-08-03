@@ -17,4 +17,5 @@ walkdir = "2.3"
 zerocopy = "0.5"
 
 [lib]
+name = "host"
 crate-type = ["staticlib"]
