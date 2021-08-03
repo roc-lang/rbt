@@ -39,9 +39,9 @@ pub fn rust_main() -> isize {
         let output = call_result.assume_init();
 
         match output.into() {
-            Ok(roc_list) => {
+            Ok(source_files) => {
                 // TODO add an Iterator impl for RocList
-                for roc_str in roc_list.as_slice() {
+                for roc_str in source_files.as_slice() {
                     let len = roc_str.len();
                     let str_bytes = roc_str.get_bytes() as *const libc::c_void;
 
