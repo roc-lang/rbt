@@ -11,4 +11,4 @@ greeting =
 
     "\(hi), \(name)!\n"
 
-main = greeting
+main = [ greeting, "foo.elm", "Bar.elm" ]

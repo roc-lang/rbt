@@ -2,11 +2,11 @@
 
 use core::ffi::c_void;
 use core::mem::MaybeUninit;
-use roc_std::{RocCallResult, RocStr};
+use roc_std::{RocCallResult, RocList, RocStr};
 
 extern "C" {
     #[link_name = "roc__mainForHost_1_exposed"]
-    fn roc_main(output: *mut RocCallResult<RocStr>) -> ();
+    fn roc_main(output: *mut RocCallResult<RocList<RocStr>>) -> ();
 }
 
 #[no_mangle]
@@ -31,7 +31,7 @@ pub unsafe fn roc_dealloc(c_ptr: *mut c_void, _alignment: u32) {
 
 #[no_mangle]
 pub fn rust_main() -> isize {
-    let mut call_result: MaybeUninit<RocCallResult<RocStr>> = MaybeUninit::uninit();
+    let mut call_result: MaybeUninit<RocCallResult<RocList<RocStr>>> = MaybeUninit::uninit();
 
     unsafe {
         roc_main(call_result.as_mut_ptr());
@@ -39,12 +39,15 @@ pub fn rust_main() -> isize {
         let output = call_result.assume_init();
 
         match output.into() {
-            Ok(roc_str) => {
-                let len = roc_str.len();
-                let str_bytes = roc_str.get_bytes() as *const libc::c_void;
+            Ok(roc_list) => {
+                // TODO add an Iterator impl for RocList
+                for roc_str in roc_list.as_slice() {
+                    let len = roc_str.len();
+                    let str_bytes = roc_str.get_bytes() as *const libc::c_void;
 
-                if libc::write(1, str_bytes, len) < 0 {
-                    panic!("Writing to stdout failed!");
+                    if libc::write(1, str_bytes, len) < 0 {
+                        panic!("Writing to stdout failed!");
+                    }
                 }
             }
             Err(msg) => {
