@@ -1,5 +1,7 @@
 #![allow(non_snake_case)]
 
+mod elm_make;
+
 use core::ffi::c_void;
 use core::mem::MaybeUninit;
 use roc_std::{RocCallResult, RocList, RocStr};
@@ -40,15 +42,7 @@ pub fn rust_main() -> isize {
 
         match output.into() {
             Ok(source_files) => {
-                // TODO add an Iterator impl for RocList
-                for roc_str in source_files.as_slice() {
-                    let len = roc_str.len();
-                    let str_bytes = roc_str.get_bytes() as *const libc::c_void;
-
-                    if libc::write(1, str_bytes, len) < 0 {
-                        panic!("Writing to stdout failed!");
-                    }
-                }
+                elm_make::build(source_files);
             }
             Err(msg) => {
                 panic!("Roc failed with message: {}", msg);

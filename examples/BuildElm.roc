@@ -1,7 +1,7 @@
 #!/usr/bin/env roc run
 
 app "rbt"
-    packages { base: "../platform" }
+    packages { base: ".." }
     imports []
     provides [ main ] to base
 
