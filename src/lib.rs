@@ -14,6 +14,7 @@ struct RocJob {
     command: RocStr,
     inputs: RocList<RocStr>,
     outputs: RocList<RocStr>,
+    working_directory: RocStr,
 }
 
 extern "C" {
@@ -79,7 +80,7 @@ pub fn rust_main() -> isize {
                     command: roc_job.command.as_str().to_string(),
                     arguments: args.clone(),
                     environment: HashMap::default(),
-                    working_directory: PathBuf::from("."),
+                    working_directory: PathBuf::from(roc_job.working_directory.as_str()),
                     inputs: inputs,
                     outputs: outputs,
                 };

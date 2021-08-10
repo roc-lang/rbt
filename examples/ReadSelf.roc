@@ -11,4 +11,5 @@ main =
         arguments: [ "examples/ReadSelf.roc", "examples/ReadSelf.roc.copy" ],
         inputs: [ "examples/ReadSelf.roc" ],
         outputs: [ "examples/ReadSelf.roc.copy" ],
+        workingDirectory: ".",
     }
