@@ -12,6 +12,8 @@ use std::path::PathBuf;
 struct RocJob {
     arguments: RocList<RocStr>,
     command: RocStr,
+    inputs: RocList<RocStr>,
+    outputs: RocList<RocStr>,
 }
 
 extern "C" {
@@ -57,6 +59,20 @@ pub fn rust_main() -> isize {
                     .map(|file| file.as_str().to_string())
                     .collect();
 
+                let inputs: Vec<PathBuf> = roc_job
+                    .inputs
+                    .as_slice()
+                    .iter()
+                    .map(|path| PathBuf::from(path.as_str()))
+                    .collect();
+
+                let outputs: Vec<PathBuf> = roc_job
+                    .outputs
+                    .as_slice()
+                    .iter()
+                    .map(|path| PathBuf::from(path.as_str()))
+                    .collect();
+
                 let job = job::Job {
                     // TODO: these should eventually be RocStrs, and Job should
                     // just accept and convert those accordingly.
@@ -64,8 +80,8 @@ pub fn rust_main() -> isize {
                     arguments: args.clone(),
                     environment: HashMap::default(),
                     working_directory: PathBuf::from("."),
-                    inputs: args.iter().map(|arg| PathBuf::from(arg)).collect(),
-                    outputs: Vec::new(),
+                    inputs: inputs,
+                    outputs: outputs,
                 };
                 job.run().expect("TODO better platform error handling");
             }

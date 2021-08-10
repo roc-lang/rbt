@@ -7,6 +7,8 @@ app "rbt"
 
 main =
     { 
-        command: "cat",
-        arguments: [ "examples/ReadSelf.roc" ],
+        command: "cp",
+        arguments: [ "examples/ReadSelf.roc", "examples/ReadSelf.roc.copy" ],
+        inputs: [ "examples/ReadSelf.roc" ],
+        outputs: [ "examples/ReadSelf.roc.copy" ],
     }
