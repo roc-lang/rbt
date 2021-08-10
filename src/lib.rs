@@ -8,9 +8,15 @@ use roc_std::{RocCallResult, RocList, RocStr};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+#[repr(C)]
+struct RocJob {
+    arguments: RocList<RocStr>,
+    command: RocStr,
+}
+
 extern "C" {
     #[link_name = "roc__mainForHost_1_exposed"]
-    fn roc_main(output: *mut RocCallResult<RocList<RocStr>>) -> ();
+    fn roc_main(output: *mut RocCallResult<RocJob>) -> ();
 }
 
 #[no_mangle]
@@ -35,7 +41,7 @@ pub unsafe fn roc_dealloc(c_ptr: *mut c_void, _alignment: u32) {
 
 #[no_mangle]
 pub fn rust_main() -> isize {
-    let mut call_result: MaybeUninit<RocCallResult<RocList<RocStr>>> = MaybeUninit::uninit();
+    let mut call_result: MaybeUninit<RocCallResult<RocJob>> = MaybeUninit::uninit();
 
     unsafe {
         roc_main(call_result.as_mut_ptr());
@@ -43,17 +49,18 @@ pub fn rust_main() -> isize {
         let output = call_result.assume_init();
 
         match output.into() {
-            Ok(source_files) => {
-                let args: Vec<String> = source_files
+            Ok(roc_job) => {
+                let args: Vec<String> = roc_job
+                    .arguments
                     .as_slice()
                     .iter()
-                    // TODO: these should eventually be RocStrs, and Job should
-                    // just accept and convert those accordingly.
                     .map(|file| file.as_str().to_string())
                     .collect();
 
                 let job = job::Job {
-                    command: String::from("cat"),
+                    // TODO: these should eventually be RocStrs, and Job should
+                    // just accept and convert those accordingly.
+                    command: roc_job.command.as_str().to_string(),
                     arguments: args.clone(),
                     environment: HashMap::default(),
                     working_directory: PathBuf::from("."),

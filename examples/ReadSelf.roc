@@ -5,4 +5,8 @@ app "rbt"
     imports []
     provides [ main ] to base
 
-main = [ "examples/ReadSelf.roc" ]
+main =
+    { 
+        command: "cat",
+        arguments: [ "examples/ReadSelf.roc" ],
+    }
