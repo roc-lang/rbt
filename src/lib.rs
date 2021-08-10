@@ -1,10 +1,12 @@
 #![allow(non_snake_case)]
 
-mod elm_make;
+mod job;
 
 use core::ffi::c_void;
 use core::mem::MaybeUninit;
 use roc_std::{RocCallResult, RocList, RocStr};
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 extern "C" {
     #[link_name = "roc__mainForHost_1_exposed"]
@@ -42,7 +44,23 @@ pub fn rust_main() -> isize {
 
         match output.into() {
             Ok(source_files) => {
-                elm_make::build(source_files);
+                let args: Vec<String> = source_files
+                    .as_slice()
+                    .iter()
+                    // TODO: these should eventually be RocStrs, and Job should
+                    // just accept and convert those accordingly.
+                    .map(|file| file.as_str().to_string())
+                    .collect();
+
+                let job = job::Job {
+                    command: String::from("cat"),
+                    arguments: args.clone(),
+                    environment: HashMap::default(),
+                    working_directory: PathBuf::from("."),
+                    inputs: args.iter().map(|arg| PathBuf::from(arg)).collect(),
+                    outputs: Vec::new(),
+                };
+                job.run().expect("TODO better platform error handling");
             }
             Err(msg) => {
                 panic!("Roc failed with message: {}", msg);
