@@ -7,6 +7,7 @@ use core::mem::MaybeUninit;
 use roc_std::{RocCallResult, RocList, RocStr};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::process::Command;
 
 #[repr(C)]
 struct RocJob {
@@ -94,4 +95,13 @@ pub fn rust_main() -> isize {
 
     // Exit code
     0
+}
+
+#[test]
+fn test_examples() {
+    let status = Command::new("roc")
+        .args(&["examples/ReadSelf.roc"])
+        .status()
+        .unwrap();
+    assert_eq!(status.success(), true);
 }
