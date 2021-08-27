@@ -18,7 +18,7 @@ A simple job might look like this in Roc code:
 ```roc
 hello : Job
 hello =
-    job { command: exec "echo Hello World" }
+    job { command: exec [ "printf", "Hello, World!" ] }
 ```
 
 We use `exec` instead of a plain string to leave the opportunity to create more ways to execute commands in the future (for example, for batch or incremental processing.)
@@ -32,7 +32,7 @@ hello : Job
 hello =
   job
       {
-          command: exec "echo $GREETING",
+          command: exec [ "sh", "-c", "echo $GREETING" ],
           environment: {:
             "GREETING" => "Hello, World!",
           :},
@@ -58,7 +58,7 @@ app =
     job
         {
            tools: [ elm ],
-           command: exec "elm make --output app.js src/Main.elm",
+           command: exec [ "elm", "make", "--output=app.js", "src/Main.elm" ],
            inputFiles: [ "elm.json", "src/Main.elm" ],
            outputFiles: [ "app.js" ],
         }
@@ -72,7 +72,7 @@ uglifiedApp =
     job
         {
             tools: [ uglifyjs ],
-            command: exec "uglifyjs app.js --compress | uglifyjs --mangle --output app.min.js"
+            command: exec [ "sh", "-c", "uglifyjs app.js --compress | uglifyjs --mangle --output app.min.js" ]
             inputJobs: [ app ],
             outputFiles: [ "app.min.js" ],
         }
@@ -94,7 +94,7 @@ hello : Job
 hello =
     job
         {
-            command: exec "echo Hello World > hello",
+            command: exec [ "sh", "-c", "echo Hello World > hello" ],
             outputs: [ "hello" ],
         }
 ```
@@ -120,7 +120,7 @@ hello =
     job
         {
             tools: [ openapiGenerator ]
-            command: exec "openapi-generator-cli generate -i spec.json -o api-client -t elm",
+            command: exec [ "openapi-generator-cli", "generate", "-i", "spec.json", "-o", "api-client", "-t", "elm" ],
             outputs: [ "api-client" ],
             persistAt: [ "/src/api-client" ],
         }
@@ -152,7 +152,7 @@ curlBinary =
   job
       {
           tools: [ nixShell ],
-          command: exec "nix-shell -p curl --run 'ln -s $(which curl) curl'",
+          command: exec [ "nix-shell", "-p", "curl", "--run", "ln -s $(which curl) curl" ],
           outputs: [ "curl" ],
       }
 
@@ -171,7 +171,7 @@ elm =
   job
       {
           tools: [ curl, gunzip ],
-          command: exec "curl -L https://github.com/elm/compiler/releases/download/0.19.1/\(filename) | gunzip > elm && chmod +x elm",
+          command: exec [ "sh", "-c", "curl -L https://github.com/elm/compiler/releases/download/0.19.1/\(filename) | gunzip > elm && chmod +x elm" ],
           outputs: [ "elm" ],
       }
       |> tool "elm"
@@ -206,7 +206,7 @@ binary =
     job
         {
             tools: [ cargo ],
-            command: exec "cargo build --release",
+            command: exec [ "cargo", "build", "--release" ],
             outputs: [ "target/release/binary-name" ],
             cpuHint: SaturatesCpus,
         }
@@ -224,7 +224,7 @@ elmFormat =
     job
         {
             tools: [ elmFormat ],
-            command: exec "elm-format --yes",
+            command: exec [ "elm-format", "--yes" ],
             inputs: [ "src/Main.elm", "src/OtherModule.elm" ],
             modifiesInputs: True,
         }
