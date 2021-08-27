@@ -23,6 +23,22 @@ hello =
 
 We use `exec` instead of a plain string to leave the opportunity to create more ways to execute commands in the future (for example, for batch or incremental processing.)
 
+### Environment
+
+Of course, commands often need environment variables to work properly, so you can specify those:
+
+```roc
+hello : Job
+hello =
+  job
+      {
+          command: exec "echo $GREETING",
+          environment: {:
+            "GREETING" => "Hello, World!",
+          :},
+      }
+```
+
 ### Inputs
 
 Jobs must specify their complete set of inputs, and a job will be rebuilt any time any of its inputs change.
