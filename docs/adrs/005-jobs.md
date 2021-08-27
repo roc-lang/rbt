@@ -198,6 +198,42 @@ elm =
 (Note that eventually we should have built-in way to download things that does checksumming and more caching.
 That's for a future ADR!)
 
+Finally, we provide a way to wrap binaries in the environment they need so they can be used in jobs without any further wrapping:
+
+```roc
+npm : Tool
+npm = systemTool "npm" 
+
+
+node : Tool
+node = systemTool "node"
+
+
+nodeModules : Job
+nodeModules =
+    job
+        {
+            command: exec npm [ "install" ],
+            inputs: [ "package.json", "package-lock.json" ],
+            outputs: [ "node_modules" ],
+        }
+
+
+uglifyjs : Tool
+uglifyjs
+    customTool
+        {
+            path: "\(nodeModules.outputs)/node_modules/.bin/uglifyjs",
+            tools: [ node ],
+            environment: {:
+                "NODE_PATH" => "\(nodeModules.outputs)/node_modules"
+            :}
+        }
+```
+
+- [ ] Surely there is a better way to do this.
+      Needs more thought.
+
 ### CPU Hinting
 
 RBT uses job parameters to jobs to construct a build graph, which it will then walk in parallel wherever possible.
