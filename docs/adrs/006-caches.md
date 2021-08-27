@@ -30,8 +30,7 @@ app : Job
 app =
     job
         { 
-            tools: [ elm ], # see ADR #TODO
-            command: exec "elm make --output app.js src/Main.elm",
+            command: exec "elm" [ "make", "--output", "app.js", "src/Main.elm" ],
             inputFiles: [ "elm.json", "src/Main.elm" ],
             outputFiles: [ "app.js" ],
             caches: {: "/elm-stuff" => elmStuff :}
