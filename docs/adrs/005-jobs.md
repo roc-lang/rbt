@@ -13,21 +13,31 @@ It specifies the set of inputs that trigger a rebuild and, in most cases, produc
 
 Commands are the only truly required part of a job.
 Without them, nothing else makes sense!
-A simple job might look like this in Roc code:
+A simple job might look like this:
 
 ```roc
 hello : Job
 hello =
-    job { command: exec "printf" [ "Hello, World!" ] }
+    job { command: exec echo [ "Hello, World!" ] }
 ```
+
+The first argument `echo` here is a `Tool` (see below for how to define those.)
+The second argument is an array of arguments which will be passed to the tool when it executes.
 
 Of course, since Roc is a full programming language, you can define your own helpers easily:
 
 ```roc
-shellScript : String -> Command
-shellScript = \script ->
-    exec "sh" [ "-c", script ]
+execShellScript : String -> Command
+execShellScript = \script ->
+    exec sh [ "-c", script ]
 ```
+
+(n.b. I'll be using the `execShellScript` helper throughout this document to make the examples a little bit more focused!)
+
+- [ ] TBD whether it makes sense for RBT to export a small standard library including things like `sh` or `bash`.
+      As of this writing, I'm learning "no".
+
+- [ ] Is "exec" or "run" a better name?
 
 ### Environment
 
@@ -38,7 +48,7 @@ hello : Job
 hello =
   job
       {
-          command: exec "sh" [ "-c", "echo $GREETING" ],
+          command: execShellScript "echo $GREETING",
           environment: {:
             "GREETING" => "Hello, World!",
           :},
@@ -63,8 +73,7 @@ app : Job
 app =
     job
         {
-           tools: [ elm ],
-           command: exec "elm" [ "make", "--output=app.js", "src/Main.elm" ],
+           command: exec elm [ "make", "--output=app.js", "src/Main.elm" ],
            inputFiles: [ "elm.json", "src/Main.elm" ],
            outputFiles: [ "app.js" ],
         }
@@ -78,13 +87,14 @@ uglifiedApp =
     job
         {
             tools: [ uglifyjs ],
-            command: exec "sh" [ "-c", "uglifyjs app.js --compress | uglifyjs --mangle --output app.min.js" ]
+            command: execShellScript "uglifyjs app.js --compress | uglifyjs --mangle --output app.min.js",
             inputJobs: [ app ],
             outputFiles: [ "app.min.js" ],
         }
 ```
 
-(TODO: I'm not happy with `inputFiles` vs `inputJobs`, but I'm similarly unhappy with calling them `roots` vs `inputs` or something similar! Needs more thought.)
+- [ ] I'm not happy with `inputFiles` vs `inputJobs`, but I'm similarly unhappy with calling them `roots` vs `inputs` or something similar!
+      Needs more thought.
 
 Note: caches (described in [ADR #6](./006-caches.md)) are also *technically* inputs, but we expect that an empty cache will not cause a build to fail and a cache changing will not trigger a rebuild.
 
@@ -100,7 +110,7 @@ hello : Job
 hello =
     job
         {
-            command: exec "sh" [ "-c", "echo Hello World > hello" ],
+            command: execShellScript "echo Hello World > hello",
             outputs: [ "hello" ],
         }
 ```
@@ -153,6 +163,7 @@ You can also use tools to source other tools:
 nixShell : Tool
 nixShell = systemTool "nix-shell"
 
+
 curlBinary : Job
 curlBinary =
   job
@@ -161,6 +172,7 @@ curlBinary =
           command: exec "nix-shell" [ "-p", "curl", "--run", "ln -s $(which curl) curl" ],
           outputs: [ "curl" ],
       }
+
 
 curl : Tool
 curl = 
@@ -177,7 +189,7 @@ elm =
   job
       {
           tools: [ curl, gunzip ],
-          command: exec "sh" [ "-c", "curl -L https://github.com/elm/compiler/releases/download/0.19.1/\(filename) | gunzip > elm && chmod +x elm" ],
+          command: execShellScript "curl -L https://github.com/elm/compiler/releases/download/0.19.1/\(filename) | gunzip > elm && chmod +x elm",
           outputs: [ "elm" ],
       }
       |> tool "elm"
