@@ -164,7 +164,7 @@ elmFormat =
     job
         {
             tools: [ elmFormat ],
-            command: execMany "elm-format --yes",
+            command: execEach "elm-format --yes",
             modifiesInputs: True,
         }
 ```
