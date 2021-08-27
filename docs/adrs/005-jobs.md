@@ -3,7 +3,6 @@
 We want to be able to specify builds in Roc (I mean, it's right there in the name!)
 
 To do that, we need to have a good idea about the kinds of data we're working with and how they relate to one another.
-This ADR specifies the first of three basic data shapes, the job (the others are tools and caches.)
 
 ## Jobs
 
