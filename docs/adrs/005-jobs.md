@@ -6,7 +6,7 @@ To do that, we need to have a good idea about the kinds of data we're working wi
 
 ## Jobs
 
-A **job** defines the basic unit of work in an RBT build.
+A **job** defines the basic unit of work in an rbt build.
 It specifies the set of inputs that trigger a rebuild and, in most cases, produces new outputs.
 
 ### Commands
@@ -34,7 +34,7 @@ execShellScript = \script ->
 
 (n.b. I'll be using the `execShellScript` helper throughout this document to make the examples a little bit more focused!)
 
-- [ ] TBD whether it makes sense for RBT to export a small standard library including things like `sh` or `bash`.
+- [ ] TBD whether it makes sense for rbt to export a small standard library including things like `sh` or `bash`.
       As of this writing, I'm learning "no".
 
 - [ ] Is "exec" or "run" a better name?
@@ -120,7 +120,7 @@ That's totally fine—there just won't be any outputs available for other jobs t
 
 #### Output Caching
 
-RBT will keep track of job output in an internal way, but will expose a way for a programmer to see the outputs (think `rbt outputs jobname` or similar)
+rbt will keep track of job output in an internal way, but will expose a way for a programmer to see the outputs (think `rbt outputs jobname` or similar)
 
 #### Output Persistence
 
@@ -144,7 +144,7 @@ hello =
 
 ### Tools
 
-A tool is just a binary that RBT knows about.
+A tool is just a binary that rbt knows about.
 We add specified toosl to the `PATH` of the build environment so jobs can use them.
 
 There are a couple of ways to source tools.
@@ -236,17 +236,17 @@ uglifyjs
 
 ### CPU Hinting
 
-RBT uses job parameters to jobs to construct a build graph, which it will then walk in parallel wherever possible.
+rbt uses job parameters to jobs to construct a build graph, which it will then walk in parallel wherever possible.
 This means that we can do a better job scheduling tasks when the tasks themselves are smaller—think compressing a single image instead of a whole directory of them.
 
 However, many compilers (like Zig, Rust/Cargo, Elm, Haskell, and Roc itself) have a monolithic compilation process where they take an entrypoint and manage compiling all the dependencies themselves.
 This is great both for programmers and compiler authors: it unlocks optimization opportunities and in many cases does away with the need for a separate build tool.
 
-Unfortunately, it's harder for a generic build tool like RBT to deal with those kinds of processes in a build step.
+Unfortunately, it's harder for a generic build tool like rbt to deal with those kinds of processes in a build step.
 The big question here: should we schedule work on other cores while the big process is running?
 We don't want to cause the CPU to do too much context switching!
 
-To fix this, jobs can give RBT enough information to do the right thing by specifying **CPU Hints**.
+To fix this, jobs can give rbt enough information to do the right thing by specifying **CPU Hints**.
 A job can either say it takes a single core or that it will saturate all available cores.
 
 A future ADR (or just the implementation) will determine how we deal with CPU hints, but one possibility is to avoid starting new work when there's a saturating job running.
