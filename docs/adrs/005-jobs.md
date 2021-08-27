@@ -42,7 +42,6 @@ There are two types of inputs:
   However, a future ADR will describe a way to automatically discover files.)
 - The outputs of other jobs.
 
-
 You might specify a job with file inputs like this:
 
 ```roc
