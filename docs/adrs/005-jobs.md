@@ -74,7 +74,7 @@ uglifiedApp =
 
 (TODO: I'm not happy with `inputFiles` vs `inputJobs`, but I'm similarly unhappy with calling them `roots` vs `inputs` or something similar! Needs more thought.)
 
-Note: caches (described in [#TODO]) are also *technically* inputs, but we expect that an empty cache will not cause a build to fail and a cache changing will not trigger a rebuild.
+Note: caches (described in [ADR #6](./006-caches.md)) are also *technically* inputs, but we expect that an empty cache will not cause a build to fail and a cache changing will not trigger a rebuild.
 
 ### Outputs
 
