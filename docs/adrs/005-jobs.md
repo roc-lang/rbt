@@ -41,7 +41,7 @@ app : Job
 app =
     job
         {
-           tools: [ elm ], # see ADR #TODO
+           tools: [ elm ],
            command: exec "elm make --output app.js src/Main.elm",
            inputFiles: [ "elm.json", "src/Main.elm" ],
            outputFiles: [ "app.js" ],
@@ -109,6 +109,60 @@ hello =
             persistAt: [ "/src/api-client" ],
         }
 ```
+
+### Tools
+
+A tool is just a binary that RBT knows about.
+We add specified toosl to the `PATH` of the build environment so jobs can use them.
+
+There are a couple of ways to source tools.
+The simplest is to assume the tool already exists on the system:
+
+```roc
+gunzip : Tool
+gunzip = systemTool "gunzip"
+```
+
+This would search through the host system's `PATH` to find a `gunzip` binary.
+
+You can also use tools to source other tools:
+
+```roc
+nixShell : Tool
+nixShell = systemTool "nix-shell"
+
+curlBinary : Job
+curlBinary =
+  job
+      {
+          tools: [ nixShell ],
+          command: exec "nix-shell -p curl --run 'ln -s $(which curl) curl'",
+          outputs: [ "curl" ],
+      }
+
+curl : Tool
+curl = 
+  tool curlBinary "curl"
+```
+
+(Note that we may want to eventually make an easier way to source tools from large package ecosystems like Nix or Homebrew, but for now we can use jobs to do whatever we want!)
+
+And, of course, we can also source tools from the internet:
+
+```roc
+elm : Tool
+elm =
+  job
+      {
+          tools: [ curl, gunzip ],
+          command: exec "curl -L https://github.com/elm/compiler/releases/download/0.19.1/\(filename) | gunzip > elm && chmod +x elm",
+          outputs: [ "elm" ],
+      }
+      |> tool "elm"
+```
+
+(Note that eventually we should have built-in way to download things that does checksumming and more caching.
+That's for a future ADR!)
 
 ### CPU Hinting
 
