@@ -22,6 +22,16 @@ hello =
     job { command: exec "echo Hello World" }
 ```
 
+The `exec` there is one of a few options:
+
+- `exec` executes the command literally without any additional arguments
+- `execEach` executes the command once per input file, which will be passed in as an additional argument at the end of the command
+- `execAll` executes the command once for all the input files, which will be passed in as additional arguments at the end of the command
+
+In practice, we expect `exec` to be used most often.
+
+(TODO: `execEach` implies that we'll track each input file as a separate call. Do we want that? It'd be really handy for API ergonomics but essentially split jobs into smaller jobs automatically.)
+
 ### Inputs
 
 Jobs must specify their complete set of inputs, and a job will be rebuilt any time any of its inputs change.
