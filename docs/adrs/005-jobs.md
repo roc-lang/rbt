@@ -21,7 +21,13 @@ hello =
     job { command: exec "printf" [ "Hello, World!" ] }
 ```
 
-We use `exec` instead of a plain string to leave the opportunity to create more ways to execute commands in the future (for example, for batch or incremental processing.)
+Of course, since Roc is a full programming language, you can define your own helpers easily:
+
+```roc
+shellScript : String -> Command
+shellScript = \script ->
+    exec "sh" [ "-c", script ]
+```
 
 ### Environment
 
