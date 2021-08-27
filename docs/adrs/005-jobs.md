@@ -165,6 +165,7 @@ elmFormat =
         {
             tools: [ elmFormat ],
             command: execEach "elm-format --yes",
+            inputs: [ "src/Main.elm", "src/OtherModule.elm" ],
             modifiesInputs: True,
         }
 ```
