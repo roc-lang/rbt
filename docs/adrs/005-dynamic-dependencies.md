@@ -65,8 +65,6 @@ Seems fine at first, but it's actually a trap!
 3. **What about I/O?**
    Assuming we solve the problems above, these scripts can do pretty much whatever they like on the filesystem.
    We would communicate that discovery scripts should only ever read from disk, but because we can't guarantee that happens folks would definitely write to the disk, do network stuff, et cetera.
-   (Fortunately this problem is mostly true of scripts.
-   A Roc API could restrict options in a useful way!)
 
 4. **What about performance?**
    Specifically, we're allowing arbitrary computation and disk I/O in a place we care a lot about performance.
