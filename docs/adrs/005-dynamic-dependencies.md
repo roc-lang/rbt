@@ -106,7 +106,7 @@ I used the [`ignore`](https://crates.io/crates/ignore) crate (used by `rg`, `fd`
 In four configurations: single-threaded and parallel, and ignoring git-ignored files and not.
 
 | Configuration              | NoRedInk monorepo   | nixpkgs (45,744 files) |
-|----------------------------|-:------------------:|-----------------------:|
+|----------------------------|--------------------:|-----------------------:|
 | parallel, all files        | 795.4 ms ±  20.6 ms | 603.1 ms ±  20.1 ms    |
 | parallel, gitignore        | 110.1 ms ±   5.2 ms | 748.6 ms ±  11.8 ms    |
 | single-threaded, all files |  1.256 s ±  0.022 s | 928.5 ms ±  28.1 ms    |
