@@ -14,7 +14,7 @@ This creates a dependency graph that rbt walks to build.
 
 Commands are the only truly required part of a job.
 Without them, nothing else makes sense!
-A simple job might look like this:
+A trivial job looks like this:
 
 ```roc
 hello : Job
@@ -22,18 +22,17 @@ hello =
     job { command: exec echo [ "Hello, World!" ] }
 ```
 
-The first argument `echo` here is a `Tool` (see below for how to define those.)
-The second argument is an array of arguments which will be passed to the tool when it executes.
+Of course, there's not much point to this job since it doesn't produce any output.
+We'll get to that (and the definition of `echo`) below.
 
-Of course, since Roc is a full programming language, you can define your own helpers easily:
+Of course, since Roc is a full programming language, you can define your own helpers easily.
+Let's make one that executes an inline shell script to keep the rest of this document tidy:
 
 ```roc
 execShellScript : String -> Command
 execShellScript = \script ->
     exec sh [ "-c", script ]
 ```
-
-(n.b. I'll be using the `execShellScript` helper throughout this document to make the examples a little bit more focused!)
 
 ### Environment
 
