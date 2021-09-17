@@ -6,8 +6,9 @@ To do that, we need to have a good idea about the kinds of data we're working wi
 
 ## Jobs
 
-A **job** defines the basic unit of work in an rbt build.
-It specifies the set of inputs that trigger a rebuild and, in most cases, produces new outputs.
+Jobs make up the basic units of work and output in rbt.
+They depend on the files in the working tree (see [ADR #5: Dynamic Dependencies](./005-dynamic-dependencies.md)) as well as the outputs of other jobs.
+This creates a dependency graph that rbt walks to build.
 
 ### Commands
 
