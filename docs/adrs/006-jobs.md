@@ -44,6 +44,62 @@ There are handful of minor things to remember about commands:
 - We won't provide any information in stdin.
   If your command needs to read a file, it should specify it in inputs (read on!)
 
+### Outputs
+
+Let's make `hello` slightly more useful by producing a file:
+
+```roc
+hello : Job
+hello =
+    job
+        {
+            command: execShellScript "echo Hello World > hello",
+            outputs: [ "hello" ],
+        }
+```
+
+Specifying `hello` here will mean that `rbt` will expect there to be a file named `hello` in the working directory after the job completes.
+
+There are a handful of minor things we want to remember about outputs:
+
+- If a job completes successfully, the outputs will be exactly the set of files specified.
+  No extra files will be copied, and the job will fail if any are missing.
+- It's fine for commands to not output anything.
+  Linters and tests, for example, can control success or failure based on command exit code.
+  There just won't be any outputs for other jobs to read in this case!
+- rbt will cache job output internally (instead of discarding results from intermediate jobs) so we can inspect or share the outputs in future builds.
+  (Of course, inspection implies a way to ask for a specific job to be built, either from the command line or an API.
+  This ADR doesn't define that, but we'll have to soon.)
+
+---
+
+- [ ] Should we require output files be written to a special directory instead?
+      Nix does this with `$out`.
+      It works just fine, and removes the need to specify outputs up front.
+
+- [ ] Should we allow specifying directories as outputs?
+      Feels globby, so it might have some of the same concerns as globs in inputs.
+
+#### Output Persistence
+
+Builds sometimes need to put files back into source directories.
+For example, a job could generate an API client, the files of which would be necessary for editor tooling to provide autocompletion or typechecking.
+So, in addition to specifying outputs, jobs will be able to specify where their outputs will be persisted.
+
+You might use persistence like this:
+
+```roc
+hello : Job
+hello =
+    job
+        {
+            tools: [ openapiGenerator ]
+            command: exec "openapi-generator-cli" [ "generate", "-i", "spec.json", "-o", "api-client", "-t", "elm" ],
+            outputs: [ "api-client" ],
+            persistAt: [ "/src/api-client" ],
+        }
+```
+
 ### Environment
 
 Of course, commands often need environment variables to work properly, so you can specify those:
@@ -102,50 +158,6 @@ uglifiedApp =
       Needs more thought.
 
 Note: caches (described in [ADR #6](./006-caches.md)) are also *technically* inputs, but we expect that an empty cache will not cause a build to fail and a cache changing will not trigger a rebuild.
-
-### Outputs
-
-Only outputs that jobs explicitly specify will be visible after the job is finished.
-Unlike inputs, outputs can be directories as well as single files.
-
-You might specify a job with an output like this:
-
-```roc
-hello : Job
-hello =
-    job
-        {
-            command: execShellScript "echo Hello World > hello",
-            outputs: [ "hello" ],
-        }
-```
-
-Some commands (linters, tests) don't output anything.
-That's totally fine—there just won't be any outputs available for other jobs to depend on.
-
-#### Output Caching
-
-rbt will keep track of job output in an internal way, but will expose a way for a programmer to see the outputs (think `rbt outputs jobname` or similar)
-
-#### Output Persistence
-
-Builds sometimes need to put files back into source directories.
-(For example, a job could generate an API client, the files of which would be necessary for editor tooling to provide autocompletion or typechecking.)
-So, in addition to specifying outputs, jobs will be able to specify where their outputs will be persisted.
-
-You might use persistence like this:
-
-```roc
-hello : Job
-hello =
-    job
-        {
-            tools: [ openapiGenerator ]
-            command: exec "openapi-generator-cli" [ "generate", "-i", "spec.json", "-o", "api-client", "-t", "elm" ],
-            outputs: [ "api-client" ],
-            persistAt: [ "/src/api-client" ],
-        }
-```
 
 ### Tools
 
