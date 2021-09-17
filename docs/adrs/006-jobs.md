@@ -34,9 +34,6 @@ execShellScript = \script ->
 
 (n.b. I'll be using the `execShellScript` helper throughout this document to make the examples a little bit more focused!)
 
-- [ ] TBD whether it makes sense for rbt to export a small standard library including things like `sh` or `bash`.
-      As of this writing, I'm learning "no".
-
 ### Environment
 
 Of course, commands often need environment variables to work properly, so you can specify those:
