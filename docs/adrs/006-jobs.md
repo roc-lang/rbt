@@ -34,6 +34,16 @@ execShellScript = \script ->
     exec sh [ "-c", script ]
 ```
 
+There are handful of minor things to remember about commands:
+
+- We only consider a job successful if it exits with a `0` exit code.
+- We will keep stdout and stderr around for inspection, but won't attempt to process them in any way.
+  If you want to add ANSI escape codes for colors and whatnot, knock yourself out.
+- Commands should assume they're being run non-interactively.
+  We may not enforce this immediately but may need to in order for remote building to work.
+- We won't provide any information in stdin.
+  If your command needs to read a file, it should specify it in inputs (read on!)
+
 ### Environment
 
 Of course, commands often need environment variables to work properly, so you can specify those:
