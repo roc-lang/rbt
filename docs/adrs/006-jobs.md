@@ -140,7 +140,7 @@ hello =
 ### Tools
 
 A tool is just a binary that rbt knows about.
-We add specified toosl to the `PATH` of the build environment so jobs can use them.
+We add specified tools to the `PATH` of the build environment so jobs can use them.
 
 There are a couple of ways to source tools.
 The simplest is to assume the tool already exists on the system:
