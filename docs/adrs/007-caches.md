@@ -1,4 +1,4 @@
-# ADR 006: What's a Cache?
+# ADR 007: What's a Cache?
 
 Many language ecosystems have some concept of a mutable, ephemeral cache which the compiler or other tools can use to speed up future tasks.
 rbt will manage these caches for you.

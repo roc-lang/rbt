@@ -1,4 +1,4 @@
-# ADR 005: What's a Job?
+# ADR 006: What's a Job?
 
 We want to be able to specify builds in Roc (I mean, it's right there in the name!)
 
