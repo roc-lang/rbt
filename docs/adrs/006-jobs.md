@@ -37,8 +37,6 @@ execShellScript = \script ->
 - [ ] TBD whether it makes sense for rbt to export a small standard library including things like `sh` or `bash`.
       As of this writing, I'm learning "no".
 
-- [ ] Is "exec" or "run" a better name?
-
 ### Environment
 
 Of course, commands often need environment variables to work properly, so you can specify those:
