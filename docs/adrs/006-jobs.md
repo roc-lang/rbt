@@ -257,6 +257,9 @@ uglifyjs
         }
 ```
 
+The build tool could also choose to expose a shell script which set the correct environment variables and paths.
+At some point we may want to encourage this, but we'd also need to reach into the environment to fix up shebangs (`#!/usr/bin/env sh` and whatnot) to make sure results can be shared.
+
 ### Environment
 
 Of course, commands often need environment variables to work properly, so you can specify those:
