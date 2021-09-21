@@ -172,7 +172,6 @@ When we're implementing this, we will have to keep in mind that the build enviro
 ### Tools
 
 A tool is just a binary that rbt knows about.
-We add specified tools to the `PATH` of the build environment so jobs can use them.
 
 There are a couple of ways to source tools.
 The simplest is to assume the tool already exists on the system:
@@ -183,6 +182,7 @@ gunzip = systemTool "gunzip"
 ```
 
 This would search through the host system's `PATH` to find a `gunzip` binary.
+By making these assumptions explicit, we can provide a list of tools needed to run a successful build to help new contributors to a project get set up more easily.
 
 You can also use tools to source other tools:
 
@@ -195,8 +195,7 @@ curlBinary : Job
 curlBinary =
   job
       {
-          tools: [ nixShell ],
-          command: exec "nix-shell" [ "-p", "curl", "--run", "ln -s $(which curl) curl" ],
+          command: exec nixShell [ "-p", "curl", "--run", "ln -s $(which curl) curl" ],
           outputs: [ "curl" ],
       }
 
@@ -258,9 +257,6 @@ uglifyjs
         }
 ```
 
-- [ ] Surely there is a better way to do this.
-      Needs more thought.
-
 ### Environment
 
 Of course, commands often need environment variables to work properly, so you can specify those:
@@ -276,6 +272,8 @@ hello =
           :},
       }
 ```
+
+As shown above, you can also provide `tool` with a list of tools, the binaries of which will be added to `PATH`.
 
 ### CPU Hinting
 
