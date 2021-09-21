@@ -143,6 +143,32 @@ Some things we should remember about inputs:
 - Caches (described in [ADR #7](./007-caches.md)) are also *technically* inputs, but not in the rebuild sense.
   We expect that an empty cache will not cause a build to fail, so a cache changing will not trigger a rebuild.
 
+#### Modifying Inputs
+
+Code formatters and some linters can automatically fix problems in source code.
+Jobs can specify a flag to make this explicitly OK.
+It might look like this:
+
+```roc
+elmFormat : Job
+elmFormat =
+    job
+        {
+            tools: [ elmFormat ],
+            command: exec "elm-format" [ "--yes" ],
+            inputs: [ "src/Main.elm", "src/OtherModule.elm" ],
+            modifiesInputs: Any,
+        }
+```
+
+Possible values for `modifiesInputs` are:
+
+- `None` (the default), meaning this mechanism is totally inactive
+- `Any`, meaning that any files the job changes will be copied back to the source tree in place
+- `AnyExcept (List String)`, meaning that most changes will be copied back to the source tree, except those explicitly specified (e.g. `.eslintrc`)
+
+When we're implementing this, we will have to keep in mind that the build environment will mostly consist of symlinks (see [ADR #4](./004-symlinking.md)), so this level of isolation may not be 100% achievable.
+
 ### Environment
 
 Of course, commands often need environment variables to work properly, so you can specify those:
@@ -280,23 +306,5 @@ binary =
             command: exec "cargo" [ "build", "--release" ],
             outputs: [ "target/release/binary-name" ],
             cpuHint: SaturatesCpus,
-        }
-```
-
-### Fixers
-
-Code formatters and some linters can automatically fix problems in source code.
-Jobs can specify a flag to make this explicitly OK.
-It might look like this:
-
-```roc
-elmFormat : Job
-elmFormat =
-    job
-        {
-            tools: [ elmFormat ],
-            command: exec "elm-format" [ "--yes" ],
-            inputs: [ "src/Main.elm", "src/OtherModule.elm" ],
-            modifiesInputs: True,
         }
 ```
