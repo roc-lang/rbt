@@ -169,22 +169,6 @@ Possible values for `modifiesInputs` are:
 
 When we're implementing this, we will have to keep in mind that the build environment will mostly consist of symlinks (see [ADR #4](./004-symlinking.md)), so this level of isolation may not be 100% achievable.
 
-### Environment
-
-Of course, commands often need environment variables to work properly, so you can specify those:
-
-```roc
-hello : Job
-hello =
-  job
-      {
-          command: execShellScript "echo $GREETING",
-          environment: {:
-            "GREETING" => "Hello, World!",
-          :},
-      }
-```
-
 ### Tools
 
 A tool is just a binary that rbt knows about.
@@ -276,6 +260,22 @@ uglifyjs
 
 - [ ] Surely there is a better way to do this.
       Needs more thought.
+
+### Environment
+
+Of course, commands often need environment variables to work properly, so you can specify those:
+
+```roc
+hello : Job
+hello =
+  job
+      {
+          command: execShellScript "echo $GREETING",
+          environment: {:
+            "GREETING" => "Hello, World!",
+          :},
+      }
+```
 
 ### CPU Hinting
 
