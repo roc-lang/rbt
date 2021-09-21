@@ -100,32 +100,10 @@ hello =
         }
 ```
 
-### Environment
-
-Of course, commands often need environment variables to work properly, so you can specify those:
-
-```roc
-hello : Job
-hello =
-  job
-      {
-          command: execShellScript "echo $GREETING",
-          environment: {:
-            "GREETING" => "Hello, World!",
-          :},
-      }
-```
-
 ### Inputs
 
-Jobs must specify their complete set of inputs, and a job will be rebuilt any time any of its inputs change.
-Jobs will not be able to see any files outside the inputs they specify (see [ADR #1](./001-job-isolation-targets.md).)
-
-There are two types of inputs:
-
-- Files from the filesystem (*only* files, not globs or directories.
-  However, a future ADR will describe a way to automatically discover files.)
-- The outputs of other jobs.
+As discussed in [ADR #5](./005-dynamic-dependencies.md), jobs can have two kinds of basic dependencies: a list of file paths known at compile time, and a set of dynamic discovery scripts.
+Jobs add a third kind of dependency here: jobs can depend on other jobs, which specifies the complete build graph.
 
 You might specify a job with file inputs like this:
 
@@ -154,10 +132,32 @@ uglifiedApp =
         }
 ```
 
-- [ ] I'm not happy with `inputFiles` vs `inputJobs`, but I'm similarly unhappy with calling them `roots` vs `inputs` or something similar!
-      Needs more thought.
+(n.b. specifying `inputJobs` separately from `inputFiles` and the yet-to-be-named discovery argument seems weird, right?
+But consider this: if we put these all in one argument, e.g. `inputs`, we would either have to wrap all the strings in some special function or lose dependency information from jobs.
+By specifying them separately, we get both nice notation and make inspecting the graph easier.)
 
-Note: caches (described in [ADR #6](./006-caches.md)) are also *technically* inputs, but we expect that an empty cache will not cause a build to fail and a cache changing will not trigger a rebuild.
+Some things we should remember about inputs:
+
+- Jobs must specify their complete set of inputs, and a job will be rebuilt any time any of its inputs change.
+- Jobs will not be able to see any files outside the inputs they specify (see [ADR #1](./001-job-isolation-targets.md).)
+- Caches (described in [ADR #7](./007-caches.md)) are also *technically* inputs, but not in the rebuild sense.
+  We expect that an empty cache will not cause a build to fail, so a cache changing will not trigger a rebuild.
+
+### Environment
+
+Of course, commands often need environment variables to work properly, so you can specify those:
+
+```roc
+hello : Job
+hello =
+  job
+      {
+          command: execShellScript "echo $GREETING",
+          environment: {:
+            "GREETING" => "Hello, World!",
+          :},
+      }
+```
 
 ### Tools
 
