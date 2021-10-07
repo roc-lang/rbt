@@ -58,7 +58,7 @@ hello =
         }
 ```
 
-Specifying `hello` here will mean that `rbt` will expect there to be a file named `hello` in the working directory after the job completes.
+Specifying `"hello"` in the `outputs:` list here will mean that `rbt` will expect there to be a file named `hello` in the working directory after the job completes.
 
 There are a handful of minor things we want to remember about outputs:
 
