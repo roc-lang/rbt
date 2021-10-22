@@ -1,10 +1,10 @@
-platform examples/hello-world
-    requires {}{ main : { command: Str, arguments: List Str, inputs: List Str, outputs: List Str, workingDirectory: Str } }
+platform roc-lang/rbt
+    requires {}{ init : { default : Job } }
     exposes []
     packages {}
-    imports []
-    provides [ mainForHost ]
+    imports [ Job.{ Job } ]
+    provides [ initForHost ]
     effects fx.Effect {}
 
-mainForHost : { command: Str, arguments: List Str, inputs: List Str, outputs: List Str, workingDirectory: Str }
-mainForHost = main
+initForHost : { default : Job }
+initForHost = init

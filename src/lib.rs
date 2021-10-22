@@ -9,18 +9,28 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Command;
 
+#[derive(Debug)]
 #[repr(C)]
-struct RocJob {
-    arguments: RocList<RocStr>,
-    command: RocStr,
-    inputs: RocList<RocStr>,
-    outputs: RocList<RocStr>,
-    working_directory: RocStr,
+struct Rbt {
+    default: RbtJob,
 }
 
+#[derive(Debug)]
+#[repr(C)]
+struct RbtJob {
+    // arguments: RocList<RocStr>,
+// command: RocStr,
+// inputs: RocList<RocStr>,
+// outputs: RocList<RocStr>,
+// working_directory: RocStr,
+}
+
+#[repr(C)]
+struct Command {}
+
 extern "C" {
-    #[link_name = "roc__mainForHost_1_exposed"]
-    fn roc_main(output: *mut RocJob) -> ();
+    #[link_name = "roc__initForHost_1_exposed"]
+    fn roc_init(output: *mut Rbt) -> ();
 }
 
 #[no_mangle]
@@ -45,45 +55,47 @@ pub unsafe fn roc_dealloc(c_ptr: *mut c_void, _alignment: u32) {
 
 #[no_mangle]
 pub fn rust_main() -> isize {
-    let mut job: MaybeUninit<RocJob> = MaybeUninit::uninit();
+    let mut rbt_uninit: MaybeUninit<Rbt> = MaybeUninit::uninit();
 
     unsafe {
-        roc_main(job.as_mut_ptr());
+        roc_init(rbt_uninit.as_mut_ptr());
 
-        let roc_job = job.assume_init();
+        let rbt = rbt_uninit.assume_init();
 
-        let args: Vec<String> = roc_job
-            .arguments
-            .as_slice()
-            .iter()
-            .map(|file| file.as_str().to_string())
-            .collect();
+        println!("{:?}", rbt);
 
-        let inputs: Vec<PathBuf> = roc_job
-            .inputs
-            .as_slice()
-            .iter()
-            .map(|path| PathBuf::from(path.as_str()))
-            .collect();
+        // let args: Vec<String> = roc_job
+        //     .arguments
+        //     .as_slice()
+        //     .iter()
+        //     .map(|file| file.as_str().to_string())
+        //     .collect();
 
-        let outputs: Vec<PathBuf> = roc_job
-            .outputs
-            .as_slice()
-            .iter()
-            .map(|path| PathBuf::from(path.as_str()))
-            .collect();
+        // let inputs: Vec<PathBuf> = roc_job
+        //     .inputs
+        //     .as_slice()
+        //     .iter()
+        //     .map(|path| PathBuf::from(path.as_str()))
+        //     .collect();
 
-        let job = job::Job {
-            // TODO: these should eventually be RocStrs, and Job should
-            // just accept and convert those accordingly.
-            command: roc_job.command.as_str().to_string(),
-            arguments: args.clone(),
-            environment: HashMap::default(),
-            working_directory: PathBuf::from(roc_job.working_directory.as_str()),
-            inputs: inputs,
-            outputs: outputs,
-        };
-        job.run().expect("TODO better platform error handling");
+        // let outputs: Vec<PathBuf> = roc_job
+        //     .outputs
+        //     .as_slice()
+        //     .iter()
+        //     .map(|path| PathBuf::from(path.as_str()))
+        //     .collect();
+
+        // let job = job::Job {
+        //     // TODO: these should eventually be RocStrs, and Job should
+        //     // just accept and convert those accordingly.
+        //     command: roc_job.command.as_str().to_string(),
+        //     arguments: args.clone(),
+        //     environment: HashMap::default(),
+        //     working_directory: PathBuf::from(roc_job.working_directory.as_str()),
+        //     inputs: inputs,
+        //     outputs: outputs,
+        // };
+        // job.run().expect("TODO better platform error handling");
     }
 
     println!("All done!");
