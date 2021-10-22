@@ -1,10 +1,10 @@
 platform roc-lang/rbt
-    requires {}{ init : { default : Job } }
-    exposes []
+    requires {}{ init : Rbt }
+    exposes [ Rbt, Tool, Job, Command ]
     packages {}
-    imports [ Job.{ Job } ]
+    imports [ Job.{ Job }, Rbt.{ Rbt } ]
     provides [ initForHost ]
     effects fx.Effect {}
 
-initForHost : { default : Job }
+initForHost : Rbt
 initForHost = init
