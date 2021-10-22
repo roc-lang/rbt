@@ -1,7 +1,14 @@
 app "build"
-    packages { base: "rbt" }
-    imports [ TODO ]
-    provides [ init ] to base
+    packages { pf: "rbt" }
+    imports [ pf.Rbt.{ Rbt, init }, pf.Tool.{ Tool, tool, systemTool }, pf.Job.{ Job, job }, pf.Command.exec ]
+    provides [ init ] to pf
+
+
+# todo: bikeshed "init" name more
+init : Rbt
+init =
+    Rbt.init { default: bundle }
+
 
 # note: these rules could be much more compact but we're spelling them out
 # explicitly for ease of understanding. Files using rbt do not have to be
@@ -54,8 +61,8 @@ addWasm =
         }
 
 
-bundled : Job
-bundled =
+bundle : Job
+bundle =
     job
         {
             command:
