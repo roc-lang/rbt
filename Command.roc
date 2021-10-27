@@ -1,6 +1,6 @@
 interface Command
   exposes [ Command, exec ]
-  imports []
+  imports [ Tool.{ Tool } ]
 
 Command : { tool : Tool, args : List Str }
 

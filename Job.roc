@@ -1,9 +1,9 @@
 interface Job
   exposes [ Job, job ]
-  imports []
+  imports [ Command.{ Command } ]
 
-Job : [ @Job { command : Str, inputs : List Job, inputFiles : List Str, outputs : List Str } ]
+Job : [ @Job { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } ]
 
-job : { command : Str, inputs ? List Job, inputFiles ? List Str, outputs : List Str } -> Job
+job : { command : Command, inputs ? List Job, inputFiles ? List Str, outputs : List Str } -> Job
 job = \{ command, outputs, inputs ? [], inputFiles ? [] } ->
    @Job { command, inputs, inputFiles, outputs }

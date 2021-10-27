@@ -1,6 +1,6 @@
 interface Rbt
   exposes [ Rbt, init ]
-  imports []
+  imports [ Job.{ Job } ]
 
 Rbt : { default : Job }
 

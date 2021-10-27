@@ -1,6 +1,6 @@
 interface Tool
   exposes [ Tool, tool, systemTool ]
-  imports []
+  imports [ Job.{ Job } ]
 
 Tool : Str
 
