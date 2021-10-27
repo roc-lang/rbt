@@ -18,15 +18,24 @@ struct Rbt {
 #[derive(Debug)]
 #[repr(C)]
 struct RbtJob {
-    // arguments: RocList<RocStr>,
-// command: RocStr,
-// inputs: RocList<RocStr>,
-// outputs: RocList<RocStr>,
-// working_directory: RocStr,
+    command: RbtCommand,
+    inputs: RocList<RbtJob>,
+    input_files: RocList<RocStr>,
+    outputs: RocList<RocStr>,
 }
 
+#[derive(Debug)]
 #[repr(C)]
-struct Command {}
+struct RbtCommand {
+    tool: RbtTool,
+    args: RocList<RocStr>,
+}
+
+#[derive(Debug)]
+#[repr(C)]
+struct RbtTool {
+    name_todo: RocStr,
+}
 
 extern "C" {
     #[link_name = "roc__initForHost_1_exposed"]
