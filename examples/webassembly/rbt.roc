@@ -41,7 +41,7 @@ esbuildBinary =
         }
 
 
-esbuild : tool
+esbuild : Tool
 esbuild =
     tool esbuildBinary "esbuild"
 
