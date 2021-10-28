@@ -1,6 +1,6 @@
 app "build"
     packages { pf: "../.." }
-    imports [ pf.Rbt.{ Rbt }, pf.Tool.{ Tool, tool, systemTool }, pf.Job.{ Job, job }, pf.Command.{ exec } ]
+    imports [ pf.Rbt.{ Rbt, Tool, tool, systemTool, Job, job, exec } ]
     provides [ init ] to pf
 
 

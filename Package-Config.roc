@@ -1,8 +1,8 @@
 platform roc-lang/rbt
     requires {}{ init : Rbt }
-    exposes [ Rbt, Tool, Job, Command ]
+    exposes [ Rbt ]
     packages {}
-    imports [ Job.{ Job }, Rbt.{ Rbt } ]
+    imports [ Rbt.{ Rbt } ]
     provides [ initForHost ]
     effects fx.Effect {}
 
