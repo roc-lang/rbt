@@ -13,22 +13,24 @@ Job : [ @Job { command : Command, inputs : List Job, inputFiles : List Str, outp
 
 job : { command : Command, inputs ? List Job, inputFiles ? List Str, outputs : List Str } -> Job
 job = \{ command, outputs, inputs ? [], inputFiles ? [] } ->
-   @Job { command, inputs, inputFiles, outputs }
+    @Job { command, inputs, inputFiles, outputs }
 
 #####
 
 Command : [ @Command { tool : Tool, args : List Str } ]
 
 exec : Tool, List Str -> Command
-exec = \tool, args -> @Command { tool, args }
+exec = \tool, args ->
+    @Command { tool, args }
 
 #####
 
 Tool : [ @Tool Str ]
 
 systemTool : Str -> Tool
-systemTool = \name -> @Tool name
+systemTool = \name ->
+    @Tool name
 
 tool : Job, Str -> Tool
 tool = \job, outputName ->
-  @Tool "TODO"
+    @Tool "TODO"
