@@ -2,7 +2,6 @@ interface Rbt
   exposes [ Rbt, init, Job, job, Command, exec, Tool, tool, systemTool ]
   imports []
 
-# TODO: make these all private
 # TODO: these are all out of order due to https://github.com/rtfeldman/roc/issues/1642. Once that's fixed, they should rearrange into the order in `exposes`
 
 Tool : [ @Tool { name: Str } ]
