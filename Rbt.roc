@@ -11,11 +11,11 @@ systemTool : Str -> Tool
 systemTool = \name ->
     @Tool { name }
 
-Command : { tool : Tool, args : List Str }
+Command : [ @Command { tool : Tool, args : List Str } ]
 
 exec : Tool, List Str -> Command
 exec = \execTool, args ->
-    { tool: execTool, args }
+    @Command { tool: execTool, args }
 
 Job : [ @Job { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } ]
 
