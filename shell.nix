@@ -4,6 +4,10 @@ let
   pkgs = import sources.nixpkgs { };
   niv = import sources.niv { };
   macosDeps = [ pkgs.darwin.apple_sdk.frameworks.CoreServices ];
+  linuxDeps = [
+    # only necessary until surgical linking is in Roc
+    pkgs.glibc
+  ];
 in pkgs.mkShell {
   buildInputs = with pkgs;
     [
@@ -17,10 +21,8 @@ in pkgs.mkShell {
       rustc
       rustfmt
       libiconv
+    ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin macosDeps
+    ++ pkgs.lib.optionals pkgs.stdenv.isLinux linuxDeps;
 
-      # only necessary until surgical linking is in Roc
-      glibc
-    ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin macosDeps;
-
-  NIXOS_GLIBC_PATH = pkgs.glibc;
+  NIXOS_GLIBC_PATH = if pkgs.stdenv.isLinux then pkgs.glibc else "";
 }
