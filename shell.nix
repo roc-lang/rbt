@@ -17,5 +17,10 @@ in pkgs.mkShell {
       rustc
       rustfmt
       libiconv
+
+      # only necessary until surgical linking is in Roc
+      glibc
     ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin macosDeps;
+
+  NIXOS_GLIBC_PATH = pkgs.glibc;
 }
