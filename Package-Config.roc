@@ -6,5 +6,5 @@ platform roc-lang/rbt
     provides [ initForHost ]
     effects fx.Effect {}
 
-initForHost : Rbt
+# initForHost : Rbt
 initForHost = init
