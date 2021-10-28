@@ -3,23 +3,7 @@ interface Rbt
   imports []
 
 # TODO: make these all private
-
-Rbt : { default : Job }
-
-init : { default : Job } -> Rbt
-init = \rbt -> rbt
-
-Job : [ @Job { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } ]
-
-job : { command : Command, inputs ? List Job, inputFiles ? List Str, outputs : List Str } -> Job
-job = \{ command, outputs, inputs ? [], inputFiles ? [] } ->
-    @Job { command, inputs, inputFiles, outputs }
-
-Command : { tool : Tool, args : List Str }
-
-exec : Tool, List Str -> Command
-exec = \tool, args ->
-    { tool, args }
+# TODO: these are all out of order due to https://github.com/rtfeldman/roc/issues/1642. Once that's fixed, they should rearrange into the order in `exposes`
 
 Tool : { name: Str }
 
@@ -27,6 +11,23 @@ systemTool : Str -> Tool
 systemTool = \name ->
     { name }
 
+Command : { tool : Tool, args : List Str }
+
+exec : Tool, List Str -> Command
+exec = \execTool, args ->
+    { tool: execTool, args }
+
+Job : [ @Job { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } ]
+
+job : { command : Command, inputs ? List Job, inputFiles ? List Str, outputs : List Str } -> Job
+job = \{ command, outputs, inputs ? [], inputFiles ? [] } ->
+    @Job { command, inputs, inputFiles, outputs }
+
+Rbt : { default : Job }
+
+init : { default : Job } -> Rbt
+init = \rbt -> rbt
+
 tool : Job, Str -> Tool
-tool = \job, outputName ->
+tool = \_, outputName ->
     { name: "TODO" }
