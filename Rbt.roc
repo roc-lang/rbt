@@ -5,11 +5,11 @@ interface Rbt
 # TODO: make these all private
 # TODO: these are all out of order due to https://github.com/rtfeldman/roc/issues/1642. Once that's fixed, they should rearrange into the order in `exposes`
 
-Tool : { name: Str }
+Tool : [ @Tool { name: Str } ]
 
 systemTool : Str -> Tool
 systemTool = \name ->
-    { name }
+    @Tool { name }
 
 Command : { tool : Tool, args : List Str }
 
@@ -30,4 +30,4 @@ init = \rbt -> @Rbt rbt
 
 tool : Job, Str -> Tool
 tool = \_, outputName ->
-    { name: "TODO" }
+    @Tool { name: "TODO" }
