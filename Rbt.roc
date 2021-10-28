@@ -23,10 +23,10 @@ job : { command : Command, inputs ? List Job, inputFiles ? List Str, outputs : L
 job = \{ command, outputs, inputs ? [], inputFiles ? [] } ->
     @Job { command, inputs, inputFiles, outputs }
 
-Rbt : { default : Job }
+Rbt : [ @Rbt { default : Job } ]
 
 init : { default : Job } -> Rbt
-init = \rbt -> rbt
+init = \rbt -> @Rbt rbt
 
 tool : Job, Str -> Tool
 tool = \_, outputName ->
