@@ -28,5 +28,5 @@ init : { default : Job } -> Rbt
 init = \rbt -> @Rbt rbt
 
 tool : Job, Str -> Tool
-tool = \_, outputName ->
+tool = \_, _ ->
     @Tool { name: "TODO" }
