@@ -2,7 +2,7 @@ platform roc-lang/rbt
     requires {}{ init : Rbt }
     exposes [ Rbt ]
     packages {}
-    imports [ Rbt.{ Rbt } ]
+    imports []
     provides [ initForHost ]
     effects fx.Effect {}
 
