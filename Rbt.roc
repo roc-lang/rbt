@@ -18,8 +18,9 @@ exec = \execTool, args ->
 
 Job : [ @Job { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } ]
 
-job : { command : Command, inputs ? List Job, inputFiles ? List Str, outputs : List Str } -> Job
-job = \{ command, outputs, inputs ? [], inputFiles ? [] } ->
+# TODO: these fields are all required until https://github.com/rtfeldman/roc/issues/1844 is fixed
+job : { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } -> Job
+job = \{ command, outputs, inputs, inputFiles } ->
     @Job { command, inputs, inputFiles, outputs }
 
 Rbt : [ @Rbt { default : Job } ]

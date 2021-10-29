@@ -23,6 +23,8 @@ wat2wasmBinary =
     job
         {
             command: exec nixShell [ "-p", "wabt", "--run", "ln -s $(which wat2wasm) wat2wasm" ],
+            inputs: [],
+            inputFiles: [],
             outputs: [ "wat2wasm" ]
         }
 
@@ -37,6 +39,8 @@ esbuildBinary =
     job
         {
             command: exec nixShell [ "-p", "esbuild", "--run", "ln -s $(which esbuild) esbuild" ],
+            inputs: [],
+            inputFiles: [],
             outputs: [ "esbuild" ]
         }
 
@@ -56,6 +60,7 @@ addWasm =
     job
         {
             command: exec wat2wasm [ "hello.wat" ],
+            inputs: [],
             inputFiles: [ "hello.wat" ],
             outputs: [ "hello.wasm" ],
         }
