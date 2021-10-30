@@ -34,7 +34,7 @@ struct RbtCommand {
 #[derive(Debug)]
 #[repr(C)]
 struct RbtTool {
-    name_todo: RocStr,
+    name: RocStr,
 }
 
 extern "C" {
