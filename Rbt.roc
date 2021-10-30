@@ -4,6 +4,7 @@ interface Rbt
 
 # TODO: these are all out of order due to https://github.com/rtfeldman/roc/issues/1642. Once that's fixed, they should rearrange into the order in `exposes`
 
+# TODO: how are we gonna get tools from Jobs? Maybe Tool, Command, and Job need to live in a single union and have private aliases outwards?
 Tool : [ @Tool { name: Str } ]
 
 systemTool : Str -> Tool
