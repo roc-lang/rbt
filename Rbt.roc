@@ -4,7 +4,16 @@ interface Rbt
 
 # TODO: these are all out of order due to https://github.com/rtfeldman/roc/issues/1642. Once that's fixed, they should rearrange into the order in `exposes`
 
-# TODO: how are we gonna get tools from Jobs? Maybe Tool, Command, and Job need to live in a single union and have private aliases outwards?
+# TODO: how are we gonna get tools from Jobs? Maybe Tool, Command, and Job
+# need to live in a single union and have private aliases outwards?  I'd like
+# to have this look like:
+#
+#     Tool : [ @Tool { name : Str, fromJob: Maybe Job } ]
+#
+# Or maybe:
+#
+#     Tool : [ @SystemTool { name : Str }, @FromJob { name : Str, job : Job } ]
+#
 Tool : [ @Tool { name: Str } ]
 
 systemTool : Str -> Tool
