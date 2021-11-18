@@ -5,9 +5,7 @@ mod job;
 use core::ffi::c_void;
 use core::mem::MaybeUninit;
 use roc_std::{RocList, RocStr};
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::process::Command;
+use std::fmt;
 
 #[derive(Debug)]
 #[repr(C)]
@@ -34,7 +32,21 @@ struct RbtCommand {
 #[derive(Debug)]
 #[repr(C)]
 struct RbtTool {
-    name: RocStr,
+    payload: RbtToolPayload,
+    tag: i64,
+}
+
+#[repr(C)]
+union RbtToolPayload {
+    system_tool: core::mem::ManuallyDrop<RocStr>,
+    // fromJob: (Job, RocStr)
+    from_job: core::mem::ManuallyDrop<RocStr>,
+}
+
+impl fmt::Debug for RbtToolPayload {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("lol")
+    }
 }
 
 extern "C" {

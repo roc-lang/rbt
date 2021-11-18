@@ -14,11 +14,11 @@ interface Rbt
 #
 #     Tool : [ @SystemTool { name : Str }, @FromJob { name : Str, job : Job } ]
 #
-Tool : [ @Tool { name: Str } ]
+Tool : [ @SystemTool { name: Str }, @FromJob { name : Str } ]
 
 systemTool : Str -> Tool
 systemTool = \name ->
-    @Tool { name }
+    @SystemTool { name }
 
 Command : [ @Command { tool : Tool, args : List Str } ]
 
@@ -40,4 +40,4 @@ init = \rbt -> @Rbt rbt
 
 tool : Job, Str -> Tool
 tool = \_, _ ->
-    @Tool { name: "TODO" }
+    @FromJob { name: "TODO" }
