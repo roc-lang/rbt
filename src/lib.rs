@@ -29,11 +29,29 @@ struct RbtCommand {
     args: RocList<RocStr>,
 }
 
-#[derive(Debug)]
 #[repr(C)]
 struct RbtTool {
     payload: RbtToolPayload,
     tag: i64,
+}
+
+impl fmt::Debug for RbtTool {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.tag {
+            0 => f
+                .debug_struct("from_job")
+                .field("name", unsafe { &self.payload.from_job })
+                .finish(),
+            1 => f
+                .debug_struct("system_tool")
+                .field("name", unsafe { &self.payload.system_tool })
+                .finish(),
+            _ => panic!(
+                "I don't know what payload this tag ({:}) should be associated with!",
+                self.tag
+            ),
+        }
+    }
 }
 
 #[repr(C)]
@@ -41,12 +59,6 @@ union RbtToolPayload {
     system_tool: core::mem::ManuallyDrop<RocStr>,
     // fromJob: (Job, RocStr)
     from_job: core::mem::ManuallyDrop<RocStr>,
-}
-
-impl fmt::Debug for RbtToolPayload {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("lol")
-    }
 }
 
 extern "C" {
