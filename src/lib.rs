@@ -17,16 +17,16 @@ struct Rbt {
 #[repr(C)]
 struct RbtJob {
     command: RbtCommand,
-    inputs: RocList<RbtJob>,
-    input_files: RocList<RocStr>,
-    outputs: RocList<RocStr>,
+    inputs: RocList<RocStr>,
+    // input_files: RocList<RocStr>,
+    // outputs: RocList<RocStr>,
 }
 
 #[derive(Debug)]
 #[repr(C)]
 struct RbtCommand {
-    tool: RbtTool,
     args: RocList<RocStr>,
+    tool: RbtTool,
 }
 
 #[repr(C)]
@@ -91,10 +91,16 @@ pub fn rust_main() -> isize {
     let mut rbt_uninit: MaybeUninit<Rbt> = MaybeUninit::uninit();
 
     unsafe {
+        println!("roc_init");
         roc_init(rbt_uninit.as_mut_ptr());
 
+        println!("rbt_uninit");
         let rbt = rbt_uninit.assume_init();
 
+        // println!(
+        //     "{:?}",
+        //     std::mem::transmute::<RbtTool, [u8; 24]>(rbt.default.command.tool)
+        // );
         println!("{:?}", rbt);
 
         // let args: Vec<String> = roc_job
