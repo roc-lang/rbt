@@ -18,8 +18,8 @@ struct Rbt {
 #[repr(C)]
 struct RbtJob {
     command: RbtCommand,
-    inputs: RocList<RbtJob>,
     input_files: RocList<RocStr>,
+    inputs: RocList<RbtJob>,
     outputs: RocList<RocStr>,
 }
 
