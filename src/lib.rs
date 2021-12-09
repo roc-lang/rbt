@@ -17,9 +17,9 @@ struct Rbt {
 #[repr(C)]
 struct RbtJob {
     command: RbtCommand,
-    inputs: RocList<RocStr>,
-    // input_files: RocList<RocStr>,
-    // outputs: RocList<RocStr>,
+    inputs: RocList<RbtJob>,
+    input_files: RocList<RocStr>,
+    outputs: RocList<RocStr>,
 }
 
 #[derive(Debug)]
@@ -88,6 +88,7 @@ pub unsafe fn roc_dealloc(c_ptr: *mut c_void, _alignment: u32) {
 
 #[no_mangle]
 pub fn rust_main() -> isize {
+    println!("about to rbt_uninit");
     let mut rbt_uninit: MaybeUninit<Rbt> = MaybeUninit::uninit();
 
     unsafe {
@@ -101,7 +102,7 @@ pub fn rust_main() -> isize {
         //     "{:?}",
         //     std::mem::transmute::<RbtTool, [u8; 24]>(rbt.default.command.tool)
         // );
-        println!("{:?}", rbt);
+        println!("{:#?}", rbt);
 
         // let args: Vec<String> = roc_job
         //     .arguments
