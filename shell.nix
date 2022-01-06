@@ -16,7 +16,6 @@ in pkgs.mkShell {
 
       # rust tools
       cargo
-      cargo-watch
       rustPackages.clippy
       rustc
       rustfmt
