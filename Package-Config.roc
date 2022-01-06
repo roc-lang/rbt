@@ -1,4 +1,4 @@
-platform roc-lang/rbt
+platform "roc-lang/rbt"
     requires {}{ init : Rbt }
     exposes [ Rbt ]
     packages {}
