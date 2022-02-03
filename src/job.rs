@@ -115,6 +115,7 @@ impl Job {
     }
 
     fn run_job(&self, work_dir: &Path) -> Result<Output> {
+        // TODO: check and report exit code
         Command::new(self.command.as_str())
             .args(
                 self.arguments
