@@ -16,28 +16,28 @@ interface Rbt
 #
 Tool : [ @SystemTool { name: Str }, @FromJob { name : Str } ]
 
-systemTool : Str -> Tool
+# systemTool : Str -> Tool
 systemTool = \name ->
     @SystemTool { name }
 
 Command : [ @Command { tool : Tool, args : List Str } ]
 
-exec : Tool, List Str -> Command
+# exec : Tool, List Str -> Command
 exec = \execTool, args ->
     @Command { tool: execTool, args }
 
 Job : [ @Job { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } ]
 
 # TODO: these fields are all required until https://github.com/rtfeldman/roc/issues/1844 is fixed
-job : { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } -> Job
+# job : { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } -> Job
 job = \{ command, inputs, inputFiles, outputs } ->
     @Job { command, inputs, inputFiles, outputs }
 
 Rbt : [ @Rbt { default : Job } ]
 
-init : { default : Job } -> Rbt
+# init : { default : Job } -> Rbt
 init = \rbt -> @Rbt rbt
 
-tool : Job, Str -> Tool
+# tool : Job, Str -> Tool
 tool = \_, _ ->
     @FromJob { name: "TODO" }
