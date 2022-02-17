@@ -4,7 +4,6 @@ platform "roc-lang/rbt"
     packages {}
     imports []
     provides [ initForHost ]
-    effects fx.Effect {}
 
 # initForHost : Rbt
 initForHost = init
