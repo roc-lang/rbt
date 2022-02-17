@@ -29,9 +29,10 @@ exec = \execTool, args ->
 Job : [ @Job { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } ]
 
 # TODO: these fields are all required until https://github.com/rtfeldman/roc/issues/1844 is fixed
+# TODO: destructuring is broken, see https://github.com/rtfeldman/roc/issues/2512
 # job : { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } -> Job
-job = \{ command, inputs, inputFiles, outputs } ->
-    @Job { command, inputs, inputFiles, outputs }
+job = \stuff ->
+    @Job { command: stuff.command, inputs: stuff.inputs, inputFiles: stuff.inputFiles, outputs: stuff.outputs }
 
 Rbt : [ @Rbt { default : Job } ]
 
