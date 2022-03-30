@@ -258,15 +258,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "meowhash"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f31cc124c1dc48285daa66a3bd5e9f083fab93cb1fddafd661fe1862a883089b"
-dependencies = [
- "digest",
-]
-
-[[package]]
 name = "mio"
 version = "0.6.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -407,7 +398,6 @@ dependencies = [
  "byteorder",
  "digest",
  "libc",
- "meowhash",
  "notify",
  "roc_std",
  "sled",
@@ -419,6 +409,9 @@ dependencies = [
 [[package]]
 name = "roc_std"
 version = "0.1.0"
+dependencies = [
+ "static_assertions",
+]
 
 [[package]]
 name = "same-file"
@@ -462,6 +455,12 @@ name = "smallvec"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2dd574626839106c320a323308629dcb1acfc96e32a8cba364ddc61ac23ee83"
+
+[[package]]
+name = "static_assertions"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f406d6ee68db6796e11ffd7b4d171864c58b7451e79ef9460ea33c287a1f89a7"
 
 [[package]]
 name = "syn"

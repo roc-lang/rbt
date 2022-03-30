@@ -8,7 +8,6 @@ anyhow = "1.0"
 byteorder = "1.4"
 digest = "0.9"
 libc = "0.2"
-meowhash = "0.3"
 notify = "4"
 roc_std = { path = "../roc/roc_std" }
 sled = "0.34"
