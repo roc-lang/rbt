@@ -104,21 +104,13 @@ pub unsafe extern "C" fn roc_panic(c_ptr: *mut c_void, tag_id: u32) {
 #[no_mangle]
 pub fn rust_main() -> isize {
     unsafe {
-        let mut input = Rbt {
-            default: RbtJob {
-                command: RbtCommand {
-                    tool: RbtTool {
-                        name: RocStr::from(""),
-                    },
-                },
-                input_files: RocList::empty(),
-            },
-        };
-        println!("before roc_init");
-        let rbt = roc_init(&mut input);
+        let mut input = MaybeUninit::uninit();
+        roc_init(input.as_mut_ptr());
+
+        let rbt = input.assume_init();
 
         println!("debugly printing");
-        println!("{:#?}", &input);
+        println!("{:#?}", &rbt);
         // println!("{:?}", std::mem::transmute::<Rbt, [u8; 16]>(rbt));
 
         // let args: Vec<String> = roc_job
