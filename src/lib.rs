@@ -19,52 +19,53 @@ struct Rbt {
 struct RbtJob {
     command: RbtCommand,
     input_files: RocList<RocStr>,
-    inputs: RocList<RbtJob>,
-    outputs: RocList<RocStr>,
+    // inputs: RocList<RbtJob>,
+    // outputs: RocList<RocStr>,
 }
 
 #[derive(Debug)]
 #[repr(C)]
 struct RbtCommand {
-    args: RocList<RocStr>,
+    // args: RocList<RocStr>,
     tool: RbtTool,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 struct RbtTool {
-    payload: RbtToolPayload,
-    tag: i64,
+    name: RocStr,
 }
 
-impl fmt::Debug for RbtTool {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.tag {
-            0 => f
-                .debug_struct("from_job")
-                .field("name", unsafe { &self.payload.from_job })
-                .finish(),
-            1 => f
-                .debug_struct("system_tool")
-                .field("name", unsafe { &self.payload.system_tool })
-                .finish(),
-            _ => panic!(
-                "I don't know what payload this tag ({:}) should be associated with!",
-                self.tag
-            ),
-        }
-    }
-}
+// impl fmt::Debug for RbtTool {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         // match self.tag {
+//         //     0 => f
+//         //         .debug_struct("from_job")
+//         //         .field("name", unsafe { &self.payload.from_job })
+//         //         .finish(),
+//         //     1 => f
+//         //         .debug_struct("system_tool")
+//         //         .field("name", unsafe { &self.payload.system_tool })
+//         //         .finish(),
+//         //     _ => panic!(
+//         //         "I don't know what payload this tag ({:}) should be associated with!",
+//         //         self.tag
+//         //     ),
+//         // }
+//         write!(f, "lol")
+//     }
+// }
 
-#[repr(C)]
-union RbtToolPayload {
-    system_tool: core::mem::ManuallyDrop<RocStr>,
-    // fromJob: (Job, RocStr)
-    from_job: core::mem::ManuallyDrop<RocStr>,
-}
+// #[repr(C)]
+// union RbtToolPayload {
+//     system_tool: core::mem::ManuallyDrop<RocStr>,
+//     // fromJob: (Job, RocStr)
+//     from_job: core::mem::ManuallyDrop<RocStr>,
+// }
 
 extern "C" {
     #[link_name = "roc__initForHost_1_exposed"]
-    fn roc_init(output: *mut Rbt) -> ();
+    fn roc_init(init: *mut Rbt);
 }
 
 #[no_mangle]
@@ -102,21 +103,23 @@ pub unsafe extern "C" fn roc_panic(c_ptr: *mut c_void, tag_id: u32) {
 
 #[no_mangle]
 pub fn rust_main() -> isize {
-    println!("about to rbt_uninit");
-    let mut rbt_uninit: MaybeUninit<Rbt> = MaybeUninit::uninit();
-
     unsafe {
-        println!("roc_init");
-        roc_init(rbt_uninit.as_mut_ptr());
+        let mut input = Rbt {
+            default: RbtJob {
+                command: RbtCommand {
+                    tool: RbtTool {
+                        name: RocStr::from(""),
+                    },
+                },
+                input_files: RocList::empty(),
+            },
+        };
+        println!("before roc_init");
+        let rbt = roc_init(&mut input);
 
-        println!("rbt_uninit");
-        let rbt = rbt_uninit.assume_init();
-
-        // println!(
-        //     "{:?}",
-        //     std::mem::transmute::<RbtTool, [u8; 24]>(rbt.default.command.tool)
-        // );
-        println!("{:#?}", rbt);
+        println!("debugly printing");
+        println!("{:#?}", &input);
+        // println!("{:?}", std::mem::transmute::<Rbt, [u8; 16]>(rbt));
 
         // let args: Vec<String> = roc_job
         //     .arguments
