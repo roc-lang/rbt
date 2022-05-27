@@ -2,7 +2,7 @@ platform "roc-lang/rbt"
     requires {}{ init : Rbt }
     exposes [ Rbt ]
     packages {}
-    imports []
+    imports [ pf.Rbt.{ Rbt } ]
     provides [ initForHost ]
 
 # initForHost : Rbt
