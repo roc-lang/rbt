@@ -8,33 +8,33 @@ interface Rbt
 # need to live in a single union and have private aliases outwards?  I'd like
 # to have this look like:
 #
-#     Tool : [ @Tool { name : Str, fromJob: Maybe Job } ]
+#     Tool : [ Tool { name : Str, fromJob: Maybe Job } ]
 #
 # Or maybe:
 #
-#     Tool : [ @SystemTool { name : Str }, @FromJob { name : Str, job : Job } ]
+#     Tool : [ SystemTool { name : Str }, FromJob { name : Str, job : Job } ]
 #
-Tool : [ @SystemTool { name: Str } ]
+Tool : [ SystemTool { name: Str } ]
 
 # systemTool : Str -> Tool
 systemTool = \name ->
-    @SystemTool { name }
+    SystemTool { name }
 
-Command : [ @Command { tool : Tool } ]
+Command : [ Command { tool : Tool } ]
 
 # exec : Tool, List Str -> Command
 exec = \execTool ->
-    @Command { tool: execTool }
+    Command { tool: execTool }
 
-Job : [ @Job { command : Command, inputFiles : List Str } ]
+Job : [ Job { command : Command, inputFiles : List Str } ]
 
 # TODO: these fields are all required until https://github.com/rtfeldman/roc/issues/1844 is fixed
 # TODO: destructuring is broken, see https://github.com/rtfeldman/roc/issues/2512
 # job : { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } -> Job
 job = \stuff ->
-    @Job { command: stuff.command, inputFiles: stuff.inputFiles }
+    Job { command: stuff.command, inputFiles: stuff.inputFiles }
 
-# Rbt : [ @Rbt { default : Job } ]
+# Rbt : [ Rbt { default : Job } ]
 Rbt : { default: Job }
 
 # init : { default : Job } -> Rbt
@@ -42,4 +42,4 @@ init = \rbt -> rbt
 
 # tool : Job, Str -> Tool
 tool = \_, _ ->
-    @FromJob { name: "TODO" }
+    FromJob { name: "TODO" }
