@@ -1,67 +1,14 @@
 #![allow(non_snake_case)]
 
+mod bindings;
 mod job;
 
+use bindings::Rbt;
 use core::mem::MaybeUninit;
 use roc_std::{RocList, RocStr};
 use std::ffi::{c_void, CStr};
 use std::fmt;
 use std::os::raw::c_char;
-
-#[derive(Debug)]
-#[repr(C)]
-struct Rbt {
-    default: RbtJob,
-}
-
-#[derive(Debug)]
-#[repr(C)]
-struct RbtJob {
-    command: RbtCommand,
-    input_files: RocList<RocStr>,
-    // inputs: RocList<RbtJob>,
-    // outputs: RocList<RocStr>,
-}
-
-#[derive(Debug)]
-#[repr(C)]
-struct RbtCommand {
-    // args: RocList<RocStr>,
-    tool: RbtTool,
-}
-
-#[derive(Debug)]
-#[repr(C)]
-struct RbtTool {
-    name: RocStr,
-}
-
-// impl fmt::Debug for RbtTool {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         // match self.tag {
-//         //     0 => f
-//         //         .debug_struct("from_job")
-//         //         .field("name", unsafe { &self.payload.from_job })
-//         //         .finish(),
-//         //     1 => f
-//         //         .debug_struct("system_tool")
-//         //         .field("name", unsafe { &self.payload.system_tool })
-//         //         .finish(),
-//         //     _ => panic!(
-//         //         "I don't know what payload this tag ({:}) should be associated with!",
-//         //         self.tag
-//         //     ),
-//         // }
-//         write!(f, "lol")
-//     }
-// }
-
-// #[repr(C)]
-// union RbtToolPayload {
-//     system_tool: core::mem::ManuallyDrop<RocStr>,
-//     // fromJob: (Job, RocStr)
-//     from_job: core::mem::ManuallyDrop<RocStr>,
-// }
 
 extern "C" {
     #[link_name = "roc__initForHost_1_exposed"]
@@ -69,12 +16,12 @@ extern "C" {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn roc_alloc(size: usize, _alignment: u32) -> *mut c_void {
+pub(crate) unsafe extern "C" fn roc_alloc(size: usize, _alignment: u32) -> *mut c_void {
     return libc::malloc(size);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn roc_realloc(
+pub(crate) unsafe extern "C" fn roc_realloc(
     c_ptr: *mut c_void,
     new_size: usize,
     _old_size: usize,
@@ -84,12 +31,12 @@ pub unsafe extern "C" fn roc_realloc(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn roc_dealloc(c_ptr: *mut c_void, _alignment: u32) {
+pub(crate) unsafe extern "C" fn roc_dealloc(c_ptr: *mut c_void, _alignment: u32) {
     return libc::free(c_ptr);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn roc_panic(c_ptr: *mut c_void, tag_id: u32) {
+pub(crate) unsafe extern "C" fn roc_panic(c_ptr: *mut c_void, tag_id: u32) {
     match tag_id {
         0 => {
             let slice = CStr::from_ptr(c_ptr as *const c_char);
@@ -102,6 +49,20 @@ pub unsafe extern "C" fn roc_panic(c_ptr: *mut c_void, tag_id: u32) {
 }
 
 #[no_mangle]
+pub(crate) unsafe extern "C" fn roc_memcpy(
+    dst: *mut c_void,
+    src: *mut c_void,
+    n: usize,
+) -> *mut c_void {
+    libc::memcpy(dst, src, n)
+}
+
+#[no_mangle]
+pub(crate) unsafe extern "C" fn roc_memset(dst: *mut c_void, c: i32, n: usize) -> *mut c_void {
+    libc::memset(dst, c, n)
+}
+
+#[no_mangle]
 pub fn rust_main() -> isize {
     unsafe {
         let mut input = MaybeUninit::uninit();
@@ -111,40 +72,6 @@ pub fn rust_main() -> isize {
 
         println!("debugly printing");
         println!("{:#?}", &rbt);
-        // println!("{:?}", std::mem::transmute::<Rbt, [u8; 16]>(rbt));
-
-        // let args: Vec<String> = roc_job
-        //     .arguments
-        //     .as_slice()
-        //     .iter()
-        //     .map(|file| file.as_str().to_string())
-        //     .collect();
-
-        // let inputs: Vec<PathBuf> = roc_job
-        //     .inputs
-        //     .as_slice()
-        //     .iter()
-        //     .map(|path| PathBuf::from(path.as_str()))
-        //     .collect();
-
-        // let outputs: Vec<PathBuf> = roc_job
-        //     .outputs
-        //     .as_slice()
-        //     .iter()
-        //     .map(|path| PathBuf::from(path.as_str()))
-        //     .collect();
-
-        // let job = job::Job {
-        //     // TODO: these should eventually be RocStrs, and Job should
-        //     // just accept and convert those accordingly.
-        //     command: roc_job.command.as_str().to_string(),
-        //     arguments: args.clone(),
-        //     environment: HashMap::default(),
-        //     working_directory: PathBuf::from(roc_job.working_directory.as_str()),
-        //     inputs: inputs,
-        //     outputs: outputs,
-        // };
-        // job.run().expect("TODO better platform error handling");
     }
 
     println!("All done!");
