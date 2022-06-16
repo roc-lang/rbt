@@ -13,8 +13,7 @@ hello : Job
 hello =
     job
         {
-            command: exec (systemTool "bash"),
-            inputFiles: ["some file"],
-            # inputFiles: [],
-            # outputs: [ "out" ],
+            command: exec (systemTool "bash") [ "-c", "echo 'Hello, World!' > out" ],
+            inputFiles: [],
+            outputs: [ "out" ],
         }
