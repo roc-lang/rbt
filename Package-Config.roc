@@ -2,8 +2,16 @@ platform "roc-lang/rbt"
     requires {}{ init : Rbt }
     exposes [ Rbt ]
     packages {}
-    imports [ pf.Rbt.{ Rbt } ]
+    imports []
     provides [ initForHost ]
 
-# initForHost : Rbt
+initForHost : Rbt
 initForHost = init
+
+Tool : [ SystemTool { name: Str } ]
+
+Command : [ Command { tool : Tool } ]
+
+Job : [ Job { command : Command, inputFiles : List Str } ]
+
+Rbt : { default: Job }
