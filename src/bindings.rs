@@ -108,8 +108,9 @@ pub union Command {
     target_arch = "x86_64"
 ))]
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
-#[repr(transparent)]
+#[repr(C)]
 pub struct R2 {
+    pub args: roc_std::RocList<roc_std::RocStr>,
     pub tool: Tool,
 }
 
@@ -160,23 +161,31 @@ pub struct R3 {
 }
 
 impl Job {
-    #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "wasm32",
+        target_arch = "x86"
+    ))]
     /// Returns which variant this tag union holds. Note that this never includes a payload!
     pub fn discriminant(&self) -> discriminant_Job {
         unsafe {
             let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
 
-            core::mem::transmute::<u8, discriminant_Job>(*bytes.as_ptr().add(23))
+            core::mem::transmute::<u8, discriminant_Job>(*bytes.as_ptr().add(35))
         }
     }
 
-    #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "wasm32",
+        target_arch = "x86"
+    ))]
     /// Internal helper
     fn set_discriminant(&mut self, discriminant: discriminant_Job) {
         let discriminant_ptr: *mut discriminant_Job = (self as *mut Job).cast();
 
         unsafe {
-            *(discriminant_ptr.add(23)) = discriminant;
+            *(discriminant_ptr.add(35)) = discriminant;
         }
     }
 
@@ -191,9 +200,9 @@ impl Job {
     pub fn Job(arg0: Command, arg1: roc_std::RocList<roc_std::RocStr>) -> Self {
         let mut answer = Self {
             Job: core::mem::ManuallyDrop::new(R1 {
-                command: arg0,
-                inputFiles: arg1,
-            }),
+                    command: arg0,
+                    inputFiles: arg1,
+                })
         };
 
         answer.set_discriminant(discriminant_Job::Job);
@@ -216,7 +225,10 @@ impl Job {
 
         let payload = core::mem::ManuallyDrop::take(&mut self.Job);
 
-        (payload.command, payload.inputFiles)
+        (
+            payload.command, 
+            payload.inputFiles
+        )
     }
 
     #[cfg(any(
@@ -234,26 +246,35 @@ impl Job {
 
         let payload = &self.Job;
 
-        (&payload.command, &payload.inputFiles)
+        (
+            &payload.command, 
+            &payload.inputFiles
+        )
     }
 
-    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    #[cfg(any(
+        target_arch = "aarch64",
+        target_arch = "x86_64"
+    ))]
     /// Returns which variant this tag union holds. Note that this never includes a payload!
     pub fn discriminant(&self) -> discriminant_Job {
         unsafe {
             let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
 
-            core::mem::transmute::<u8, discriminant_Job>(*bytes.as_ptr().add(47))
+            core::mem::transmute::<u8, discriminant_Job>(*bytes.as_ptr().add(71))
         }
     }
 
-    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    #[cfg(any(
+        target_arch = "aarch64",
+        target_arch = "x86_64"
+    ))]
     /// Internal helper
     fn set_discriminant(&mut self, discriminant: discriminant_Job) {
         let discriminant_ptr: *mut discriminant_Job = (self as *mut Job).cast();
 
         unsafe {
-            *(discriminant_ptr.add(47)) = discriminant;
+            *(discriminant_ptr.add(71)) = discriminant;
         }
     }
 }
@@ -268,9 +289,10 @@ impl Drop for Job {
     ))]
     fn drop(&mut self) {
         // Drop the payloads
-        match self.discriminant() {
-            discriminant_Job::Job => unsafe { core::mem::ManuallyDrop::drop(&mut self.Job) },
-        }
+                    match self.discriminant() {
+                discriminant_Job::Job => unsafe { core::mem::ManuallyDrop::drop(&mut self.Job) },
+            }
+
     }
 }
 
@@ -285,11 +307,11 @@ impl PartialEq for Job {
         target_arch = "x86_64"
     ))]
     fn eq(&self, other: &Self) -> bool {
-        if self.discriminant() != other.discriminant() {
-            return false;
-        }
+            if self.discriminant() != other.discriminant() {
+                return false;
+            }
 
-        unsafe {
+            unsafe {
             match self.discriminant() {
                 discriminant_Job::Job => self.Job == other.Job,
             }
@@ -328,12 +350,12 @@ impl Ord for Job {
         target_arch = "x86_64"
     ))]
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        match self.discriminant().cmp(&other.discriminant()) {
-            core::cmp::Ordering::Equal => {}
-            not_eq => return not_eq,
-        }
+            match self.discriminant().cmp(&other.discriminant()) {
+                core::cmp::Ordering::Equal => {}
+                not_eq => return not_eq,
+            }
 
-        unsafe {
+            unsafe {
             match self.discriminant() {
                 discriminant_Job::Job => self.Job.cmp(&other.Job),
             }
@@ -356,6 +378,7 @@ impl Clone for Job {
                     Job: self.Job.clone(),
                 },
             }
+
         };
 
         answer.set_discriminant(self.discriminant());
@@ -372,12 +395,11 @@ impl core::hash::Hash for Job {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        match self.discriminant() {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {        match self.discriminant() {
             discriminant_Job::Job => unsafe {
-                discriminant_Job::Job.hash(state);
-                self.Job.hash(state);
-            },
+                    discriminant_Job::Job.hash(state);
+                    self.Job.hash(state);
+                },
         }
     }
 }
@@ -395,30 +417,40 @@ impl core::fmt::Debug for Job {
 
         unsafe {
             match self.discriminant() {
-                discriminant_Job::Job => f.debug_tuple("Job").field(&*self.Job).finish(),
+                discriminant_Job::Job => f.debug_tuple("Job")
+        .field(&*self.Job)
+        .finish(),
             }
         }
     }
 }
 
 impl Command {
-    #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "wasm32",
+        target_arch = "x86"
+    ))]
     /// Returns which variant this tag union holds. Note that this never includes a payload!
     pub fn discriminant(&self) -> discriminant_Command {
         unsafe {
             let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
 
-            core::mem::transmute::<u8, discriminant_Command>(*bytes.as_ptr().add(11))
+            core::mem::transmute::<u8, discriminant_Command>(*bytes.as_ptr().add(23))
         }
     }
 
-    #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "wasm32",
+        target_arch = "x86"
+    ))]
     /// Internal helper
     fn set_discriminant(&mut self, discriminant: discriminant_Command) {
         let discriminant_ptr: *mut discriminant_Command = (self as *mut Command).cast();
 
         unsafe {
-            *(discriminant_ptr.add(11)) = discriminant;
+            *(discriminant_ptr.add(23)) = discriminant;
         }
     }
 
@@ -430,9 +462,12 @@ impl Command {
         target_arch = "x86_64"
     ))]
     /// Construct a tag named Command, with the appropriate payload
-    pub fn Command(arg0: Tool) -> Self {
+    pub fn Command(arg0: roc_std::RocList<roc_std::RocStr>, arg1: Tool) -> Self {
         let mut answer = Self {
-            Command: core::mem::ManuallyDrop::new(R2 { tool: arg0 }),
+            Command: core::mem::ManuallyDrop::new(R2 {
+                    args: arg0,
+                    tool: arg1,
+                })
         };
 
         answer.set_discriminant(discriminant_Command::Command);
@@ -450,12 +485,15 @@ impl Command {
     /// Unsafely assume the given Command has a .discriminant() of Command and convert it to Command's payload.
     /// (Always examine .discriminant() first to make sure this is the correct variant!)
     /// Panics in debug builds if the .discriminant() doesn't return Command.
-    pub unsafe fn into_Command(mut self) -> Tool {
+    pub unsafe fn into_Command(mut self) -> (roc_std::RocList<roc_std::RocStr>, Tool) {
         debug_assert_eq!(self.discriminant(), discriminant_Command::Command);
 
         let payload = core::mem::ManuallyDrop::take(&mut self.Command);
 
-        payload.tool
+        (
+            payload.args, 
+            payload.tool
+        )
     }
 
     #[cfg(any(
@@ -468,31 +506,40 @@ impl Command {
     /// Unsafely assume the given Command has a .discriminant() of Command and return its payload.
     /// (Always examine .discriminant() first to make sure this is the correct variant!)
     /// Panics in debug builds if the .discriminant() doesn't return Command.
-    pub unsafe fn as_Command(&self) -> &Tool {
+    pub unsafe fn as_Command(&self) -> (&roc_std::RocList<roc_std::RocStr>, &Tool) {
         debug_assert_eq!(self.discriminant(), discriminant_Command::Command);
 
         let payload = &self.Command;
 
-        &payload.tool
+        (
+            &payload.args, 
+            &payload.tool
+        )
     }
 
-    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    #[cfg(any(
+        target_arch = "aarch64",
+        target_arch = "x86_64"
+    ))]
     /// Returns which variant this tag union holds. Note that this never includes a payload!
     pub fn discriminant(&self) -> discriminant_Command {
         unsafe {
             let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
 
-            core::mem::transmute::<u8, discriminant_Command>(*bytes.as_ptr().add(23))
+            core::mem::transmute::<u8, discriminant_Command>(*bytes.as_ptr().add(47))
         }
     }
 
-    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    #[cfg(any(
+        target_arch = "aarch64",
+        target_arch = "x86_64"
+    ))]
     /// Internal helper
     fn set_discriminant(&mut self, discriminant: discriminant_Command) {
         let discriminant_ptr: *mut discriminant_Command = (self as *mut Command).cast();
 
         unsafe {
-            *(discriminant_ptr.add(23)) = discriminant;
+            *(discriminant_ptr.add(47)) = discriminant;
         }
     }
 }
@@ -507,11 +554,10 @@ impl Drop for Command {
     ))]
     fn drop(&mut self) {
         // Drop the payloads
-        match self.discriminant() {
-            discriminant_Command::Command => unsafe {
-                core::mem::ManuallyDrop::drop(&mut self.Command)
-            },
-        }
+                    match self.discriminant() {
+                discriminant_Command::Command => unsafe { core::mem::ManuallyDrop::drop(&mut self.Command) },
+            }
+
     }
 }
 
@@ -526,11 +572,11 @@ impl PartialEq for Command {
         target_arch = "x86_64"
     ))]
     fn eq(&self, other: &Self) -> bool {
-        if self.discriminant() != other.discriminant() {
-            return false;
-        }
+            if self.discriminant() != other.discriminant() {
+                return false;
+            }
 
-        unsafe {
+            unsafe {
             match self.discriminant() {
                 discriminant_Command::Command => self.Command == other.Command,
             }
@@ -569,12 +615,12 @@ impl Ord for Command {
         target_arch = "x86_64"
     ))]
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        match self.discriminant().cmp(&other.discriminant()) {
-            core::cmp::Ordering::Equal => {}
-            not_eq => return not_eq,
-        }
+            match self.discriminant().cmp(&other.discriminant()) {
+                core::cmp::Ordering::Equal => {}
+                not_eq => return not_eq,
+            }
 
-        unsafe {
+            unsafe {
             match self.discriminant() {
                 discriminant_Command::Command => self.Command.cmp(&other.Command),
             }
@@ -597,6 +643,7 @@ impl Clone for Command {
                     Command: self.Command.clone(),
                 },
             }
+
         };
 
         answer.set_discriminant(self.discriminant());
@@ -613,12 +660,11 @@ impl core::hash::Hash for Command {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        match self.discriminant() {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {        match self.discriminant() {
             discriminant_Command::Command => unsafe {
-                discriminant_Command::Command.hash(state);
-                self.Command.hash(state);
-            },
+                    discriminant_Command::Command.hash(state);
+                    self.Command.hash(state);
+                },
         }
     }
 }
@@ -636,16 +682,20 @@ impl core::fmt::Debug for Command {
 
         unsafe {
             match self.discriminant() {
-                discriminant_Command::Command => {
-                    f.debug_tuple("Command").field(&*self.Command).finish()
-                }
+                discriminant_Command::Command => f.debug_tuple("Command")
+        .field(&*self.Command)
+        .finish(),
             }
         }
     }
 }
 
 impl Tool {
-    #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "wasm32",
+        target_arch = "x86"
+    ))]
     /// Returns which variant this tag union holds. Note that this never includes a payload!
     pub fn discriminant(&self) -> discriminant_Tool {
         unsafe {
@@ -655,7 +705,11 @@ impl Tool {
         }
     }
 
-    #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "wasm32",
+        target_arch = "x86"
+    ))]
     /// Internal helper
     fn set_discriminant(&mut self, discriminant: discriminant_Tool) {
         let discriminant_ptr: *mut discriminant_Tool = (self as *mut Tool).cast();
@@ -675,7 +729,9 @@ impl Tool {
     /// Construct a tag named SystemTool, with the appropriate payload
     pub fn SystemTool(arg0: roc_std::RocStr) -> Self {
         let mut answer = Self {
-            SystemTool: core::mem::ManuallyDrop::new(R3 { name: arg0 }),
+            SystemTool: core::mem::ManuallyDrop::new(R3 {
+                    name: arg0,
+                })
         };
 
         answer.set_discriminant(discriminant_Tool::SystemTool);
@@ -698,6 +754,7 @@ impl Tool {
 
         let payload = core::mem::ManuallyDrop::take(&mut self.SystemTool);
 
+        
         payload.name
     }
 
@@ -716,10 +773,14 @@ impl Tool {
 
         let payload = &self.SystemTool;
 
+        
         &payload.name
     }
 
-    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    #[cfg(any(
+        target_arch = "aarch64",
+        target_arch = "x86_64"
+    ))]
     /// Returns which variant this tag union holds. Note that this never includes a payload!
     pub fn discriminant(&self) -> discriminant_Tool {
         unsafe {
@@ -729,7 +790,10 @@ impl Tool {
         }
     }
 
-    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    #[cfg(any(
+        target_arch = "aarch64",
+        target_arch = "x86_64"
+    ))]
     /// Internal helper
     fn set_discriminant(&mut self, discriminant: discriminant_Tool) {
         let discriminant_ptr: *mut discriminant_Tool = (self as *mut Tool).cast();
@@ -750,11 +814,10 @@ impl Drop for Tool {
     ))]
     fn drop(&mut self) {
         // Drop the payloads
-        match self.discriminant() {
-            discriminant_Tool::SystemTool => unsafe {
-                core::mem::ManuallyDrop::drop(&mut self.SystemTool)
-            },
-        }
+                    match self.discriminant() {
+                discriminant_Tool::SystemTool => unsafe { core::mem::ManuallyDrop::drop(&mut self.SystemTool) },
+            }
+
     }
 }
 
@@ -769,11 +832,11 @@ impl PartialEq for Tool {
         target_arch = "x86_64"
     ))]
     fn eq(&self, other: &Self) -> bool {
-        if self.discriminant() != other.discriminant() {
-            return false;
-        }
+            if self.discriminant() != other.discriminant() {
+                return false;
+            }
 
-        unsafe {
+            unsafe {
             match self.discriminant() {
                 discriminant_Tool::SystemTool => self.SystemTool == other.SystemTool,
             }
@@ -812,12 +875,12 @@ impl Ord for Tool {
         target_arch = "x86_64"
     ))]
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        match self.discriminant().cmp(&other.discriminant()) {
-            core::cmp::Ordering::Equal => {}
-            not_eq => return not_eq,
-        }
+            match self.discriminant().cmp(&other.discriminant()) {
+                core::cmp::Ordering::Equal => {}
+                not_eq => return not_eq,
+            }
 
-        unsafe {
+            unsafe {
             match self.discriminant() {
                 discriminant_Tool::SystemTool => self.SystemTool.cmp(&other.SystemTool),
             }
@@ -840,6 +903,7 @@ impl Clone for Tool {
                     SystemTool: self.SystemTool.clone(),
                 },
             }
+
         };
 
         answer.set_discriminant(self.discriminant());
@@ -856,12 +920,11 @@ impl core::hash::Hash for Tool {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        match self.discriminant() {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {        match self.discriminant() {
             discriminant_Tool::SystemTool => unsafe {
-                discriminant_Tool::SystemTool.hash(state);
-                self.SystemTool.hash(state);
-            },
+                    discriminant_Tool::SystemTool.hash(state);
+                    self.SystemTool.hash(state);
+                },
         }
     }
 }
@@ -879,10 +942,9 @@ impl core::fmt::Debug for Tool {
 
         unsafe {
             match self.discriminant() {
-                discriminant_Tool::SystemTool => f
-                    .debug_tuple("SystemTool")
-                    .field(&*self.SystemTool)
-                    .finish(),
+                discriminant_Tool::SystemTool => f.debug_tuple("SystemTool")
+        .field(&*self.SystemTool)
+        .finish(),
             }
         }
     }

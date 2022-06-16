@@ -10,7 +10,7 @@ initForHost = init
 
 Tool : [ SystemTool { name: Str } ]
 
-Command : [ Command { tool : Tool } ]
+Command : [ Command { tool : Tool, args: List Str } ]
 
 Job : [ Job { command : Command, inputFiles : List Str } ]
 
