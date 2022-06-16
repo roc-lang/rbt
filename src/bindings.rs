@@ -65,6 +65,7 @@ pub union Job {
 pub struct R1 {
     pub command: Command,
     pub inputFiles: roc_std::RocList<roc_std::RocStr>,
+    pub outputs: roc_std::RocList<roc_std::RocStr>,
 }
 
 #[cfg(any(
@@ -171,7 +172,7 @@ impl Job {
         unsafe {
             let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
 
-            core::mem::transmute::<u8, discriminant_Job>(*bytes.as_ptr().add(35))
+            core::mem::transmute::<u8, discriminant_Job>(*bytes.as_ptr().add(47))
         }
     }
 
@@ -185,7 +186,7 @@ impl Job {
         let discriminant_ptr: *mut discriminant_Job = (self as *mut Job).cast();
 
         unsafe {
-            *(discriminant_ptr.add(35)) = discriminant;
+            *(discriminant_ptr.add(47)) = discriminant;
         }
     }
 
@@ -197,11 +198,12 @@ impl Job {
         target_arch = "x86_64"
     ))]
     /// Construct a tag named Job, with the appropriate payload
-    pub fn Job(arg0: Command, arg1: roc_std::RocList<roc_std::RocStr>) -> Self {
+    pub fn Job(arg0: Command, arg1: roc_std::RocList<roc_std::RocStr>, arg2: roc_std::RocList<roc_std::RocStr>) -> Self {
         let mut answer = Self {
             Job: core::mem::ManuallyDrop::new(R1 {
                     command: arg0,
                     inputFiles: arg1,
+                    outputs: arg2,
                 })
         };
 
@@ -220,14 +222,15 @@ impl Job {
     /// Unsafely assume the given Job has a .discriminant() of Job and convert it to Job's payload.
     /// (Always examine .discriminant() first to make sure this is the correct variant!)
     /// Panics in debug builds if the .discriminant() doesn't return Job.
-    pub unsafe fn into_Job(mut self) -> (Command, roc_std::RocList<roc_std::RocStr>) {
+    pub unsafe fn into_Job(mut self) -> (Command, roc_std::RocList<roc_std::RocStr>, roc_std::RocList<roc_std::RocStr>) {
         debug_assert_eq!(self.discriminant(), discriminant_Job::Job);
 
         let payload = core::mem::ManuallyDrop::take(&mut self.Job);
 
         (
             payload.command, 
-            payload.inputFiles
+            payload.inputFiles, 
+            payload.outputs
         )
     }
 
@@ -241,14 +244,15 @@ impl Job {
     /// Unsafely assume the given Job has a .discriminant() of Job and return its payload.
     /// (Always examine .discriminant() first to make sure this is the correct variant!)
     /// Panics in debug builds if the .discriminant() doesn't return Job.
-    pub unsafe fn as_Job(&self) -> (&Command, &roc_std::RocList<roc_std::RocStr>) {
+    pub unsafe fn as_Job(&self) -> (&Command, &roc_std::RocList<roc_std::RocStr>, &roc_std::RocList<roc_std::RocStr>) {
         debug_assert_eq!(self.discriminant(), discriminant_Job::Job);
 
         let payload = &self.Job;
 
         (
             &payload.command, 
-            &payload.inputFiles
+            &payload.inputFiles, 
+            &payload.outputs
         )
     }
 
@@ -261,7 +265,7 @@ impl Job {
         unsafe {
             let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
 
-            core::mem::transmute::<u8, discriminant_Job>(*bytes.as_ptr().add(71))
+            core::mem::transmute::<u8, discriminant_Job>(*bytes.as_ptr().add(95))
         }
     }
 
@@ -274,7 +278,7 @@ impl Job {
         let discriminant_ptr: *mut discriminant_Job = (self as *mut Job).cast();
 
         unsafe {
-            *(discriminant_ptr.add(71)) = discriminant;
+            *(discriminant_ptr.add(95)) = discriminant;
         }
     }
 }
