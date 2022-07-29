@@ -94,11 +94,8 @@ pub fn rust_main() -> isize {
 
         let rbt = input.assume_init();
 
-        println!("debugly printing");
         println!("{:#?}", &rbt);
     }
-
-    println!("All done!");
 
     // Exit code
     0
