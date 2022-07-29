@@ -1,17 +1,17 @@
 platform "roc-lang/rbt"
-    requires {}{ init : Rbt }
-    exposes [ Rbt ]
+    requires {} { init : Rbt }
+    exposes [Rbt]
     packages {}
     imports []
-    provides [ initForHost ]
+    provides [initForHost]
 
 initForHost : Rbt
 initForHost = init
 
-Tool : [ SystemTool { name: Str } ]
+Tool : [SystemTool { name : Str }]
 
-Command : [ Command { tool : Tool, args: List Str } ]
+Command : [Command { tool : Tool, args : List Str }]
 
-Job : [ Job { command : Command, inputFiles : List Str, outputs: List Str } ]
+Job : [Job { command : Command, inputFiles : List Str, outputs : List Str }]
 
-Rbt : { default: Job }
+Rbt : { default : Job }
