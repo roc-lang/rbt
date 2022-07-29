@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
 
 mod bindings;
-mod job;
 
 use bindings::Rbt;
 use core::mem::MaybeUninit;
