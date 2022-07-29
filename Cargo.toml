@@ -9,7 +9,7 @@ byteorder = "1.4"
 digest = "0.9"
 libc = "0.2"
 notify = "4"
-roc_std = { path = "../roc/roc_std" }
+roc_std = { path = "../roc/crates/roc_std" }
 sled = "0.34"
 tempfile = "3.2"
 walkdir = "2.3"
