@@ -4,9 +4,7 @@ mod bindings;
 
 use bindings::Rbt;
 use core::mem::MaybeUninit;
-use roc_std::{RocList, RocStr};
 use std::ffi::{c_void, CStr};
-use std::fmt;
 use std::os::raw::c_char;
 
 extern "C" {
