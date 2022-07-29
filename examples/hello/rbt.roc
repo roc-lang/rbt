@@ -3,7 +3,7 @@ app "build"
     imports [pf.Rbt.{ Rbt, systemTool, Job, job, exec }]
     provides [init] to pf
 
-# init : Rbt
+init : Rbt
 init =
     Rbt.init { default: hello }
 
