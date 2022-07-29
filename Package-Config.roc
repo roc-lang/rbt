@@ -14,4 +14,4 @@ Command : [Command { tool : Tool, args : List Str }]
 
 Job : [Job { command : Command, inputFiles : List Str, outputs : List Str }]
 
-Rbt : { default : Job }
+Rbt : [ Rbt { default : Job } ]
