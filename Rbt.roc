@@ -25,13 +25,13 @@ Command : [Command { tool : Tool, args : List Str }]
 exec = \execTool, args ->
     Command { tool: execTool, args }
 
-Job : [Job { command : Command, inputFiles : List Str }]
+Job : [Job { command : Command, inputFiles : List Str, outputs : List Str }]
 
 # TODO: these fields are all required until https://github.com/rtfeldman/roc/issues/1844 is fixed
 # TODO: destructuring is broken, see https://github.com/rtfeldman/roc/issues/2512
 # job : { command : Command, inputs : List Job, inputFiles : List Str, outputs : List Str } -> Job
 job = \stuff ->
-    Job { command: stuff.command, inputFiles: stuff.inputFiles }
+    Job { command: stuff.command, inputFiles: stuff.inputFiles, outputs: stuff.outputs }
 
 # Rbt : [ Rbt { default : Job } ]
 Rbt : { default : Job }
