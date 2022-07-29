@@ -5,22 +5,9 @@ app "build"
 
 
 # todo: bikeshed "init" name more
-# init : Rbt
+init : Rbt
 init =
     Rbt.init { default: bundle }
-
-# smallJob : Job
-# smallJob =
-#     job
-#         {
-#             command:
-#                 exec (systemTool "printf")
-#                     [ "Hello" ],
-#             inputs: [],
-#             inputFiles: [],
-#             outputs: [],
-#         }
-
 
 # note: these rules could be much more compact but we're spelling them out
 # explicitly for ease of understanding. Files using rbt do not have to be
@@ -30,24 +17,23 @@ nixShell =
     systemTool "nix-shell"
 
 
-# wat2wasmBinary : Job
-# wat2wasmBinary =
-#     job
-#         {
-#             command: exec nixShell [ "-p", "wabt", "--run", "ln -s $(which wat2wasm) wat2wasm" ],
-#             inputs: [],
-#             inputFiles: [],
-#             outputs: [ "wat2wasm" ]
-#         }
+wat2wasmBinary : Job
+wat2wasmBinary =
+    job
+        {
+            command: exec nixShell [ "-p", "wabt", "--run", "ln -s $(which wat2wasm) wat2wasm" ],
+            inputs: [],
+            inputFiles: [],
+            outputs: [ "wat2wasm" ]
+        }
 
 
-# wat2wasm : Tool
+wat2wasm : Tool
 wat2wasm =
-    # tool wat2wasmBinary "wat2wasm"
-    systemTool "wat2wasm"
+    tool wat2wasmBinary "wat2wasm"
 
 
-# esbuildBinary : Job
+esbuildBinary : Job
 esbuildBinary =
     job
         {
@@ -58,10 +44,9 @@ esbuildBinary =
         }
 
 
-# esbuild : Tool
+esbuild : Tool
 esbuild =
-    # tool esbuildBinary "esbuild"
-    systemTool "esbuild"
+    tool esbuildBinary "esbuild"
 
 
 # #######################################
@@ -80,7 +65,7 @@ addWasm =
         }
 
 
-# bundle : Job
+bundle : Job
 bundle =
     job
         {
