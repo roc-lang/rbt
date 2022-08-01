@@ -4,7 +4,7 @@ app "build"
     provides [ init ] to pf
 
 
-init : Rbt
+# init : Rbt
 init =
     Rbt.init { default: hello }
 
@@ -13,8 +13,7 @@ hello : Job
 hello =
     job
         {
-            command: exec (systemTool "bash") [ "-c", "echo Hello, World > out" ],
-            inputs: [],
+            command: exec (systemTool "bash") [ "-c", "echo 'Hello, World!' > out" ],
             inputFiles: [],
             outputs: [ "out" ],
         }

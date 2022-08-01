@@ -4,7 +4,14 @@ platform "roc-lang/rbt"
     packages {}
     imports []
     provides [ initForHost ]
-    effects fx.Effect {}
 
-# initForHost : Rbt
+initForHost : Rbt
 initForHost = init
+
+Tool : [ SystemTool { name: Str } ]
+
+Command : [ Command { tool : Tool, args: List Str } ]
+
+Job : [ Job { command : Command, inputFiles : List Str, outputs: List Str } ]
+
+Rbt : { default: Job }

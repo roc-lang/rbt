@@ -5,7 +5,7 @@ app "build"
 
 
 # todo: bikeshed "init" name more
-init : Rbt
+# init : Rbt
 init =
     Rbt.init { default: bundle }
 
@@ -25,7 +25,7 @@ init =
 # note: these rules could be much more compact but we're spelling them out
 # explicitly for ease of understanding. Files using rbt do not have to be
 # so verbose!
-nixShell : Tool
+# nixShell : Tool
 nixShell =
     systemTool "nix-shell"
 
@@ -41,13 +41,13 @@ nixShell =
 #         }
 
 
-wat2wasm : Tool
+# wat2wasm : Tool
 wat2wasm =
     # tool wat2wasmBinary "wat2wasm"
     systemTool "wat2wasm"
 
 
-esbuildBinary : Job
+# esbuildBinary : Job
 esbuildBinary =
     job
         {
@@ -58,7 +58,7 @@ esbuildBinary =
         }
 
 
-esbuild : Tool
+# esbuild : Tool
 esbuild =
     # tool esbuildBinary "esbuild"
     systemTool "esbuild"
@@ -80,7 +80,7 @@ addWasm =
         }
 
 
-bundle : Job
+# bundle : Job
 bundle =
     job
         {
