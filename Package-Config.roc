@@ -1,17 +1,21 @@
 platform "roc-lang/rbt"
-    requires {}{ init : Rbt }
-    exposes [ Rbt ]
+    requires {} { init : Rbt }
+    exposes [Rbt]
     packages {}
     imports []
-    provides [ initForHost ]
+    provides [initForHost]
 
 initForHost : Rbt
 initForHost = init
 
-Tool : [ SystemTool { name: Str } ]
+# TODO: once `roc glue` knows how to resolve them, these should move back
+# into Rbt.roc so we can stop copying the definitions over every time we make
+# a change!
 
-Command : [ Command { tool : Tool, args: List Str } ]
+Tool : [SystemTool { name : Str }]
 
-Job : [ Job { command : Command, inputFiles : List Str, outputs: List Str } ]
+Command : [Command { tool : Tool, args : List Str }]
 
-Rbt : { default: Job }
+Job : [Job { command : Command, inputFiles : List Str, outputs : List Str }]
+
+Rbt : [ Rbt { default : Job } ]

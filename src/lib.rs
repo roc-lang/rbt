@@ -1,13 +1,10 @@
 #![allow(non_snake_case)]
 
 mod bindings;
-mod job;
 
 use bindings::Rbt;
 use core::mem::MaybeUninit;
-use roc_std::{RocList, RocStr};
 use std::ffi::{c_void, CStr};
-use std::fmt;
 use std::os::raw::c_char;
 
 extern "C" {
@@ -91,17 +88,14 @@ pub unsafe extern "C" fn roc_getppid() -> i32 {
 
 #[no_mangle]
 pub fn rust_main() -> isize {
-    unsafe {
+    let rbt_wrapped = unsafe {
         let mut input = MaybeUninit::uninit();
         roc_init(input.as_mut_ptr());
+        input.assume_init()
+    };
+    let rbt = unsafe { rbt_wrapped.as_Rbt() };
 
-        let rbt = input.assume_init();
-
-        println!("debugly printing");
-        println!("{:#?}", &rbt);
-    }
-
-    println!("All done!");
+    println!("{:#?}", &rbt);
 
     // Exit code
     0

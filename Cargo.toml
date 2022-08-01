@@ -6,14 +6,14 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 byteorder = "1.4"
-digest = "0.9"
+digest = "0.10"
 libc = "0.2"
 notify = "4"
-roc_std = { path = "../roc/roc_std" }
+roc_std = { path = "../roc/crates/roc_std" }
 sled = "0.34"
 tempfile = "3.2"
 walkdir = "2.3"
-zerocopy = "0.5"
+zerocopy = "0.6"
 
 [lib]
 name = "host"
