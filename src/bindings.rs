@@ -7,8 +7,6 @@
 #![allow(non_upper_case_globals)]
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-use core::mem::MaybeUninit;
-
 #[cfg(any(
     target_arch = "arm",
     target_arch = "aarch64",
@@ -260,14 +258,18 @@ impl Rbt {
     pub unsafe fn into_Rbt(mut self) -> RbtGuts {
         debug_assert_eq!(self.discriminant(), discriminant_Rbt::Rbt);
 
-        let mut bag_of_sand = MaybeUninit::uninit();
-        let rbt = core::mem::replace(
-            &mut self.Rbt,
-            core::mem::ManuallyDrop::new(bag_of_sand.assume_init()),
-        );
-        core::mem::forget(self);
+        let payload = {
+            let mut uninitialized = core::mem::MaybeUninit::uninit();
+            let swapped = core::mem::replace(
+                &mut self.Rbt,
+                core::mem::ManuallyDrop::new(uninitialized.assume_init()),
+            );
+            core::mem::forget(self);
 
-        core::mem::ManuallyDrop::into_inner(rbt)
+            core::mem::ManuallyDrop::into_inner(swapped)
+        };
+
+        payload
     }
 
     #[cfg(any(
@@ -496,7 +498,16 @@ impl Job {
     pub unsafe fn into_Job(mut self) -> JobGuts {
         debug_assert_eq!(self.discriminant(), discriminant_Job::Job);
 
-        let payload = core::mem::ManuallyDrop::take(&mut self.Job);
+        let payload = {
+            let mut uninitialized = core::mem::MaybeUninit::uninit();
+            let swapped = core::mem::replace(
+                &mut self.Job,
+                core::mem::ManuallyDrop::new(uninitialized.assume_init()),
+            );
+            core::mem::forget(self);
+
+            core::mem::ManuallyDrop::into_inner(swapped)
+        };
 
         payload
     }
@@ -727,7 +738,16 @@ impl Command {
     pub unsafe fn into_Command(mut self) -> CommandGuts {
         debug_assert_eq!(self.discriminant(), discriminant_Command::Command);
 
-        let payload = core::mem::ManuallyDrop::take(&mut self.Command);
+        let payload = {
+            let mut uninitialized = core::mem::MaybeUninit::uninit();
+            let swapped = core::mem::replace(
+                &mut self.Command,
+                core::mem::ManuallyDrop::new(uninitialized.assume_init()),
+            );
+            core::mem::forget(self);
+
+            core::mem::ManuallyDrop::into_inner(swapped)
+        };
 
         payload
     }
@@ -962,7 +982,16 @@ impl Tool {
     pub unsafe fn into_SystemTool(mut self) -> SystemTool {
         debug_assert_eq!(self.discriminant(), discriminant_Tool::SystemTool);
 
-        let payload = core::mem::ManuallyDrop::take(&mut self.SystemTool);
+        let payload = {
+            let mut uninitialized = core::mem::MaybeUninit::uninit();
+            let swapped = core::mem::replace(
+                &mut self.SystemTool,
+                core::mem::ManuallyDrop::new(uninitialized.assume_init()),
+            );
+            core::mem::forget(self);
+
+            core::mem::ManuallyDrop::into_inner(swapped)
+        };
 
         payload
     }
