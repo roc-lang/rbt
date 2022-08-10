@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 
 mod bindings;
+mod rbt;
 
 use bindings::Rbt;
 use core::mem::MaybeUninit;
@@ -95,6 +96,7 @@ pub fn rust_main() -> isize {
     };
 
     println!("{:#?}", &rbt);
+    println!("{:#?}", rbt::Rbt::from(rbt));
 
     // Exit code
     0
