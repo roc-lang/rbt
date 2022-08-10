@@ -99,9 +99,13 @@ pub fn rust_main() -> isize {
 
     let converted = rbt::Rbt::from(rbt);
     println!("{:#?}", converted);
+
+    let serialized = serde_json::to_string_pretty(&converted).expect("couldn't serialize to JSON");
+    println!("{}", serialized);
+
     println!(
-        "{}",
-        serde_json::to_string_pretty(&converted).expect("couldn't dump to JSON")
+        "{:#?}",
+        serde_json::from_str::<rbt::Rbt>(&serialized).expect("couldn't load from JSON")
     );
 
     // Exit code

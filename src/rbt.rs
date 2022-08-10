@@ -1,9 +1,10 @@
 use crate::bindings;
 use roc_std::{RocList, RocStr};
+use serde::de::Visitor;
 use serde::ser::SerializeSeq;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Rbt {
     default: Job,
 }
@@ -19,12 +20,18 @@ impl From<bindings::Rbt> for Rbt {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Job {
     command: Command,
-    #[serde(serialize_with = "serialize_roc_list_of_roc_str")]
+    #[serde(
+        serialize_with = "serialize_roc_list_of_roc_str",
+        deserialize_with = "deserialize_roc_list_of_roc_str"
+    )]
     inputFiles: RocList<RocStr>,
-    #[serde(serialize_with = "serialize_roc_list_of_roc_str")]
+    #[serde(
+        serialize_with = "serialize_roc_list_of_roc_str",
+        deserialize_with = "deserialize_roc_list_of_roc_str"
+    )]
     outputs: RocList<RocStr>,
 }
 
@@ -41,10 +48,13 @@ impl From<bindings::Job> for Job {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Command {
     tool: Tool,
-    #[serde(serialize_with = "serialize_roc_list_of_roc_str")]
+    #[serde(
+        serialize_with = "serialize_roc_list_of_roc_str",
+        deserialize_with = "deserialize_roc_list_of_roc_str"
+    )]
     args: RocList<RocStr>,
 }
 
@@ -60,10 +70,13 @@ impl From<bindings::Command> for Command {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Tool {
     SystemTool {
-        #[serde(serialize_with = "serialize_roc_str")]
+        #[serde(
+            serialize_with = "serialize_roc_str",
+            deserialize_with = "deserialize_roc_str"
+        )]
         name: RocStr,
     },
 }
@@ -75,6 +88,7 @@ impl From<bindings::Tool> for Tool {
 }
 
 // Remote Types
+//// RocList<RocStr>
 
 fn serialize_roc_list_of_roc_str<S>(
     list: &RocList<RocStr>,
@@ -90,9 +104,68 @@ where
     seq.end()
 }
 
+fn deserialize_roc_list_of_roc_str<'de, D>(deserializer: D) -> Result<RocList<RocStr>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    deserializer.deserialize_seq(RocListOfRocStringVisitor {})
+}
+
+struct RocListOfRocStringVisitor {}
+
+impl<'de> Visitor<'de> for RocListOfRocStringVisitor {
+    type Value = RocList<RocStr>;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "a list of strings")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'de>,
+    {
+        let mut out: Vec<RocStr> = match seq.size_hint() {
+            Some(hint) => Vec::with_capacity(hint),
+            None => Vec::new(),
+        };
+
+        while let Some(next) = seq.next_element::<&str>()? {
+            out.push(RocStr::from(next))
+        }
+
+        Ok(RocList::from_slice(&out))
+    }
+}
+
+//// RocStr
+
 fn serialize_roc_str<S>(roc_str: &RocStr, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
     serializer.serialize_str(roc_str.as_str())
+}
+
+fn deserialize_roc_str<'de, D>(deserializer: D) -> Result<RocStr, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    deserializer.deserialize_string(RocStringVisitor {})
+}
+
+struct RocStringVisitor {}
+
+impl<'de> Visitor<'de> for RocStringVisitor {
+    type Value = RocStr;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "a string")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(RocStr::from(value))
+    }
 }
