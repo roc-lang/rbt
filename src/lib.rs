@@ -88,12 +88,11 @@ pub unsafe extern "C" fn roc_getppid() -> i32 {
 
 #[no_mangle]
 pub fn rust_main() -> isize {
-    let rbt_wrapped = unsafe {
+    let rbt = unsafe {
         let mut input = MaybeUninit::uninit();
         roc_init(input.as_mut_ptr());
         input.assume_init()
     };
-    let rbt = unsafe { rbt_wrapped.as_Rbt() };
 
     println!("{:#?}", &rbt);
 
