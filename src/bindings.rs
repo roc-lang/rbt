@@ -17,7 +17,7 @@
 #[repr(C)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Rbt {
-    f0: RbtGuts,
+    f0: R1,
 }
 
 #[cfg(any(
@@ -29,7 +29,7 @@ pub struct Rbt {
 ))]
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct RbtGuts {
+pub struct R1 {
     pub default: Job,
 }
 
@@ -43,7 +43,7 @@ pub struct RbtGuts {
 #[repr(C)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Job {
-    f0: JobGuts,
+    f0: R2,
 }
 
 #[cfg(any(
@@ -55,7 +55,7 @@ pub struct Job {
 ))]
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[repr(C)]
-pub struct JobGuts {
+pub struct R2 {
     pub command: Command,
     pub inputFiles: roc_std::RocList<roc_std::RocStr>,
     pub outputs: roc_std::RocList<roc_std::RocStr>,
@@ -71,7 +71,7 @@ pub struct JobGuts {
 #[repr(C)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Command {
-    f0: CommandGuts,
+    f0: R3,
 }
 
 #[cfg(any(
@@ -83,7 +83,7 @@ pub struct Command {
 ))]
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[repr(C)]
-pub struct CommandGuts {
+pub struct R3 {
     pub args: roc_std::RocList<roc_std::RocStr>,
     pub tool: Tool,
 }
@@ -110,7 +110,7 @@ impl Rbt {
         target_arch = "x86_64"
     ))]
     /// A tag named Rbt, with the given payload.
-    pub fn Rbt(f0: RbtGuts) -> Self {
+    pub fn Rbt(f0: R1) -> Self {
         Self { f0 }
     }
 
@@ -163,7 +163,7 @@ impl Job {
         target_arch = "x86_64"
     ))]
     /// A tag named Job, with the given payload.
-    pub fn Job(f0: JobGuts) -> Self {
+    pub fn Job(f0: R2) -> Self {
         Self { f0 }
     }
 
@@ -216,7 +216,7 @@ impl Command {
         target_arch = "x86_64"
     ))]
     /// A tag named Command, with the given payload.
-    pub fn Command(f0: CommandGuts) -> Self {
+    pub fn Command(f0: R3) -> Self {
         Self { f0 }
     }
 
