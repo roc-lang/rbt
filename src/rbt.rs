@@ -1,7 +1,9 @@
 use crate::bindings;
 use roc_std::{RocList, RocStr};
+use serde::ser::SerializeSeq;
+use serde::Serialize;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Rbt {
     default: Job,
 }
@@ -17,10 +19,12 @@ impl From<bindings::Rbt> for Rbt {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Job {
     command: Command,
+    #[serde(serialize_with = "serialize_roc_list_of_roc_str")]
     inputFiles: RocList<RocStr>,
+    #[serde(serialize_with = "serialize_roc_list_of_roc_str")]
     outputs: RocList<RocStr>,
 }
 
@@ -37,9 +41,10 @@ impl From<bindings::Job> for Job {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Command {
     tool: Tool,
+    #[serde(serialize_with = "serialize_roc_list_of_roc_str")]
     args: RocList<RocStr>,
 }
 
@@ -55,13 +60,39 @@ impl From<bindings::Command> for Command {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum Tool {
-    SystemTool(RocStr),
+    SystemTool {
+        #[serde(serialize_with = "serialize_roc_str")]
+        name: RocStr,
+    },
 }
 
 impl From<bindings::Tool> for Tool {
     fn from(tool: bindings::Tool) -> Self {
-        Self::SystemTool(tool.f0)
+        Self::SystemTool { name: tool.f0 }
     }
+}
+
+// Remote Types
+
+fn serialize_roc_list_of_roc_str<S>(
+    list: &RocList<RocStr>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let mut seq = serializer.serialize_seq(Some(list.len()))?;
+    for item in list {
+        seq.serialize_element(item.as_str())?;
+    }
+    seq.end()
+}
+
+fn serialize_roc_str<S>(roc_str: &RocStr, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(roc_str.as_str())
 }

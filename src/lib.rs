@@ -96,7 +96,13 @@ pub fn rust_main() -> isize {
     };
 
     println!("{:#?}", &rbt);
-    println!("{:#?}", rbt::Rbt::from(rbt));
+
+    let converted = rbt::Rbt::from(rbt);
+    println!("{:#?}", converted);
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&converted).expect("couldn't dump to JSON")
+    );
 
     // Exit code
     0
