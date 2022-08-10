@@ -17,7 +17,7 @@
 #[repr(C)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Rbt {
-    f0: R1,
+    pub f0: R1,
 }
 
 #[cfg(any(
@@ -43,7 +43,7 @@ pub struct R1 {
 #[repr(C)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Job {
-    f0: R2,
+    pub f0: R2,
 }
 
 #[cfg(any(
@@ -71,7 +71,7 @@ pub struct R2 {
 #[repr(C)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Command {
-    f0: R3,
+    pub f0: R3,
 }
 
 #[cfg(any(
@@ -98,7 +98,7 @@ pub struct R3 {
 #[repr(C)]
 #[derive(Clone, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Tool {
-    f0: roc_std::RocStr,
+    pub f0: roc_std::RocStr,
 }
 
 impl Rbt {
