@@ -9,7 +9,9 @@ pub struct CLI {
 }
 
 impl CLI {
+    #[tracing::instrument]
     pub fn run(&self) -> Result<(), String> {
-        Err("TODO!".to_string())
+        tracing::warn!("todo: unimplemented!");
+        Err("Hello, World!".to_string())
     }
 }
