@@ -19,7 +19,7 @@ pub struct CLI {
 }
 
 impl CLI {
-    #[tracing::instrument]
+    #[tracing::instrument(skip(self))]
     pub fn run(&self) -> Result<()> {
         let rbt: Rbt = match &self.load_from_json {
             Some(path) => Self::load_from_json(path).context("could not load from JSON")?,
