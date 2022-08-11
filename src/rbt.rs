@@ -27,7 +27,7 @@ pub struct Job {
         serialize_with = "serialize_roc_list_of_roc_str",
         deserialize_with = "deserialize_roc_list_of_roc_str"
     )]
-    inputFiles: RocList<RocStr>,
+    input_files: RocList<RocStr>,
     #[serde(
         serialize_with = "serialize_roc_list_of_roc_str",
         deserialize_with = "deserialize_roc_list_of_roc_str"
@@ -42,7 +42,7 @@ impl From<bindings::Job> for Job {
 
         Job {
             command: Command::from(unwrapped.command),
-            inputFiles: unwrapped.inputFiles,
+            input_files: unwrapped.inputFiles,
             outputs: unwrapped.outputs,
         }
     }
