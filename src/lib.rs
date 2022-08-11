@@ -101,12 +101,3 @@ pub fn rust_main() -> isize {
         0
     }
 }
-
-#[test]
-fn test_examples() {
-    let status = Command::new("roc")
-        .args(&["examples/ReadSelf.roc"])
-        .status()
-        .unwrap();
-    assert_eq!(status.success(), true);
-}
