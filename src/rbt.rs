@@ -129,8 +129,8 @@ impl<'de> Visitor<'de> for RocListOfRocStringVisitor {
             None => Vec::new(),
         };
 
-        while let Some(next) = seq.next_element::<&str>()? {
-            out.push(RocStr::from(next))
+        while let Some(next) = seq.next_element::<String>()? {
+            out.push(RocStr::from(next.as_str()))
         }
 
         Ok(RocList::from_slice(&out))
