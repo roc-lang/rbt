@@ -13,6 +13,9 @@ pub struct CLI {
     /// it from this JSON.
     #[clap(long)]
     load_from_json: Option<PathBuf>,
+
+    #[clap(long)]
+    dump_to_json: bool,
 }
 
 impl CLI {
@@ -24,6 +27,14 @@ impl CLI {
         };
 
         tracing::info!(?rbt, "loaded");
+
+        if self.dump_to_json {
+            tracing::info!("dumping to JSON, as reqested");
+            println!(
+                "{}",
+                serde_json::to_string(&rbt).context("could not dump to JSON")?
+            )
+        }
 
         Ok(())
     }
