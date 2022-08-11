@@ -19,10 +19,8 @@ impl CLI {
     #[tracing::instrument]
     pub fn run(&self) -> Result<()> {
         let rbt: Rbt = match &self.load_from_json {
-            Some(path) => self
-                .load_from_json(path)
-                .context("could not load from JSON")?,
-            None => self.load_from_roc(),
+            Some(path) => Self::load_from_json(path).context("could not load from JSON")?,
+            None => Self::load_from_roc(),
         };
 
         println!("{:#?}", rbt);
@@ -31,7 +29,7 @@ impl CLI {
     }
 
     #[tracing::instrument(level = "debug")]
-    pub fn load_from_roc(&self) -> Rbt {
+    pub fn load_from_roc() -> Rbt {
         tracing::trace!("running Roc program");
         let rbt = unsafe {
             let mut input = MaybeUninit::uninit();
@@ -44,7 +42,8 @@ impl CLI {
     }
 
     #[tracing::instrument(level = "debug")]
-    pub fn load_from_json(&self, path: &Path) -> Result<Rbt> {
+    pub fn load_from_json(path: &Path) -> Result<Rbt> {
+        tracing::trace!("loading from JSON");
         let file =
             File::open(path).with_context(|| format!("could not open {}", path.display()))?;
         let reader = BufReader::new(file);
