@@ -88,6 +88,7 @@ pub fn rust_main() -> isize {
     let cli = cli::CLI::parse();
 
     let subscriber = tracing_subscriber::FmtSubscriber::builder()
+        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
         .with_max_level(tracing::Level::TRACE) // TODO: source log level from CLI args
         .finish();
 
