@@ -32,12 +32,14 @@ impl CLI {
 
     #[tracing::instrument(level = "debug")]
     pub fn load_from_roc(&self) -> Rbt {
+        tracing::trace!("running Roc program");
         let rbt = unsafe {
             let mut input = MaybeUninit::uninit();
             roc_init(input.as_mut_ptr());
             input.assume_init()
         };
 
+        tracing::trace!("converting Roc -> Rust");
         rbt.into()
     }
 
