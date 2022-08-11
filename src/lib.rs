@@ -94,7 +94,7 @@ pub fn rust_main() -> isize {
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     if let Err(problem) = cli.run() {
-        tracing::error!("{}", problem);
+        tracing::error!("{:?}", problem);
         1
     } else {
         0

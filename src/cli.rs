@@ -1,4 +1,5 @@
 use crate::rbt::Rbt;
+use anyhow::{Context, Result};
 use clap::Parser;
 use core::mem::MaybeUninit;
 use std::fs::File;
@@ -16,11 +17,11 @@ pub struct CLI {
 
 impl CLI {
     #[tracing::instrument]
-    pub fn run(&self) -> Result<(), String> {
-        tracing::warn!("todo: unimplemented!");
-
+    pub fn run(&self) -> Result<()> {
         let rbt: Rbt = match &self.load_from_json {
-            Some(path) => self.load_from_json(path)?,
+            Some(path) => self
+                .load_from_json(path)
+                .context("could not load from JSON")?,
             None => self.load_from_roc(),
         };
 
@@ -41,11 +42,12 @@ impl CLI {
     }
 
     #[tracing::instrument(level = "debug")]
-    pub fn load_from_json(&self, path: &Path) -> Result<Rbt, String> {
-        let file = File::open(path).map_err(|e| e.to_string())?;
+    pub fn load_from_json(&self, path: &Path) -> Result<Rbt> {
+        let file =
+            File::open(path).with_context(|| format!("could not open {}", path.display()))?;
         let reader = BufReader::new(file);
 
-        serde_json::from_reader(reader).map_err(|e| e.to_string())
+        serde_json::from_reader(reader).context("could not deserialize JSON into an rbt instance")
     }
 }
 
