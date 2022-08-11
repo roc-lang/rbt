@@ -23,7 +23,7 @@ impl CLI {
             None => Self::load_from_roc(),
         };
 
-        println!("{:#?}", rbt);
+        tracing::info!(?rbt, "loaded");
 
         Ok(())
     }
