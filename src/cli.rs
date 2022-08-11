@@ -8,9 +8,10 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
 pub struct CLI {
-    /// Temporary while we're working out how to get stuff from Roc
+    /// [temporary] Instead of running the Rbt configuration from Roc, load
+    /// it from this JSON.
     #[clap(long)]
-    load_from: Option<PathBuf>,
+    load_from_json: Option<PathBuf>,
 }
 
 impl CLI {
@@ -18,7 +19,7 @@ impl CLI {
     pub fn run(&self) -> Result<(), String> {
         tracing::warn!("todo: unimplemented!");
 
-        let rbt: Rbt = match &self.load_from {
+        let rbt: Rbt = match &self.load_from_json {
             Some(path) => self.load_from_json(path)?,
             None => self.load_from_roc(),
         };
