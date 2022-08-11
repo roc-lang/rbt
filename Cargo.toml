@@ -6,6 +6,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 byteorder = "1.4"
+clap = { version = "3.2.16", features = ["color", "suggestions", "unstable-v4", "env", "cargo", "derive"] }
 digest = "0.10"
 libc = "0.2"
 notify = "4"
