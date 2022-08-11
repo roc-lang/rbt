@@ -4,7 +4,6 @@ mod bindings;
 mod cli;
 mod rbt;
 
-use bindings::Rbt;
 use clap::Parser;
 use std::ffi::{c_void, CStr};
 use std::os::raw::c_char;
