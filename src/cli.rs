@@ -1,6 +1,8 @@
 use crate::rbt::Rbt;
 use clap::Parser;
 use core::mem::MaybeUninit;
+use std::fs::File;
+use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Parser)]
@@ -39,7 +41,10 @@ impl CLI {
 
     #[tracing::instrument(level = "debug")]
     pub fn load_from_json(&self, path: &Path) -> Result<Rbt, String> {
-        Err("TODO".to_string())
+        let file = File::open(path).map_err(|e| e.to_string())?;
+        let reader = BufReader::new(file);
+
+        serde_json::from_reader(reader).map_err(|e| e.to_string())
     }
 }
 
