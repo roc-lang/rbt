@@ -6,7 +6,8 @@ use std::hash::{Hash, Hasher};
 #[derive(Debug, Default)]
 pub struct Runner<'job> {
     jobs: HashMap<u64, RunnableJob<'job>>,
-    waiting_for: HashMap<u64, HashSet<u64>>,
+    blocked: HashMap<u64, HashSet<u64>>,
+    ready: HashSet<u64>,
 }
 
 impl<'job> Runner<'job> {
@@ -38,10 +39,14 @@ impl<'job> Runner<'job> {
                 outputs: &job.outputs,
             };
 
-            self.waiting_for.insert(
-                id,
-                runnable_job.inputs.values().map(|id| id.clone()).collect(),
-            );
+            let blockers: HashSet<u64> =
+                runnable_job.inputs.values().map(|id| id.clone()).collect();
+            if blockers.is_empty() {
+                self.ready.insert(id);
+            } else {
+                self.blocked.insert(id, blockers);
+            }
+
             self.jobs.insert(id, runnable_job);
 
             todo.append(&mut job.inputs.values().collect());
