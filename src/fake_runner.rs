@@ -9,6 +9,8 @@ impl Runner for FakeRunner {
     fn run(&self, job: &RunnableJob) -> Result<()> {
         tracing::info!("fake runner \"running\" job");
 
+        std::thread::sleep(std::time::Duration::from_millis(500));
+
         Ok(())
     }
 }
