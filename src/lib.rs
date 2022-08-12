@@ -3,6 +3,7 @@
 mod bindings;
 mod cli;
 mod rbt;
+mod runner;
 
 use clap::Parser;
 use std::ffi::{c_void, CStr};

@@ -1,4 +1,5 @@
 use crate::rbt::Rbt;
+use crate::runner::Runner;
 use anyhow::{Context, Result};
 use clap::Parser;
 use core::mem::MaybeUninit;
@@ -35,6 +36,11 @@ impl CLI {
                 serde_json::to_string(&rbt).context("could not dump to JSON")?
             )
         }
+
+        let mut runner = Runner::default();
+        runner.add_target(&rbt.default);
+
+        tracing::info!(?runner, "loaded runner");
 
         Ok(())
     }

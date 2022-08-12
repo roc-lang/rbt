@@ -8,6 +8,7 @@ anyhow = "1.0"
 byteorder = "1.4"
 clap = { version = "3.2.16", features = ["color", "suggestions", "unstable-v4", "env", "cargo", "derive"] }
 digest = "0.10"
+itertools = "0.10.3"
 libc = "0.2"
 notify = "4"
 roc_std = { path = "../roc/crates/roc_std" }
