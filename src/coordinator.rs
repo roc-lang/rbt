@@ -1,5 +1,5 @@
 use crate::rbt;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use roc_std::{RocList, RocStr};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
@@ -59,18 +59,20 @@ impl<'job> Coordinator<'job> {
         !self.blocked.is_empty() && !self.ready.is_empty()
     }
 
-    #[tracing::instrument(skip(self))]
-    pub fn run_next(&mut self) -> Result<()> {
+    #[tracing::instrument(skip(self, runner))]
+    pub fn run_next<R: Runner>(&mut self, runner: &R) -> Result<()> {
         let next = match self.ready.pop() {
             Some(id) => id,
             None => anyhow::bail!("no work ready to do"),
         };
 
-        // assuming things were fine
-        tracing::warn!(
-            job = ?self.jobs[&next],
-            "running in debug mode instead of using an actual runner"
-        );
+        runner
+            .run(
+                self.jobs
+                    .get(&next)
+                    .context("had a bad job ID in Coordinator.ready")?,
+            )
+            .context("could not run job")?;
 
         for (blocked, blockers) in self.blocked.iter_mut() {
             if blockers.remove(&next) {
@@ -94,8 +96,12 @@ impl<'job> Coordinator<'job> {
 
 #[derive(Debug)]
 pub struct RunnableJob<'job> {
-    command: &'job rbt::Command,
-    inputs: HashMap<&'job str, u64>,
-    input_files: &'job RocList<RocStr>,
-    outputs: &'job RocList<RocStr>,
+    pub command: &'job rbt::Command,
+    inputs: HashMap<&'job str, u64>, // not pub because inputs will eventually be provided in Runner.run
+    pub input_files: &'job RocList<RocStr>,
+    pub outputs: &'job RocList<RocStr>,
+}
+
+pub trait Runner {
+    fn run(&self, job: &RunnableJob) -> Result<()>;
 }

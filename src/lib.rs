@@ -3,6 +3,7 @@
 mod bindings;
 mod cli;
 mod coordinator;
+mod fake_runner;
 mod rbt;
 
 use clap::Parser;

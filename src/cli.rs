@@ -40,8 +40,12 @@ impl CLI {
         let mut coordinator = Coordinator::default();
         coordinator.add_target(&rbt.default);
 
+        let runner = crate::fake_runner::FakeRunner::default();
+
         while coordinator.has_outstanding_work() {
-            coordinator.run_next().context("failed to run task")?;
+            coordinator
+                .run_next(&runner)
+                .context("failed to run task")?;
         }
 
         Ok(())
