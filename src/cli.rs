@@ -1,5 +1,5 @@
+use crate::coordinator::Coordinator;
 use crate::rbt::Rbt;
-use crate::runner::Runner;
 use anyhow::{Context, Result};
 use clap::Parser;
 use core::mem::MaybeUninit;
@@ -37,11 +37,11 @@ impl CLI {
             )
         }
 
-        let mut runner = Runner::default();
-        runner.add_target(&rbt.default);
+        let mut coordinator = Coordinator::default();
+        coordinator.add_target(&rbt.default);
 
-        while runner.has_outstanding_work() {
-            runner.run_next().context("failed to run task")?;
+        while coordinator.has_outstanding_work() {
+            coordinator.run_next().context("failed to run task")?;
         }
 
         Ok(())

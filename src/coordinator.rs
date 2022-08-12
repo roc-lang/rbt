@@ -5,13 +5,13 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Default)]
-pub struct Runner<'job> {
+pub struct Coordinator<'job> {
     jobs: HashMap<u64, RunnableJob<'job>>,
     blocked: HashMap<u64, HashSet<u64>>,
     ready: Vec<u64>,
 }
 
-impl<'job> Runner<'job> {
+impl<'job> Coordinator<'job> {
     #[tracing::instrument(skip(target_job))] // job is quite a bit of info for the log!
     pub fn add_target(&mut self, target_job: &'job rbt::Job) {
         let mut todo = vec![target_job];
