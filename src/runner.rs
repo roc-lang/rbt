@@ -80,10 +80,10 @@ impl<'job> Runner<'job> {
                     tracing::info!(ready = blocked, "new job ready to work");
                     self.ready.push(*blocked);
 
-                    // TODO: it would be useful to remove the newly-unblocked
-                    // item from self.blocked, but there's already a mutable
-                    // borrow. Possibly rearrange the code to do some mutable
-                    // filtering thing.
+                    // TODO: it would be more performant to remove the
+                    // newly-unblocked item from self.blocked, but there's
+                    // already a mutable borrow. Possibly rearrange the code
+                    // to do some mutable filtering thing.
                 }
             }
         }
