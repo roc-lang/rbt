@@ -1,4 +1,5 @@
 use crate::rbt;
+use anyhow::Result;
 use roc_std::{RocList, RocStr};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
@@ -7,7 +8,7 @@ use std::hash::{Hash, Hasher};
 pub struct Runner<'job> {
     jobs: HashMap<u64, RunnableJob<'job>>,
     blocked: HashMap<u64, HashSet<u64>>,
-    ready: HashSet<u64>,
+    ready: Vec<u64>,
 }
 
 impl<'job> Runner<'job> {
@@ -41,8 +42,9 @@ impl<'job> Runner<'job> {
 
             let blockers: HashSet<u64> =
                 runnable_job.inputs.values().map(|id| id.clone()).collect();
+
             if blockers.is_empty() {
-                self.ready.insert(id);
+                self.ready.push(id);
             } else {
                 self.blocked.insert(id, blockers);
             }
@@ -51,6 +53,42 @@ impl<'job> Runner<'job> {
 
             todo.append(&mut job.inputs.values().collect());
         }
+    }
+
+    pub fn has_outstanding_work(&self) -> bool {
+        !self.blocked.is_empty() && !self.ready.is_empty()
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub fn run_next(&mut self) -> Result<()> {
+        let next = match self.ready.pop() {
+            Some(id) => id,
+            None => anyhow::bail!("no work ready to do"),
+        };
+
+        // assuming things were fine
+        tracing::warn!(
+            job = ?self.jobs[&next],
+            "running in debug mode instead of using an actual runner"
+        );
+
+        for (blocked, blockers) in self.blocked.iter_mut() {
+            if blockers.remove(&next) {
+                tracing::trace!(removed = next, blocked, "removed blocker");
+
+                if blockers.is_empty() {
+                    tracing::info!(ready = blocked, "new job ready to work");
+                    self.ready.push(*blocked);
+
+                    // TODO: it would be useful to remove the newly-unblocked
+                    // item from self.blocked, but there's already a mutable
+                    // borrow. Possibly rearrange the code to do some mutable
+                    // filtering thing.
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 

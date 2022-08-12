@@ -40,7 +40,9 @@ impl CLI {
         let mut runner = Runner::default();
         runner.add_target(&rbt.default);
 
-        tracing::info!(?runner, "loaded runner");
+        while runner.has_outstanding_work() {
+            runner.run_next().context("failed to run task")?;
+        }
 
         Ok(())
     }
