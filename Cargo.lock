@@ -588,6 +588,7 @@ dependencies = [
  "sled",
  "tempfile",
  "tracing",
+ "tracing-log",
  "tracing-subscriber",
  "walkdir",
  "zerocopy",

@@ -94,6 +94,8 @@ pub fn rust_main() -> isize {
         .with_writer(std::io::stderr)
         .finish();
 
+    tracing_log::LogTracer::init().expect("could not initialize log tracer");
+
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     if let Err(problem) = cli.run() {
