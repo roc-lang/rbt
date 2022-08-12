@@ -57,9 +57,10 @@ impl From<bindings::Job> for Job {
 impl Hash for Job {
     /// `Job` is hashed specifically to be able to track dependencies. That means
     /// that the hash has to be stable with respect to the ordering of the inputs
-    /// in the HashMap, regardless of the hashing function it uses! This is a
-    /// little more expensive than just iterating over the keys in the order
-    /// they appear, but gives us the stability we need for further calculations.
+    /// in the HashMap, regardless of the hashing function it uses! It should
+    /// also be stable across runs. This custom implementation is a little more
+    /// expensive than just iterating over the keys in the order they appear,
+    /// but gives us the stability we need for further calculations.
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.command.hash(state);
         self.input_files.hash(state);
