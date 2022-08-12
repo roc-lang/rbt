@@ -1,9 +1,11 @@
 use crate::bindings;
+use itertools::Itertools;
 use roc_std::{RocList, RocStr};
 use serde::de::Visitor;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Rbt {
@@ -51,7 +53,26 @@ impl From<bindings::Job> for Job {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+// TODO: when Job has Eq, it must be true that `j1 == j2 => hash(j1) == hash(j2)`
+impl Hash for Job {
+    /// `Job` is hashed specifically to be able to track dependencies. That means
+    /// that the hash has to be stable with respect to the ordering of the inputs
+    /// in the HashMap, regardless of the hashing function it uses! This is a
+    /// little more expensive than just iterating over the keys in the order
+    /// they appear, but gives us the stability we need for further calculations.
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.command.hash(state);
+        self.input_files.hash(state);
+        self.outputs.hash(state);
+
+        for (name, input) in self.inputs.iter().sorted_by(|a, b| Ord::cmp(&a.0, &b.0)) {
+            name.hash(state);
+            input.hash(state);
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Hash)]
 pub struct Command {
     pub tool: Tool,
     #[serde(
@@ -73,7 +94,7 @@ impl From<bindings::Command> for Command {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Hash)]
 pub enum Tool {
     SystemTool {
         #[serde(
