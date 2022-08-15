@@ -79,15 +79,13 @@ impl<'job> Coordinator<'job> {
             .context("could not run job")?;
 
         for (blocked, blockers) in self.blocked.iter_mut() {
-            if blockers.remove(&next) {
-                if blockers.is_empty() {
-                    self.ready.push(*blocked);
+            if blockers.remove(&next) && blockers.is_empty() {
+                self.ready.push(*blocked);
 
-                    // TODO: it would be more performant to remove the
-                    // newly-unblocked item from self.blocked, but there's
-                    // already a mutable borrow. Possibly rearrange the code
-                    // to do some mutable filtering thing.
-                }
+                // TODO: it would be more performant to remove the
+                // newly-unblocked item from self.blocked, but there's
+                // already a mutable borrow. Possibly rearrange the code
+                // to do some mutable filtering thing.
             }
         }
 
