@@ -14,6 +14,11 @@ in pkgs.mkShell {
       niv.niv
       git
 
+      # roc tools
+      (pkgs.callPackage sources.roc {
+        cargoSha256 = "sha256-jFN0Ne/0wCCZl/oNmZE5/Sw5l+qNxShI3xlP4ikFMlw=";
+      })
+
       # rust tools
       cargo
       cargo-edit
