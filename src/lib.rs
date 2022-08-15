@@ -1,17 +1,12 @@
 #![allow(non_snake_case)]
 
 mod bindings;
+mod cli;
 mod rbt;
 
-use bindings::Rbt;
-use core::mem::MaybeUninit;
+use clap::Parser;
 use std::ffi::{c_void, CStr};
 use std::os::raw::c_char;
-
-extern "C" {
-    #[link_name = "roc__initForHost_1_exposed"]
-    fn roc_init(init: *mut Rbt);
-}
 
 #[no_mangle]
 pub(crate) unsafe extern "C" fn roc_alloc(size: usize, _alignment: u32) -> *mut c_void {
@@ -89,27 +84,22 @@ pub unsafe extern "C" fn roc_getppid() -> i32 {
 
 #[no_mangle]
 pub fn rust_main() -> isize {
-    let rbt = unsafe {
-        let mut input = MaybeUninit::uninit();
-        roc_init(input.as_mut_ptr());
-        input.assume_init()
-    };
+    let cli = cli::CLI::parse();
 
-    println!("{:#?}", &rbt);
+    let subscriber = tracing_subscriber::FmtSubscriber::builder()
+        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
+        .with_max_level(tracing::Level::TRACE) // TODO: source log level from CLI args
+        .with_writer(std::io::stderr)
+        .finish();
 
-    let converted = rbt::Rbt::from(rbt);
-    println!("{:#?}", converted);
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
-    let serialized = serde_json::to_string_pretty(&converted).expect("couldn't serialize to JSON");
-    println!("{}", serialized);
-
-    println!(
-        "{:#?}",
-        serde_json::from_str::<rbt::Rbt>(&serialized).expect("couldn't load from JSON")
-    );
-
-    // Exit code
-    0
+    if let Err(problem) = cli.run() {
+        tracing::error!("{:?}", problem);
+        1
+    } else {
+        0
+    }
 }
 
 #[test]

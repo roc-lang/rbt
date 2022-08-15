@@ -6,6 +6,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 byteorder = "1.4"
+clap = { version = "3.2.16", features = ["color", "suggestions", "unstable-v4", "env", "cargo", "derive"] }
 digest = "0.10"
 libc = "0.2"
 notify = "4"
@@ -14,6 +15,8 @@ serde = { version = "1.0.143", features = ["derive"] }
 serde_json = "1.0.83"
 sled = "0.34"
 tempfile = "3.2"
+tracing = "0.1.36"
+tracing-subscriber = "0.3.15"
 walkdir = "2.3"
 zerocopy = "0.6"
 

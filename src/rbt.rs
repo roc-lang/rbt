@@ -26,7 +26,7 @@ pub struct Job {
         serialize_with = "serialize_roc_list_of_roc_str",
         deserialize_with = "deserialize_roc_list_of_roc_str"
     )]
-    inputFiles: RocList<RocStr>,
+    input_files: RocList<RocStr>,
     #[serde(
         serialize_with = "serialize_roc_list_of_roc_str",
         deserialize_with = "deserialize_roc_list_of_roc_str"
@@ -41,7 +41,7 @@ impl From<bindings::Job> for Job {
 
         Job {
             command: Command::from(unwrapped.command),
-            inputFiles: unwrapped.inputFiles,
+            input_files: unwrapped.inputFiles,
             outputs: unwrapped.outputs,
         }
     }
@@ -128,8 +128,8 @@ impl<'de> Visitor<'de> for RocListOfRocStringVisitor {
             None => Vec::new(),
         };
 
-        while let Some(next) = seq.next_element::<&str>()? {
-            out.push(RocStr::from(next))
+        while let Some(next) = seq.next_element::<String>()? {
+            out.push(RocStr::from(next.as_str()))
         }
 
         Ok(RocList::from_slice(&out))
