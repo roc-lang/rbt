@@ -20,17 +20,13 @@ pub struct Cli {
 }
 
 impl Cli {
-    #[tracing::instrument(skip(self))]
     pub fn run(&self) -> Result<()> {
         let rbt: Rbt = match &self.load_from_json {
             Some(path) => Self::load_from_json(path).context("could not load from JSON")?,
             None => Self::load_from_roc(),
         };
 
-        tracing::info!(?rbt, "loaded");
-
         if self.dump_to_json {
-            tracing::info!("dumping to JSON, as reqested");
             println!(
                 "{}",
                 serde_json::to_string(&rbt).context("could not dump to JSON")?
@@ -51,22 +47,17 @@ impl Cli {
         Ok(())
     }
 
-    #[tracing::instrument(level = "debug")]
     pub fn load_from_roc() -> Rbt {
-        tracing::trace!("running Roc program");
         let rbt = unsafe {
             let mut input = MaybeUninit::uninit();
             roc_init(input.as_mut_ptr());
             input.assume_init()
         };
 
-        tracing::trace!("converting Roc -> Rust");
         rbt.into()
     }
 
-    #[tracing::instrument(level = "debug")]
     pub fn load_from_json(path: &Path) -> Result<Rbt> {
-        tracing::trace!("loading from JSON");
         let file =
             File::open(path).with_context(|| format!("could not open {}", path.display()))?;
         let reader = BufReader::new(file);
