@@ -8,6 +8,10 @@ let
     # only necessary until surgical linking is in Roc
     pkgs.glibc
   ];
+
+  roc = pkgs.callPackage sources.roc {
+    cargoSha256 = "sha256-jFN0Ne/0wCCZl/oNmZE5/Sw5l+qNxShI3xlP4ikFMlw=";
+  };
 in pkgs.mkShell {
   buildInputs = with pkgs;
     [
@@ -15,9 +19,8 @@ in pkgs.mkShell {
       git
 
       # roc tools
-      (pkgs.callPackage sources.roc {
-        cargoSha256 = "sha256-jFN0Ne/0wCCZl/oNmZE5/Sw5l+qNxShI3xlP4ikFMlw=";
-      })
+      roc
+
       (pkgs.writeShellScriptBin "sync-roc-std" ''
         set -euo pipefail
 
@@ -25,6 +28,14 @@ in pkgs.mkShell {
         rm -rf "$ROOT/vendor/roc_std"
         mkdir -p "$ROOT/vendor/roc_std"
         ${pkgs.rsync}/bin/rsync --chmod 0644 -r ${sources.roc}/crates/roc_std/ "$ROOT/vendor/roc_std"
+      '')
+
+      (pkgs.writeShellScriptBin "sync-glue" ''
+        set -euo pipefail
+
+        ROOT="$(${pkgs.git}/bin/git rev-parse --show-toplevel)"
+        ${roc}/bin/roc glue "$ROOT/Package-Config.roc" "$ROOT/src/glue.rs"
+        ${rustfmt}/bin/rustfmt "$ROOT/src/glue.rs"
       '')
 
       # rust tools
