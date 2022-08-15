@@ -104,3 +104,9 @@ pub struct RunnableJob<'job> {
 pub trait Runner {
     fn run(&self, job: &RunnableJob) -> Result<()>;
 }
+
+impl Runner for Box<dyn Runner> {
+    fn run(&self, job: &RunnableJob) -> Result<()> {
+        self.as_ref().run(job)
+    }
+}

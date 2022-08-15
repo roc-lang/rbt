@@ -17,6 +17,11 @@ pub struct Cli {
 
     #[clap(long)]
     dump_to_json: bool,
+
+    /// Use a runner that does not actually run any tasks. Only useful for
+    /// rbt developers!
+    #[clap(long)]
+    use_fake_runner: bool,
 }
 
 impl Cli {
@@ -36,7 +41,11 @@ impl Cli {
         let mut coordinator = Coordinator::default();
         coordinator.add_target(&rbt.default);
 
-        let runner = crate::fake_runner::FakeRunner::default();
+        let runner: Box<dyn crate::coordinator::Runner> = if self.use_fake_runner {
+            Box::new(crate::fake_runner::FakeRunner::default())
+        } else {
+            Box::new(crate::runner::Runner::default())
+        };
 
         while coordinator.has_outstanding_work() {
             coordinator
