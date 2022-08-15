@@ -2,6 +2,8 @@
 
 mod bindings;
 mod cli;
+mod coordinator;
+mod fake_runner;
 mod rbt;
 
 use clap::Parser;
@@ -87,10 +89,12 @@ pub fn rust_main() -> isize {
     let cli = cli::CLI::parse();
 
     let subscriber = tracing_subscriber::FmtSubscriber::builder()
-        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
+        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
         .with_max_level(tracing::Level::TRACE) // TODO: source log level from CLI args
         .with_writer(std::io::stderr)
         .finish();
+
+    tracing_log::LogTracer::init().expect("could not initialize log tracer");
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
@@ -100,13 +104,4 @@ pub fn rust_main() -> isize {
     } else {
         0
     }
-}
-
-#[test]
-fn test_examples() {
-    let status = Command::new("roc")
-        .args(&["examples/ReadSelf.roc"])
-        .status()
-        .unwrap();
-    assert_eq!(status.success(), true);
 }

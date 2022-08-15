@@ -1,3 +1,4 @@
+use crate::coordinator::Coordinator;
 use crate::rbt::Rbt;
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -34,6 +35,17 @@ impl CLI {
                 "{}",
                 serde_json::to_string(&rbt).context("could not dump to JSON")?
             )
+        }
+
+        let mut coordinator = Coordinator::default();
+        coordinator.add_target(&rbt.default);
+
+        let runner = crate::fake_runner::FakeRunner::default();
+
+        while coordinator.has_outstanding_work() {
+            coordinator
+                .run_next(&runner)
+                .context("failed to run task")?;
         }
 
         Ok(())
