@@ -61,7 +61,7 @@ impl<'job> Coordinator<'job> {
     }
 
     pub fn has_outstanding_work(&self) -> bool {
-        !self.blocked.is_empty() && !self.ready.is_empty()
+        !self.blocked.is_empty() || !self.ready.is_empty()
     }
 
     pub fn run_next<R: Runner>(&mut self, runner: &R) -> Result<()> {
