@@ -48,9 +48,7 @@ impl Cli {
         };
 
         while coordinator.has_outstanding_work() {
-            coordinator
-                .run_next(&runner)
-                .context("failed to run task")?;
+            coordinator.run_next(&runner).context("failed to run job")?;
         }
 
         Ok(())
