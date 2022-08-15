@@ -78,16 +78,26 @@ impl<'job> Coordinator<'job> {
             )
             .context("could not run job")?;
 
-        for (blocked, blockers) in self.blocked.iter_mut() {
-            if blockers.remove(&next) && blockers.is_empty() {
-                self.ready.push(*blocked);
+        // Now that we're done running the job, we update our bookkeeping to
+        // figure out what running that job just unblocked.
+        //
+        // As an implementation note, this will probably end up in a separate
+        // function once we're running tasks in parallel!
+        let mut newly_unblocked = Vec::default(); // avoiding mutating both fields of self in the loop below
 
-                // TODO: it would be more performant to remove the
-                // newly-unblocked item from self.blocked, but there's
-                // already a mutable borrow. Possibly rearrange the code
-                // to do some mutable filtering thing.
+        self.blocked.retain(|blocked, blockers| {
+            let removed = blockers.remove(&next);
+            if !removed {
+                return false;
             }
-        }
+
+            let no_blockers_remaining = blockers.is_empty();
+            if no_blockers_remaining {
+                newly_unblocked.push(*blocked)
+            }
+            !no_blockers_remaining
+        });
+        self.ready.append(&mut newly_unblocked);
 
         Ok(())
     }
