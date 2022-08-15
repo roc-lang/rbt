@@ -18,3 +18,10 @@ After that, you can either run `nix-shell` to get into a development shell, or [
 rbt versions `roc` and `nixpkgs` using [`niv`](https://github.com/nmattia/niv).
 
 To update these deps, get into a dev shell and run `niv update`, or `niv update roc` or `niv update nixpkgs` to just update one or the other.
+
+### Updating `roc_std`
+
+To simplify dependency management, rbt vendors a copy of Roc's standard library at `vendor/roc_std`.
+We keep this in sync with the Roc version from niv, but check in the files to make life easier in CI.
+
+To update this code, get into a dev shell and run `sync-roc-std`, then commit the changes.
