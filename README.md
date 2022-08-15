@@ -10,3 +10,11 @@ A very early work in progress!
 
 For now, you'll need to have [the `nix` package manager](https://nixos.org/download.html) installed.
 After that, you can either run `nix-shell` to get into a development shell, or [install `direnv`](https://direnv.net/) and run `direnv allow` to do the same whenever you `cd` here.
+
+### Repo Maintenance
+
+#### Updating dev dependencies
+
+rbt versions `roc` and `nixpkgs` using [`niv`](https://github.com/nmattia/niv).
+
+To update these deps, get into a dev shell and run `niv update`, or `niv update roc` or `niv update nixpkgs` to just update one or the other.
