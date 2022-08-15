@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 
 mod bindings;
+mod rbt;
 
 use bindings::Rbt;
 use core::mem::MaybeUninit;
@@ -88,14 +89,24 @@ pub unsafe extern "C" fn roc_getppid() -> i32 {
 
 #[no_mangle]
 pub fn rust_main() -> isize {
-    let rbt_wrapped = unsafe {
+    let rbt = unsafe {
         let mut input = MaybeUninit::uninit();
         roc_init(input.as_mut_ptr());
         input.assume_init()
     };
-    let rbt = unsafe { rbt_wrapped.as_Rbt() };
 
     println!("{:#?}", &rbt);
+
+    let converted = rbt::Rbt::from(rbt);
+    println!("{:#?}", converted);
+
+    let serialized = serde_json::to_string_pretty(&converted).expect("couldn't serialize to JSON");
+    println!("{}", serialized);
+
+    println!(
+        "{:#?}",
+        serde_json::from_str::<rbt::Rbt>(&serialized).expect("couldn't load from JSON")
+    );
 
     // Exit code
     0

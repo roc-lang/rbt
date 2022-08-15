@@ -14,30 +14,10 @@
     target_arch = "x86",
     target_arch = "x86_64"
 ))]
-#[derive(Clone, Copy, Eq, Ord, Hash, PartialEq, PartialOrd)]
-#[repr(u8)]
-pub enum discriminant_Rbt {
-    Rbt = 0,
-}
-
-impl core::fmt::Debug for discriminant_Rbt {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Rbt => f.write_str("discriminant_Rbt::Rbt"),
-        }
-    }
-}
-
-#[cfg(any(
-    target_arch = "arm",
-    target_arch = "aarch64",
-    target_arch = "wasm32",
-    target_arch = "x86",
-    target_arch = "x86_64"
-))]
 #[repr(C)]
-pub union Rbt {
-    Rbt: core::mem::ManuallyDrop<R1>,
+#[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
+pub struct Rbt {
+    pub f0: R1,
 }
 
 #[cfg(any(
@@ -60,30 +40,10 @@ pub struct R1 {
     target_arch = "x86",
     target_arch = "x86_64"
 ))]
-#[derive(Clone, Copy, Eq, Ord, Hash, PartialEq, PartialOrd)]
-#[repr(u8)]
-pub enum discriminant_Job {
-    Job = 0,
-}
-
-impl core::fmt::Debug for discriminant_Job {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Job => f.write_str("discriminant_Job::Job"),
-        }
-    }
-}
-
-#[cfg(any(
-    target_arch = "arm",
-    target_arch = "aarch64",
-    target_arch = "wasm32",
-    target_arch = "x86",
-    target_arch = "x86_64"
-))]
 #[repr(C)]
-pub union Job {
-    Job: core::mem::ManuallyDrop<R2>,
+#[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
+pub struct Job {
+    pub f0: R2,
 }
 
 #[cfg(any(
@@ -108,30 +68,10 @@ pub struct R2 {
     target_arch = "x86",
     target_arch = "x86_64"
 ))]
-#[derive(Clone, Copy, Eq, Ord, Hash, PartialEq, PartialOrd)]
-#[repr(u8)]
-pub enum discriminant_Command {
-    Command = 0,
-}
-
-impl core::fmt::Debug for discriminant_Command {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Command => f.write_str("discriminant_Command::Command"),
-        }
-    }
-}
-
-#[cfg(any(
-    target_arch = "arm",
-    target_arch = "aarch64",
-    target_arch = "wasm32",
-    target_arch = "x86",
-    target_arch = "x86_64"
-))]
 #[repr(C)]
-pub union Command {
-    Command: core::mem::ManuallyDrop<R3>,
+#[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
+pub struct Command {
+    pub f0: R3,
 }
 
 #[cfg(any(
@@ -155,43 +95,10 @@ pub struct R3 {
     target_arch = "x86",
     target_arch = "x86_64"
 ))]
-#[derive(Clone, Copy, Eq, Ord, Hash, PartialEq, PartialOrd)]
-#[repr(u8)]
-pub enum discriminant_Tool {
-    SystemTool = 0,
-}
-
-impl core::fmt::Debug for discriminant_Tool {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::SystemTool => f.write_str("discriminant_Tool::SystemTool"),
-        }
-    }
-}
-
-#[cfg(any(
-    target_arch = "arm",
-    target_arch = "aarch64",
-    target_arch = "wasm32",
-    target_arch = "x86",
-    target_arch = "x86_64"
-))]
 #[repr(C)]
-pub union Tool {
-    SystemTool: core::mem::ManuallyDrop<R4>,
-}
-
-#[cfg(any(
-    target_arch = "arm",
-    target_arch = "aarch64",
-    target_arch = "wasm32",
-    target_arch = "x86",
-    target_arch = "x86_64"
-))]
-#[derive(Clone, Debug, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
-#[repr(transparent)]
-pub struct R4 {
-    pub name: roc_std::RocStr,
+#[derive(Clone, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
+pub struct Tool {
+    pub f0: roc_std::RocStr,
 }
 
 impl Rbt {
@@ -202,13 +109,9 @@ impl Rbt {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Returns which variant this tag union holds. Note that this never includes a payload!
-    pub fn discriminant(&self) -> discriminant_Rbt {
-        unsafe {
-            let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
-
-            core::mem::transmute::<u8, discriminant_Rbt>(*bytes.as_ptr().add(0))
-        }
+    /// A tag named Rbt, with the given payload.
+    pub fn Rbt(f0: R1) -> Self {
+        Self { f0 }
     }
 
     #[cfg(any(
@@ -218,13 +121,10 @@ impl Rbt {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Internal helper
-    fn set_discriminant(&mut self, discriminant: discriminant_Rbt) {
-        let discriminant_ptr: *mut discriminant_Rbt = (self as *mut Rbt).cast();
-
-        unsafe {
-            *(discriminant_ptr.add(0)) = discriminant;
-        }
+    /// Other `into_` methods return a payload, but since the Rbt tag
+    /// has no payload, this does nothing and is only here for completeness.
+    pub fn into_Rbt(self) {
+        ()
     }
 
     #[cfg(any(
@@ -234,178 +134,10 @@ impl Rbt {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Construct a tag named `Rbt`, with the appropriate payload
-    pub fn Rbt(arg0: R1) -> Self {
-        let mut answer = Self {
-            Rbt: core::mem::ManuallyDrop::new(arg0)
-        };
-
-        answer.set_discriminant(discriminant_Rbt::Rbt);
-
-        answer
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Unsafely assume the given `Rbt` has a `.discriminant()` of `Rbt` and convert it to `Rbt`'s payload.
-    /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
-    /// Panics in debug builds if the `.discriminant()` doesn't return `Rbt`.
-    pub unsafe fn into_Rbt(mut self) -> R1 {
-        debug_assert_eq!(self.discriminant(), discriminant_Rbt::Rbt);
-
-        let payload = core::mem::ManuallyDrop::take(&mut self.Rbt);
-
-        
-        payload
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Unsafely assume the given `Rbt` has a `.discriminant()` of `Rbt` and return its payload.
-    /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
-    /// Panics in debug builds if the `.discriminant()` doesn't return `Rbt`.
-    pub unsafe fn as_Rbt(&self) -> &R1 {
-        debug_assert_eq!(self.discriminant(), discriminant_Rbt::Rbt);
-
-        let payload = &self.Rbt;
-
-        
-        payload
-    }
-}
-
-impl Drop for Rbt {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn drop(&mut self) {
-        // Drop the payloads
-                    match self.discriminant() {
-                discriminant_Rbt::Rbt => unsafe { core::mem::ManuallyDrop::drop(&mut self.Rbt) },
-            }
-
-    }
-}
-
-impl Eq for Rbt {}
-
-impl PartialEq for Rbt {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn eq(&self, other: &Self) -> bool {
-            if self.discriminant() != other.discriminant() {
-                return false;
-            }
-
-            unsafe {
-            match self.discriminant() {
-                discriminant_Rbt::Rbt => self.Rbt == other.Rbt,
-            }
-        }
-    }
-}
-
-impl PartialOrd for Rbt {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        match self.discriminant().partial_cmp(&other.discriminant()) {
-            Some(core::cmp::Ordering::Equal) => {}
-            not_eq => return not_eq,
-        }
-
-        unsafe {
-            match self.discriminant() {
-                discriminant_Rbt::Rbt => self.Rbt.partial_cmp(&other.Rbt),
-            }
-        }
-    }
-}
-
-impl Ord for Rbt {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-            match self.discriminant().cmp(&other.discriminant()) {
-                core::cmp::Ordering::Equal => {}
-                not_eq => return not_eq,
-            }
-
-            unsafe {
-            match self.discriminant() {
-                discriminant_Rbt::Rbt => self.Rbt.cmp(&other.Rbt),
-            }
-        }
-    }
-}
-
-impl Clone for Rbt {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn clone(&self) -> Self {
-        let mut answer = unsafe {
-            match self.discriminant() {
-                discriminant_Rbt::Rbt => Self {
-                    Rbt: self.Rbt.clone(),
-                },
-            }
-
-        };
-
-        answer.set_discriminant(self.discriminant());
-
-        answer
-    }
-}
-
-impl core::hash::Hash for Rbt {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {        match self.discriminant() {
-            discriminant_Rbt::Rbt => unsafe {
-                    discriminant_Rbt::Rbt.hash(state);
-                    self.Rbt.hash(state);
-                },
-        }
+    /// Other `as` methods return a payload, but since the Rbt tag
+    /// has no payload, this does nothing and is only here for completeness.
+    pub fn as_Rbt(&self) {
+        ()
     }
 }
 
@@ -418,15 +150,7 @@ impl core::fmt::Debug for Rbt {
         target_arch = "x86_64"
     ))]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_str("Rbt::")?;
-
-        unsafe {
-            match self.discriminant() {
-                discriminant_Rbt::Rbt => f.debug_tuple("Rbt")
-        .field(&*self.Rbt)
-        .finish(),
-            }
-        }
+        f.debug_tuple("Rbt::Rbt").field(&self.f0).finish()
     }
 }
 
@@ -438,13 +162,9 @@ impl Job {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Returns which variant this tag union holds. Note that this never includes a payload!
-    pub fn discriminant(&self) -> discriminant_Job {
-        unsafe {
-            let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
-
-            core::mem::transmute::<u8, discriminant_Job>(*bytes.as_ptr().add(0))
-        }
+    /// A tag named Job, with the given payload.
+    pub fn Job(f0: R2) -> Self {
+        Self { f0 }
     }
 
     #[cfg(any(
@@ -454,13 +174,10 @@ impl Job {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Internal helper
-    fn set_discriminant(&mut self, discriminant: discriminant_Job) {
-        let discriminant_ptr: *mut discriminant_Job = (self as *mut Job).cast();
-
-        unsafe {
-            *(discriminant_ptr.add(0)) = discriminant;
-        }
+    /// Other `into_` methods return a payload, but since the Job tag
+    /// has no payload, this does nothing and is only here for completeness.
+    pub fn into_Job(self) {
+        ()
     }
 
     #[cfg(any(
@@ -470,178 +187,10 @@ impl Job {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Construct a tag named `Job`, with the appropriate payload
-    pub fn Job(arg0: R2) -> Self {
-        let mut answer = Self {
-            Job: core::mem::ManuallyDrop::new(arg0)
-        };
-
-        answer.set_discriminant(discriminant_Job::Job);
-
-        answer
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Unsafely assume the given `Job` has a `.discriminant()` of `Job` and convert it to `Job`'s payload.
-    /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
-    /// Panics in debug builds if the `.discriminant()` doesn't return `Job`.
-    pub unsafe fn into_Job(mut self) -> R2 {
-        debug_assert_eq!(self.discriminant(), discriminant_Job::Job);
-
-        let payload = core::mem::ManuallyDrop::take(&mut self.Job);
-
-        
-        payload
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Unsafely assume the given `Job` has a `.discriminant()` of `Job` and return its payload.
-    /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
-    /// Panics in debug builds if the `.discriminant()` doesn't return `Job`.
-    pub unsafe fn as_Job(&self) -> &R2 {
-        debug_assert_eq!(self.discriminant(), discriminant_Job::Job);
-
-        let payload = &self.Job;
-
-        
-        payload
-    }
-}
-
-impl Drop for Job {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn drop(&mut self) {
-        // Drop the payloads
-                    match self.discriminant() {
-                discriminant_Job::Job => unsafe { core::mem::ManuallyDrop::drop(&mut self.Job) },
-            }
-
-    }
-}
-
-impl Eq for Job {}
-
-impl PartialEq for Job {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn eq(&self, other: &Self) -> bool {
-            if self.discriminant() != other.discriminant() {
-                return false;
-            }
-
-            unsafe {
-            match self.discriminant() {
-                discriminant_Job::Job => self.Job == other.Job,
-            }
-        }
-    }
-}
-
-impl PartialOrd for Job {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        match self.discriminant().partial_cmp(&other.discriminant()) {
-            Some(core::cmp::Ordering::Equal) => {}
-            not_eq => return not_eq,
-        }
-
-        unsafe {
-            match self.discriminant() {
-                discriminant_Job::Job => self.Job.partial_cmp(&other.Job),
-            }
-        }
-    }
-}
-
-impl Ord for Job {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-            match self.discriminant().cmp(&other.discriminant()) {
-                core::cmp::Ordering::Equal => {}
-                not_eq => return not_eq,
-            }
-
-            unsafe {
-            match self.discriminant() {
-                discriminant_Job::Job => self.Job.cmp(&other.Job),
-            }
-        }
-    }
-}
-
-impl Clone for Job {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn clone(&self) -> Self {
-        let mut answer = unsafe {
-            match self.discriminant() {
-                discriminant_Job::Job => Self {
-                    Job: self.Job.clone(),
-                },
-            }
-
-        };
-
-        answer.set_discriminant(self.discriminant());
-
-        answer
-    }
-}
-
-impl core::hash::Hash for Job {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {        match self.discriminant() {
-            discriminant_Job::Job => unsafe {
-                    discriminant_Job::Job.hash(state);
-                    self.Job.hash(state);
-                },
-        }
+    /// Other `as` methods return a payload, but since the Job tag
+    /// has no payload, this does nothing and is only here for completeness.
+    pub fn as_Job(&self) {
+        ()
     }
 }
 
@@ -654,15 +203,7 @@ impl core::fmt::Debug for Job {
         target_arch = "x86_64"
     ))]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_str("Job::")?;
-
-        unsafe {
-            match self.discriminant() {
-                discriminant_Job::Job => f.debug_tuple("Job")
-        .field(&*self.Job)
-        .finish(),
-            }
-        }
+        f.debug_tuple("Job::Job").field(&self.f0).finish()
     }
 }
 
@@ -674,13 +215,9 @@ impl Command {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Returns which variant this tag union holds. Note that this never includes a payload!
-    pub fn discriminant(&self) -> discriminant_Command {
-        unsafe {
-            let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
-
-            core::mem::transmute::<u8, discriminant_Command>(*bytes.as_ptr().add(0))
-        }
+    /// A tag named Command, with the given payload.
+    pub fn Command(f0: R3) -> Self {
+        Self { f0 }
     }
 
     #[cfg(any(
@@ -690,13 +227,10 @@ impl Command {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Internal helper
-    fn set_discriminant(&mut self, discriminant: discriminant_Command) {
-        let discriminant_ptr: *mut discriminant_Command = (self as *mut Command).cast();
-
-        unsafe {
-            *(discriminant_ptr.add(0)) = discriminant;
-        }
+    /// Other `into_` methods return a payload, but since the Command tag
+    /// has no payload, this does nothing and is only here for completeness.
+    pub fn into_Command(self) {
+        ()
     }
 
     #[cfg(any(
@@ -706,178 +240,10 @@ impl Command {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Construct a tag named `Command`, with the appropriate payload
-    pub fn Command(arg0: R3) -> Self {
-        let mut answer = Self {
-            Command: core::mem::ManuallyDrop::new(arg0)
-        };
-
-        answer.set_discriminant(discriminant_Command::Command);
-
-        answer
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Unsafely assume the given `Command` has a `.discriminant()` of `Command` and convert it to `Command`'s payload.
-    /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
-    /// Panics in debug builds if the `.discriminant()` doesn't return `Command`.
-    pub unsafe fn into_Command(mut self) -> R3 {
-        debug_assert_eq!(self.discriminant(), discriminant_Command::Command);
-
-        let payload = core::mem::ManuallyDrop::take(&mut self.Command);
-
-        
-        payload
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Unsafely assume the given `Command` has a `.discriminant()` of `Command` and return its payload.
-    /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
-    /// Panics in debug builds if the `.discriminant()` doesn't return `Command`.
-    pub unsafe fn as_Command(&self) -> &R3 {
-        debug_assert_eq!(self.discriminant(), discriminant_Command::Command);
-
-        let payload = &self.Command;
-
-        
-        payload
-    }
-}
-
-impl Drop for Command {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn drop(&mut self) {
-        // Drop the payloads
-                    match self.discriminant() {
-                discriminant_Command::Command => unsafe { core::mem::ManuallyDrop::drop(&mut self.Command) },
-            }
-
-    }
-}
-
-impl Eq for Command {}
-
-impl PartialEq for Command {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn eq(&self, other: &Self) -> bool {
-            if self.discriminant() != other.discriminant() {
-                return false;
-            }
-
-            unsafe {
-            match self.discriminant() {
-                discriminant_Command::Command => self.Command == other.Command,
-            }
-        }
-    }
-}
-
-impl PartialOrd for Command {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        match self.discriminant().partial_cmp(&other.discriminant()) {
-            Some(core::cmp::Ordering::Equal) => {}
-            not_eq => return not_eq,
-        }
-
-        unsafe {
-            match self.discriminant() {
-                discriminant_Command::Command => self.Command.partial_cmp(&other.Command),
-            }
-        }
-    }
-}
-
-impl Ord for Command {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-            match self.discriminant().cmp(&other.discriminant()) {
-                core::cmp::Ordering::Equal => {}
-                not_eq => return not_eq,
-            }
-
-            unsafe {
-            match self.discriminant() {
-                discriminant_Command::Command => self.Command.cmp(&other.Command),
-            }
-        }
-    }
-}
-
-impl Clone for Command {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn clone(&self) -> Self {
-        let mut answer = unsafe {
-            match self.discriminant() {
-                discriminant_Command::Command => Self {
-                    Command: self.Command.clone(),
-                },
-            }
-
-        };
-
-        answer.set_discriminant(self.discriminant());
-
-        answer
-    }
-}
-
-impl core::hash::Hash for Command {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {        match self.discriminant() {
-            discriminant_Command::Command => unsafe {
-                    discriminant_Command::Command.hash(state);
-                    self.Command.hash(state);
-                },
-        }
+    /// Other `as` methods return a payload, but since the Command tag
+    /// has no payload, this does nothing and is only here for completeness.
+    pub fn as_Command(&self) {
+        ()
     }
 }
 
@@ -890,15 +256,7 @@ impl core::fmt::Debug for Command {
         target_arch = "x86_64"
     ))]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_str("Command::")?;
-
-        unsafe {
-            match self.discriminant() {
-                discriminant_Command::Command => f.debug_tuple("Command")
-        .field(&*self.Command)
-        .finish(),
-            }
-        }
+        f.debug_tuple("Command::Command").field(&self.f0).finish()
     }
 }
 
@@ -910,13 +268,9 @@ impl Tool {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Returns which variant this tag union holds. Note that this never includes a payload!
-    pub fn discriminant(&self) -> discriminant_Tool {
-        unsafe {
-            let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
-
-            core::mem::transmute::<u8, discriminant_Tool>(*bytes.as_ptr().add(0))
-        }
+    /// A tag named SystemTool, with the given payload.
+    pub fn SystemTool(f0: roc_std::RocStr) -> Self {
+        Self { f0 }
     }
 
     #[cfg(any(
@@ -926,13 +280,10 @@ impl Tool {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Internal helper
-    fn set_discriminant(&mut self, discriminant: discriminant_Tool) {
-        let discriminant_ptr: *mut discriminant_Tool = (self as *mut Tool).cast();
-
-        unsafe {
-            *(discriminant_ptr.add(0)) = discriminant;
-        }
+    /// Other `into_` methods return a payload, but since the SystemTool tag
+    /// has no payload, this does nothing and is only here for completeness.
+    pub fn into_SystemTool(self) {
+        ()
     }
 
     #[cfg(any(
@@ -942,178 +293,10 @@ impl Tool {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Construct a tag named `SystemTool`, with the appropriate payload
-    pub fn SystemTool(arg0: R4) -> Self {
-        let mut answer = Self {
-            SystemTool: core::mem::ManuallyDrop::new(arg0)
-        };
-
-        answer.set_discriminant(discriminant_Tool::SystemTool);
-
-        answer
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Unsafely assume the given `Tool` has a `.discriminant()` of `SystemTool` and convert it to `SystemTool`'s payload.
-    /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
-    /// Panics in debug builds if the `.discriminant()` doesn't return `SystemTool`.
-    pub unsafe fn into_SystemTool(mut self) -> R4 {
-        debug_assert_eq!(self.discriminant(), discriminant_Tool::SystemTool);
-
-        let payload = core::mem::ManuallyDrop::take(&mut self.SystemTool);
-
-        
-        payload
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Unsafely assume the given `Tool` has a `.discriminant()` of `SystemTool` and return its payload.
-    /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
-    /// Panics in debug builds if the `.discriminant()` doesn't return `SystemTool`.
-    pub unsafe fn as_SystemTool(&self) -> &R4 {
-        debug_assert_eq!(self.discriminant(), discriminant_Tool::SystemTool);
-
-        let payload = &self.SystemTool;
-
-        
-        payload
-    }
-}
-
-impl Drop for Tool {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn drop(&mut self) {
-        // Drop the payloads
-                    match self.discriminant() {
-                discriminant_Tool::SystemTool => unsafe { core::mem::ManuallyDrop::drop(&mut self.SystemTool) },
-            }
-
-    }
-}
-
-impl Eq for Tool {}
-
-impl PartialEq for Tool {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn eq(&self, other: &Self) -> bool {
-            if self.discriminant() != other.discriminant() {
-                return false;
-            }
-
-            unsafe {
-            match self.discriminant() {
-                discriminant_Tool::SystemTool => self.SystemTool == other.SystemTool,
-            }
-        }
-    }
-}
-
-impl PartialOrd for Tool {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        match self.discriminant().partial_cmp(&other.discriminant()) {
-            Some(core::cmp::Ordering::Equal) => {}
-            not_eq => return not_eq,
-        }
-
-        unsafe {
-            match self.discriminant() {
-                discriminant_Tool::SystemTool => self.SystemTool.partial_cmp(&other.SystemTool),
-            }
-        }
-    }
-}
-
-impl Ord for Tool {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-            match self.discriminant().cmp(&other.discriminant()) {
-                core::cmp::Ordering::Equal => {}
-                not_eq => return not_eq,
-            }
-
-            unsafe {
-            match self.discriminant() {
-                discriminant_Tool::SystemTool => self.SystemTool.cmp(&other.SystemTool),
-            }
-        }
-    }
-}
-
-impl Clone for Tool {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn clone(&self) -> Self {
-        let mut answer = unsafe {
-            match self.discriminant() {
-                discriminant_Tool::SystemTool => Self {
-                    SystemTool: self.SystemTool.clone(),
-                },
-            }
-
-        };
-
-        answer.set_discriminant(self.discriminant());
-
-        answer
-    }
-}
-
-impl core::hash::Hash for Tool {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {        match self.discriminant() {
-            discriminant_Tool::SystemTool => unsafe {
-                    discriminant_Tool::SystemTool.hash(state);
-                    self.SystemTool.hash(state);
-                },
-        }
+    /// Other `as` methods return a payload, but since the SystemTool tag
+    /// has no payload, this does nothing and is only here for completeness.
+    pub fn as_SystemTool(&self) {
+        ()
     }
 }
 
@@ -1126,14 +309,6 @@ impl core::fmt::Debug for Tool {
         target_arch = "x86_64"
     ))]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_str("Tool::")?;
-
-        unsafe {
-            match self.discriminant() {
-                discriminant_Tool::SystemTool => f.debug_tuple("SystemTool")
-        .field(&*self.SystemTool)
-        .finish(),
-            }
-        }
+        f.debug_tuple("Tool::SystemTool").field(&self.f0).finish()
     }
 }
