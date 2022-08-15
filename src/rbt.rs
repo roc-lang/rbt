@@ -11,7 +11,6 @@ pub struct Rbt {
 
 impl From<bindings::Rbt> for Rbt {
     fn from(rbt: bindings::Rbt) -> Self {
-        // let unwrapped = rbt.into_Rbt();
         let unwrapped = rbt.f0;
 
         Rbt {
