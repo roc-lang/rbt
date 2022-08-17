@@ -90,7 +90,7 @@ impl<'job> Coordinator<'job> {
 #[derive(Debug)]
 pub struct RunnableJob<'job> {
     pub id: JobId,
-    pub command: glue::Command,
+    pub command: glue::R3,
     pub inputs: HashMap<&'job str, JobId>,
     pub input_files: RocList<RocStr>,
     pub outputs: RocList<RocStr>,
@@ -103,7 +103,7 @@ impl<'job> From<glue::Job> for RunnableJob<'job> {
 
         RunnableJob {
             id,
-            command: unwrapped.command,
+            command: unwrapped.command.f0,
             inputs: HashMap::default(),
             input_files: unwrapped.inputFiles,
             outputs: unwrapped.outputs,
@@ -113,9 +113,9 @@ impl<'job> From<glue::Job> for RunnableJob<'job> {
 
 impl<'job> From<&RunnableJob<'job>> for Command {
     fn from(job: &RunnableJob) -> Self {
-        let mut command = Command::new(&job.command.f0.tool.f0.to_string());
+        let mut command = Command::new(&job.command.tool.f0.to_string());
 
-        for arg in &job.command.f0.args {
+        for arg in &job.command.args {
             command.arg(arg.as_str());
         }
 
