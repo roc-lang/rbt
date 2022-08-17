@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
-pub struct CLI {
+pub struct Cli {
     /// [temporary] Instead of running the Rbt configuration from Roc, load
     /// it from this JSON.
     #[clap(long)]
@@ -19,7 +19,7 @@ pub struct CLI {
     dump_to_json: bool,
 }
 
-impl CLI {
+impl Cli {
     #[tracing::instrument(skip(self))]
     pub fn run(&self) -> Result<()> {
         let rbt: Rbt = match &self.load_from_json {

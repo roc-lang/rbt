@@ -22,5 +22,17 @@
         "type": "tarball",
         "url": "https://github.com/NixOS/nixpkgs/archive/8f73de28e63988da02426ebb17209e3ae07f103b.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "roc": {
+        "branch": "main",
+        "description": "Roc is a language for making delightful software.",
+        "homepage": "https://roc-lang.org",
+        "owner": "roc-lang",
+        "repo": "roc",
+        "rev": "fa1a870d4bbc91674a0254bbbb07113923e98c8f",
+        "sha256": "1z87viblnamclm93pcj085l12xb0j57q2f6q13xhw1zkyh3g132j",
+        "type": "tarball",
+        "url": "https://github.com/roc-lang/roc/archive/fa1a870d4bbc91674a0254bbbb07113923e98c8f.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

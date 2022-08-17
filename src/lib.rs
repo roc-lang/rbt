@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+#![allow(clippy::missing_safety_doc)]
 
 mod bindings;
 mod cli;
@@ -12,7 +13,7 @@ use std::os::raw::c_char;
 
 #[no_mangle]
 pub(crate) unsafe extern "C" fn roc_alloc(size: usize, _alignment: u32) -> *mut c_void {
-    return libc::malloc(size);
+    libc::malloc(size)
 }
 
 #[no_mangle]
@@ -22,12 +23,12 @@ pub(crate) unsafe extern "C" fn roc_realloc(
     _old_size: usize,
     _alignment: u32,
 ) -> *mut c_void {
-    return libc::realloc(c_ptr, new_size);
+    libc::realloc(c_ptr, new_size)
 }
 
 #[no_mangle]
 pub(crate) unsafe extern "C" fn roc_dealloc(c_ptr: *mut c_void, _alignment: u32) {
-    return libc::free(c_ptr);
+    libc::free(c_ptr)
 }
 
 #[no_mangle]
@@ -58,7 +59,7 @@ pub(crate) unsafe extern "C" fn roc_memset(dst: *mut c_void, c: i32, n: usize) -
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn roc_shm_open(name: *const i8, oflag: i32, mode: i32) -> i32 {
+pub unsafe extern "C" fn roc_shm_open(name: *const i8, oflag: i32, mode: u32) -> i32 {
     libc::shm_open(name, oflag, mode)
 }
 
@@ -86,7 +87,7 @@ pub unsafe extern "C" fn roc_getppid() -> i32 {
 
 #[no_mangle]
 pub fn rust_main() -> isize {
-    let cli = cli::CLI::parse();
+    let cli = cli::Cli::parse();
 
     let subscriber = tracing_subscriber::FmtSubscriber::builder()
         .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)

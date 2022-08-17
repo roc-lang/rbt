@@ -14,6 +14,19 @@ in pkgs.mkShell {
       niv.niv
       git
 
+      # roc tools
+      (pkgs.callPackage sources.roc {
+        cargoSha256 = "sha256-jFN0Ne/0wCCZl/oNmZE5/Sw5l+qNxShI3xlP4ikFMlw=";
+      })
+      (pkgs.writeShellScriptBin "sync-roc-std" ''
+        set -euo pipefail
+
+        ROOT="$(${pkgs.git}/bin/git rev-parse --show-toplevel)"
+        rm -rf "$ROOT/vendor/roc_std"
+        mkdir -p "$ROOT/vendor/roc_std"
+        ${pkgs.rsync}/bin/rsync --chmod 0644 -r ${sources.roc}/crates/roc_std/ "$ROOT/vendor/roc_std"
+      '')
+
       # rust tools
       cargo
       cargo-edit

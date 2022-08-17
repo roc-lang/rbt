@@ -40,8 +40,7 @@ impl<'job> Coordinator<'job> {
                 outputs: &job.outputs,
             };
 
-            let blockers: HashSet<u64> =
-                runnable_job.inputs.values().map(|id| id.clone()).collect();
+            let blockers: HashSet<u64> = runnable_job.inputs.values().copied().collect();
 
             if blockers.is_empty() {
                 self.ready.push(id);
