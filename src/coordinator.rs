@@ -4,11 +4,20 @@ use roc_std::{RocList, RocStr};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
+#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
+struct JobId(u64);
+
+impl From<u64> for JobId {
+    fn from(unwrapped: u64) -> Self {
+        JobId(unwrapped)
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct Coordinator<'job> {
-    jobs: HashMap<u64, RunnableJob<'job>>,
-    blocked: HashMap<u64, HashSet<u64>>,
-    ready: Vec<u64>,
+    jobs: HashMap<JobId, RunnableJob<'job>>,
+    blocked: HashMap<JobId, HashSet<JobId>>,
+    ready: Vec<JobId>,
 }
 
 impl<'job> Coordinator<'job> {
@@ -22,7 +31,7 @@ impl<'job> Coordinator<'job> {
             // TODO: figure out the right hasher for our use case and use that instead
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
             job.hash(&mut hasher);
-            let id = hasher.finish();
+            let id = hasher.finish().into();
 
             let runnable_job = RunnableJob {
                 command: &job.command,
@@ -33,14 +42,14 @@ impl<'job> Coordinator<'job> {
                         let mut dep_hasher = std::collections::hash_map::DefaultHasher::new();
                         dep.hash(&mut dep_hasher);
 
-                        (name.as_str(), dep_hasher.finish())
+                        (name.as_str(), dep_hasher.finish().into())
                     })
                     .collect(),
                 input_files: &job.input_files,
                 outputs: &job.outputs,
             };
 
-            let blockers: HashSet<u64> = runnable_job.inputs.values().copied().collect();
+            let blockers: HashSet<JobId> = runnable_job.inputs.values().copied().collect();
 
             if blockers.is_empty() {
                 self.ready.push(id);
@@ -75,10 +84,10 @@ impl<'job> Coordinator<'job> {
 
         for (blocked, blockers) in self.blocked.iter_mut() {
             if blockers.remove(&next) {
-                tracing::trace!(removed = next, blocked, "removed blocker");
+                tracing::trace!(removed = ?next, ?blocked, "removed blocker");
 
                 if blockers.is_empty() {
-                    tracing::info!(ready = blocked, "new job ready to work");
+                    tracing::info!(ready = ?blocked, "new job ready to work");
                     self.ready.push(*blocked);
 
                     // TODO: it would be more performant to remove the
@@ -96,7 +105,7 @@ impl<'job> Coordinator<'job> {
 #[derive(Debug)]
 pub struct RunnableJob<'job> {
     pub command: &'job rbt::Command,
-    inputs: HashMap<&'job str, u64>, // not pub because inputs will eventually be provided in Runner.run
+    inputs: HashMap<&'job str, JobId>, // not pub because inputs will eventually be provided in Runner.run
     pub input_files: &'job RocList<RocStr>,
     pub outputs: &'job RocList<RocStr>,
 }
