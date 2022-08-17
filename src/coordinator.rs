@@ -72,3 +72,34 @@ impl Runner for Box<dyn Runner> {
         self.as_ref().run(job)
     }
 }
+
+/// Some parts of `glue::Job` do not have a meaningful ordering (for example,
+/// the order of output files) while some do (for example, the ordering of
+/// command arguments.) This hasher's job is to return the same value for a
+/// non-meaningful change, but change immediately for a meaningful one.
+///
+/// Note: this data structure is going to grow the ability to refer to other
+/// jobs as soon as it's possibly feasible. When that happens, a depth-first
+/// search through the tree rooted at `top_job` will probably suffice.
+fn hash_for_glue_job(top_job: &glue::Job) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+
+    let job = &top_job.f0;
+
+    // TODO: when we can get commands from other jobs, we need to hash the
+    // other tool instead of relying on the derived `Hash` trait for this,
+    // for the reasons in the top doc comment here.
+    job.command.hash(&mut hasher);
+
+    job.inputFiles
+        .iter()
+        .sorted()
+        .for_each(|input_file| input_file.hash(&mut hasher));
+
+    job.outputs
+        .iter()
+        .sorted()
+        .for_each(|output| output.hash(&mut hasher));
+
+    hasher.finish()
+}
