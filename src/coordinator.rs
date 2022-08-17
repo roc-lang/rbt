@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
-struct JobId(u64);
+pub struct JobId(u64);
 
 impl From<u64> for JobId {
     fn from(unwrapped: u64) -> Self {
@@ -106,7 +106,7 @@ impl<'job> Coordinator<'job> {
 #[derive(Debug)]
 pub struct RunnableJob<'job> {
     pub command: &'job rbt::Command,
-    inputs: HashMap<&'job str, JobId>, // not pub because inputs will eventually be provided in Runner.run
+    pub inputs: HashMap<&'job str, JobId>,
     pub input_files: &'job RocList<RocStr>,
     pub outputs: &'job RocList<RocStr>,
 }
