@@ -1,5 +1,6 @@
-use crate::rbt;
+use crate::glue;
 use anyhow::{Context, Result};
+use itertools::Itertools;
 use roc_std::{RocList, RocStr};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
@@ -11,6 +12,12 @@ pub struct JobId(u64);
 impl From<u64> for JobId {
     fn from(unwrapped: u64) -> Self {
         JobId(unwrapped)
+    }
+}
+
+impl From<&glue::Job> for JobId {
+    fn from(job: &glue::Job) -> Self {
+        JobId(hash_for_glue_job(job))
     }
 }
 
@@ -28,44 +35,13 @@ pub struct Coordinator<'job> {
 }
 
 impl<'job> Coordinator<'job> {
-    pub fn add_target(&mut self, target_job: &'job rbt::Job) {
-        let mut todo = vec![target_job];
-
-        while let Some(job) = todo.pop() {
-            // TODO: figure out the right hasher for our use case and use that instead
-            let mut hasher = std::collections::hash_map::DefaultHasher::new();
-            job.hash(&mut hasher);
-            let id = hasher.finish().into();
-
-            let runnable_job = RunnableJob {
-                id,
-                command: &job.command,
-                inputs: job
-                    .inputs
-                    .iter()
-                    .map(|(name, dep)| {
-                        let mut dep_hasher = std::collections::hash_map::DefaultHasher::new();
-                        dep.hash(&mut dep_hasher);
-
-                        (name.as_str(), dep_hasher.finish().into())
-                    })
-                    .collect(),
-                input_files: &job.input_files,
-                outputs: &job.outputs,
-            };
-
-            let blockers: HashSet<JobId> = runnable_job.inputs.values().copied().collect();
-
-            if blockers.is_empty() {
-                self.ready.push(id);
-            } else {
-                self.blocked.insert(id, blockers);
-            }
-
-            self.jobs.insert(id, runnable_job);
-
-            todo.append(&mut job.inputs.values().collect());
-        }
+    pub fn add_target(&mut self, top_job: glue::Job) {
+        // Note: this data structure is going to grow the ability to refer to other
+        // jobs as soon as it's possibly feasible. When that happens, a depth-first
+        // search through the tree rooted at `top_job` will probably suffice.
+        let job: RunnableJob = top_job.into();
+        self.ready.push(job.id);
+        self.jobs.insert(job.id, job);
     }
 
     pub fn has_outstanding_work(&self) -> bool {
@@ -114,20 +90,32 @@ impl<'job> Coordinator<'job> {
 #[derive(Debug)]
 pub struct RunnableJob<'job> {
     pub id: JobId,
-    pub command: &'job rbt::Command,
+    pub command: glue::Command,
     pub inputs: HashMap<&'job str, JobId>,
-    pub input_files: &'job RocList<RocStr>,
-    pub outputs: &'job RocList<RocStr>,
+    pub input_files: RocList<RocStr>,
+    pub outputs: RocList<RocStr>,
+}
+
+impl<'job> From<glue::Job> for RunnableJob<'job> {
+    fn from(job: glue::Job) -> Self {
+        let id = JobId::from(&job);
+        let unwrapped = job.f0;
+
+        RunnableJob {
+            id,
+            command: unwrapped.command,
+            inputs: HashMap::default(),
+            input_files: unwrapped.inputFiles,
+            outputs: unwrapped.outputs,
+        }
+    }
 }
 
 impl<'job> From<&RunnableJob<'job>> for Command {
     fn from(job: &RunnableJob) -> Self {
-        let mut command = match &job.command.tool {
-            // TODO: in the future, we'll also get binaries from other job's output
-            rbt::Tool::SystemTool { name } => Command::new(name.to_string()),
-        };
+        let mut command = Command::new(&job.command.f0.tool.f0.to_string());
 
-        for arg in &job.command.args {
+        for arg in &job.command.f0.args {
             command.arg(arg.as_str());
         }
 
@@ -143,4 +131,35 @@ impl Runner for Box<dyn Runner> {
     fn run(&self, job: &RunnableJob) -> Result<()> {
         self.as_ref().run(job)
     }
+}
+
+/// Some parts of `glue::Job` do not have a meaningful ordering (for example,
+/// the order of output files) while some do (for example, the ordering of
+/// command arguments.) This hasher's job is to return the same value for a
+/// non-meaningful change, but change immediately for a meaningful one.
+///
+/// Note: this data structure is going to grow the ability to refer to other
+/// jobs as soon as it's possibly feasible. When that happens, a depth-first
+/// search through the tree rooted at `top_job` will probably suffice.
+fn hash_for_glue_job(top_job: &glue::Job) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+
+    let job = &top_job.f0;
+
+    // TODO: when we can get commands from other jobs, we need to hash the
+    // other tool instead of relying on the derived `Hash` trait for this,
+    // for the reasons in the top doc comment here.
+    job.command.hash(&mut hasher);
+
+    job.inputFiles
+        .iter()
+        .sorted()
+        .for_each(|input_file| input_file.hash(&mut hasher));
+
+    job.outputs
+        .iter()
+        .sorted()
+        .for_each(|output| output.hash(&mut hasher));
+
+    hasher.finish()
 }

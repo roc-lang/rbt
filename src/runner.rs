@@ -95,7 +95,7 @@ impl Store {
     }
 
     fn take_outputs_from_workspace(&self, job: &RunnableJob, workspace: Workspace) -> Result<()> {
-        for output in job.outputs {
+        for output in &job.outputs {
             let output_str = output.as_str();
             let workspace_src = workspace.join(output_str);
 
