@@ -21,13 +21,10 @@ pub struct Coordinator<'job> {
 }
 
 impl<'job> Coordinator<'job> {
-    #[tracing::instrument(skip(target_job))] // job is quite a bit of info for the log!
     pub fn add_target(&mut self, target_job: &'job rbt::Job) {
         let mut todo = vec![target_job];
 
         while let Some(job) = todo.pop() {
-            let _span = tracing::span!(tracing::Level::TRACE, "processing job").entered();
-
             // TODO: figure out the right hasher for our use case and use that instead
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
             job.hash(&mut hasher);
@@ -67,7 +64,6 @@ impl<'job> Coordinator<'job> {
         !self.blocked.is_empty() && !self.ready.is_empty()
     }
 
-    #[tracing::instrument(skip(self, runner))]
     pub fn run_next<R: Runner>(&mut self, runner: &R) -> Result<()> {
         let next = match self.ready.pop() {
             Some(id) => id,
@@ -83,18 +79,13 @@ impl<'job> Coordinator<'job> {
             .context("could not run job")?;
 
         for (blocked, blockers) in self.blocked.iter_mut() {
-            if blockers.remove(&next) {
-                tracing::trace!(removed = ?next, ?blocked, "removed blocker");
+            if blockers.remove(&next) && blockers.is_empty() {
+                self.ready.push(*blocked);
 
-                if blockers.is_empty() {
-                    tracing::info!(ready = ?blocked, "new job ready to work");
-                    self.ready.push(*blocked);
-
-                    // TODO: it would be more performant to remove the
-                    // newly-unblocked item from self.blocked, but there's
-                    // already a mutable borrow. Possibly rearrange the code
-                    // to do some mutable filtering thing.
-                }
+                // TODO: it would be more performant to remove the
+                // newly-unblocked item from self.blocked, but there's
+                // already a mutable borrow. Possibly rearrange the code
+                // to do some mutable filtering thing.
             }
         }
 
