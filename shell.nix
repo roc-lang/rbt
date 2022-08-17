@@ -34,7 +34,7 @@ in pkgs.mkShell {
         set -euo pipefail
 
         ROOT="$(${pkgs.git}/bin/git rev-parse --show-toplevel)"
-        ${roc}/bin/roc glue "$ROOT/Package-Config.roc" "$ROOT/src/glue.rs"
+        ${roc}/bin/roc glue "$ROOT/main.roc" "$ROOT/src/glue.rs"
         ${rustfmt}/bin/rustfmt "$ROOT/src/glue.rs"
       '')
 

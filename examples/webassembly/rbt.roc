@@ -1,5 +1,5 @@
 app "build"
-    packages { pf: "../../Package-Config.roc" }
+    packages { pf: "../../main.roc" }
     imports [pf.Rbt.{ Rbt, Tool, tool, systemTool, Job, job, exec }]
     provides [init] to pf
 

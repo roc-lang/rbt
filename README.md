@@ -28,6 +28,6 @@ To update this code, get into a dev shell and run `sync-roc-std`, then commit th
 
 ### Updating `src/glue.rs`
 
-Regenerate bindings between Roc (whose entrypoint is `Package-Config.roc`) and `src/glue.rs` by running `sync-glue` from a dev shell.
+Regenerate bindings between Roc (whose entrypoint is `main.roc`) and `src/glue.rs` by running `sync-glue` from a dev shell.
 
 If everything compiles and works, then fix any Clippy errors that have shown up in the generated code, probably by putting a `#![allow(clippy)]` directive at the top of the file.
