@@ -29,7 +29,7 @@ impl std::fmt::Display for JobId {
 
 #[derive(Debug, Default)]
 pub struct Coordinator<'job> {
-    jobs: HashMap<JobId, RunnableJob<'job>>,
+    jobs: HashMap<JobId, Job<'job>>,
     blocked: HashMap<JobId, HashSet<JobId>>,
     ready: Vec<JobId>,
 }
@@ -39,7 +39,7 @@ impl<'job> Coordinator<'job> {
         // Note: this data structure is going to grow the ability to refer to other
         // jobs as soon as it's possibly feasible. When that happens, a depth-first
         // search through the tree rooted at `top_job` will probably suffice.
-        let job: RunnableJob = top_job.into();
+        let job: Job = top_job.into();
         self.ready.push(job.id);
         self.jobs.insert(job.id, job);
     }
@@ -88,7 +88,7 @@ impl<'job> Coordinator<'job> {
 }
 
 #[derive(Debug)]
-pub struct RunnableJob<'job> {
+pub struct Job<'job> {
     pub id: JobId,
     pub command: glue::R3,
     pub inputs: HashMap<&'job str, JobId>,
@@ -96,12 +96,12 @@ pub struct RunnableJob<'job> {
     pub outputs: RocList<RocStr>,
 }
 
-impl<'job> From<glue::Job> for RunnableJob<'job> {
+impl<'job> From<glue::Job> for Job<'job> {
     fn from(job: glue::Job) -> Self {
         let id = JobId::from(&job);
         let unwrapped = job.f0;
 
-        RunnableJob {
+        Job {
             id,
             command: unwrapped.command.f0,
             inputs: HashMap::default(),
@@ -111,8 +111,8 @@ impl<'job> From<glue::Job> for RunnableJob<'job> {
     }
 }
 
-impl<'job> From<&RunnableJob<'job>> for Command {
-    fn from(job: &RunnableJob) -> Self {
+impl<'job> From<&Job<'job>> for Command {
+    fn from(job: &Job) -> Self {
         let mut command = Command::new(&job.command.tool.f0.to_string());
 
         for arg in &job.command.args {
@@ -124,11 +124,11 @@ impl<'job> From<&RunnableJob<'job>> for Command {
 }
 
 pub trait Runner {
-    fn run(&self, job: &RunnableJob) -> Result<()>;
+    fn run(&self, job: &Job) -> Result<()>;
 }
 
 impl Runner for Box<dyn Runner> {
-    fn run(&self, job: &RunnableJob) -> Result<()> {
+    fn run(&self, job: &Job) -> Result<()> {
         self.as_ref().run(job)
     }
 }

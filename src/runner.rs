@@ -1,4 +1,4 @@
-use crate::coordinator::{self, RunnableJob};
+use crate::coordinator::{self, Job};
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -15,7 +15,7 @@ impl Runner {
 }
 
 impl coordinator::Runner for Runner {
-    fn run(&self, job: &RunnableJob) -> Result<()> {
+    fn run(&self, job: &Job) -> Result<()> {
         let workspace = Workspace::create(&self.root, job)?;
 
         debug_assert!(job.inputs.is_empty(), "we don't handle inputs yet");
@@ -51,7 +51,7 @@ impl coordinator::Runner for Runner {
 struct Workspace(PathBuf);
 
 impl Workspace {
-    fn create(root: &Path, job: &RunnableJob) -> Result<Self> {
+    fn create(root: &Path, job: &Job) -> Result<Self> {
         let workspace = Workspace(root.join("workspaces").join(job.id.to_string()));
 
         std::fs::create_dir_all(&workspace).context("could not create workspace")?;
@@ -82,7 +82,7 @@ impl AsRef<Path> for Workspace {
 struct Store(PathBuf);
 
 impl Store {
-    fn create(root: &Path, job: &RunnableJob) -> Result<Self> {
+    fn create(root: &Path, job: &Job) -> Result<Self> {
         let store = Store(root.join("builds").join(job.id.to_string()));
 
         std::fs::create_dir_all(&store.0).context("could not create directory to store outputs")?;
@@ -94,7 +94,7 @@ impl Store {
         self.0.join(other)
     }
 
-    fn take_outputs_from_workspace(&self, job: &RunnableJob, workspace: Workspace) -> Result<()> {
+    fn take_outputs_from_workspace(&self, job: &Job, workspace: Workspace) -> Result<()> {
         for output in &job.outputs {
             let output_str = output.as_str();
             let workspace_src = workspace.join(output_str);
