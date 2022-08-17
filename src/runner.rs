@@ -16,7 +16,7 @@ impl Runner {
 
 impl coordinator::Runner for Runner {
     fn run(&self, job: &RunnableJob) -> Result<()> {
-        let workspace = Workspace::create(&self.root, &job)?;
+        let workspace = Workspace::create(&self.root, job)?;
 
         debug_assert!(job.inputs.is_empty(), "we don't handle inputs yet");
         debug_assert!(
@@ -41,8 +41,8 @@ impl coordinator::Runner for Runner {
             None => anyhow::bail!("command failed with no exit code (maybe it was killed?)"),
         }
 
-        let store = Store::create(&self.root, &job)?;
-        store.take_outputs_from_workspace(&job, &workspace)?;
+        let store = Store::create(&self.root, job)?;
+        store.take_outputs_from_workspace(job, &workspace)?;
 
         Ok(())
     }
