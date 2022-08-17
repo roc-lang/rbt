@@ -3,6 +3,7 @@ use anyhow::{Context, Result};
 use roc_std::{RocList, RocStr};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
+use std::process::Command;
 
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
 pub struct JobId(u64);
@@ -117,6 +118,21 @@ pub struct RunnableJob<'job> {
     pub inputs: HashMap<&'job str, JobId>,
     pub input_files: &'job RocList<RocStr>,
     pub outputs: &'job RocList<RocStr>,
+}
+
+impl<'job> From<&RunnableJob<'job>> for Command {
+    fn from(job: &RunnableJob) -> Self {
+        let mut command = match &job.command.tool {
+            // TODO: in the future, we'll also get binaries from other job's output
+            rbt::Tool::SystemTool { name } => Command::new(name.to_string()),
+        };
+
+        for arg in &job.command.args {
+            command.arg(arg.as_str());
+        }
+
+        command
+    }
 }
 
 pub trait Runner {

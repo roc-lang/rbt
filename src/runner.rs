@@ -1,5 +1,4 @@
 use crate::coordinator::{self, RunnableJob};
-use crate::rbt;
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -25,15 +24,7 @@ impl coordinator::Runner for Runner {
             "we don't handle input files yet"
         );
 
-        let mut command = match &job.command.tool {
-            // TODO: in the future, we'll also get binaries from other job's output
-            rbt::Tool::SystemTool { name } => Command::new(name.to_string()),
-        };
-
-        for arg in &job.command.args {
-            command.arg(arg.as_str());
-        }
-
+        let mut command: Command = job.into();
         command.current_dir(&workspace);
 
         // TODO: send stdout, stderr, etc to The Log Zone(tm)
