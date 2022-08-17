@@ -13,6 +13,12 @@ impl From<u64> for JobId {
     }
 }
 
+impl std::fmt::Display for JobId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct Coordinator<'job> {
     jobs: HashMap<JobId, RunnableJob<'job>>,
@@ -31,6 +37,7 @@ impl<'job> Coordinator<'job> {
             let id = hasher.finish().into();
 
             let runnable_job = RunnableJob {
+                id,
                 command: &job.command,
                 inputs: job
                     .inputs
@@ -105,6 +112,7 @@ impl<'job> Coordinator<'job> {
 
 #[derive(Debug)]
 pub struct RunnableJob<'job> {
+    pub id: JobId,
     pub command: &'job rbt::Command,
     pub inputs: HashMap<&'job str, JobId>,
     pub input_files: &'job RocList<RocStr>,
