@@ -1,4 +1,5 @@
-use crate::coordinator::{Job, Runner};
+use crate::coordinator::Runner;
+use crate::job::Job;
 use anyhow::Result;
 
 #[derive(Debug, Default)]

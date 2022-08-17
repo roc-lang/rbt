@@ -1,9 +1,7 @@
 use crate::glue;
-use crate::job;
+use crate::job::{self, Job};
 use anyhow::{Context, Result};
-use roc_std::{RocList, RocStr};
 use std::collections::{HashMap, HashSet};
-use std::process::Command;
 
 #[derive(Debug, Default)]
 pub struct Coordinator<'job> {
@@ -62,42 +60,6 @@ impl<'job> Coordinator<'job> {
         self.ready.extend(newly_unblocked);
 
         Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub struct Job<'job> {
-    pub id: job::Id,
-    pub command: glue::R3,
-    pub inputs: HashMap<&'job str, job::Id>,
-    pub input_files: RocList<RocStr>,
-    pub outputs: RocList<RocStr>,
-}
-
-impl<'job> From<glue::Job> for Job<'job> {
-    fn from(job: glue::Job) -> Self {
-        let id = job::Id::from(&job);
-        let unwrapped = job.f0;
-
-        Job {
-            id,
-            command: unwrapped.command.f0,
-            inputs: HashMap::default(),
-            input_files: unwrapped.inputFiles,
-            outputs: unwrapped.outputs,
-        }
-    }
-}
-
-impl<'job> From<&Job<'job>> for Command {
-    fn from(job: &Job) -> Self {
-        let mut command = Command::new(&job.command.tool.f0.to_string());
-
-        for arg in &job.command.args {
-            command.arg(arg.as_str());
-        }
-
-        command
     }
 }
 

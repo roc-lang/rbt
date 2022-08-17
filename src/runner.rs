@@ -1,4 +1,5 @@
-use crate::coordinator::{self, Job};
+use crate::coordinator;
+use crate::job::Job;
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 use std::process::Command;
