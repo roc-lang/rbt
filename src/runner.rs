@@ -12,7 +12,10 @@ impl coordinator::Runner for Runner {
             "we don't handle input files yet"
         );
 
-        println!("{:#?}", job);
+        // create temporary directory for build
+        // convert job.command to an executable thing
+        // run it
+        // collect the output
 
         anyhow::bail!("real runner is unimplemented")
     }
