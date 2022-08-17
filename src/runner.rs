@@ -41,21 +41,8 @@ impl coordinator::Runner for Runner {
             None => anyhow::bail!("command failed with no exit code (maybe it was killed?)"),
         }
 
-        let build_dir = self.root.join("builds").join(format!("{}", job.id));
-        std::fs::create_dir_all(&build_dir)
-            .context("could not create directory to store outputs")?;
-
-        for output in job.outputs {
-            let output_str = output.as_str();
-            let workspace_src = workspace.join(output_str);
-
-            std::fs::rename(&workspace_src, build_dir.join(output_str)).with_context(|| {
-                format!(
-                    "could not collect build output `{}`. Did the build produce it?",
-                    workspace_src.display()
-                )
-            })?;
-        }
+        let store = Store::create(&self.root, &job)?;
+        store.take_outputs_from_workspace(&job, &workspace)?;
 
         Ok(())
     }
@@ -89,5 +76,37 @@ impl Drop for Workspace {
 impl AsRef<Path> for Workspace {
     fn as_ref(&self) -> &Path {
         &self.0
+    }
+}
+
+struct Store(PathBuf);
+
+impl Store {
+    fn create(root: &Path, job: &RunnableJob) -> Result<Self> {
+        let store = Store(root.join("builds").join(job.id.to_string()));
+
+        std::fs::create_dir_all(&store.0).context("could not create directory to store outputs")?;
+
+        Ok(store)
+    }
+
+    fn join<P: AsRef<Path>>(&self, other: P) -> PathBuf {
+        self.0.join(other)
+    }
+
+    fn take_outputs_from_workspace(&self, job: &RunnableJob, workspace: &Workspace) -> Result<()> {
+        for output in job.outputs {
+            let output_str = output.as_str();
+            let workspace_src = workspace.join(output_str);
+
+            std::fs::rename(&workspace_src, self.join(output_str)).with_context(|| {
+                format!(
+                    "could not collect build output `{}`. Did the build produce it?",
+                    workspace_src.display()
+                )
+            })?;
+        }
+
+        Ok(())
     }
 }
