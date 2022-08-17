@@ -1,6 +1,5 @@
 use crate::glue;
 use roc_std::{RocList, RocStr};
-use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::process::Command;
 
@@ -29,15 +28,14 @@ impl std::fmt::Display for Id {
 }
 
 #[derive(Debug)]
-pub struct Job<'job> {
+pub struct Job {
     pub id: Id,
     pub command: glue::R3,
-    pub inputs: HashMap<&'job str, Id>,
     pub input_files: RocList<RocStr>,
     pub outputs: RocList<RocStr>,
 }
 
-impl<'job> From<glue::Job> for Job<'job> {
+impl From<glue::Job> for Job {
     fn from(job: glue::Job) -> Self {
         let id = Id::from(&job);
         let unwrapped = job.f0;
@@ -45,14 +43,13 @@ impl<'job> From<glue::Job> for Job<'job> {
         Job {
             id,
             command: unwrapped.command.f0,
-            inputs: HashMap::default(),
             input_files: unwrapped.inputFiles,
             outputs: unwrapped.outputs,
         }
     }
 }
 
-impl<'job> From<&Job<'job>> for Command {
+impl From<&Job> for Command {
     fn from(job: &Job) -> Self {
         let mut command = Command::new(&job.command.tool.f0.to_string());
 

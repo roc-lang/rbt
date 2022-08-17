@@ -19,7 +19,6 @@ impl coordinator::Runner for Runner {
     fn run(&self, job: &Job) -> Result<()> {
         let workspace = Workspace::create(&self.root, job)?;
 
-        debug_assert!(job.inputs.is_empty(), "we don't handle inputs yet");
         debug_assert!(
             job.input_files.is_empty(),
             "we don't handle input files yet"

@@ -4,13 +4,13 @@ use anyhow::{Context, Result};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Default)]
-pub struct Coordinator<'job> {
-    jobs: HashMap<job::Id, Job<'job>>,
+pub struct Coordinator {
+    jobs: HashMap<job::Id, Job>,
     blocked: HashMap<job::Id, HashSet<job::Id>>,
     ready: Vec<job::Id>,
 }
 
-impl<'job> Coordinator<'job> {
+impl Coordinator {
     pub fn add_target(&mut self, top_job: glue::Job) {
         // Note: this data structure is going to grow the ability to refer to other
         // jobs as soon as it's possibly feasible. When that happens, a depth-first
