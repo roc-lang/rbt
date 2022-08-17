@@ -1,37 +1,15 @@
 use crate::glue;
+use crate::job;
 use anyhow::{Context, Result};
-use itertools::Itertools;
 use roc_std::{RocList, RocStr};
 use std::collections::{HashMap, HashSet};
-use std::hash::{Hash, Hasher};
 use std::process::Command;
-
-#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
-pub struct JobId(u64);
-
-impl From<u64> for JobId {
-    fn from(unwrapped: u64) -> Self {
-        JobId(unwrapped)
-    }
-}
-
-impl From<&glue::Job> for JobId {
-    fn from(job: &glue::Job) -> Self {
-        JobId(hash_for_glue_job(job))
-    }
-}
-
-impl std::fmt::Display for JobId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:x}", self.0)
-    }
-}
 
 #[derive(Debug, Default)]
 pub struct Coordinator<'job> {
-    jobs: HashMap<JobId, Job<'job>>,
-    blocked: HashMap<JobId, HashSet<JobId>>,
-    ready: Vec<JobId>,
+    jobs: HashMap<job::Id, Job<'job>>,
+    blocked: HashMap<job::Id, HashSet<job::Id>>,
+    ready: Vec<job::Id>,
 }
 
 impl<'job> Coordinator<'job> {
@@ -89,16 +67,16 @@ impl<'job> Coordinator<'job> {
 
 #[derive(Debug)]
 pub struct Job<'job> {
-    pub id: JobId,
+    pub id: job::Id,
     pub command: glue::R3,
-    pub inputs: HashMap<&'job str, JobId>,
+    pub inputs: HashMap<&'job str, job::Id>,
     pub input_files: RocList<RocStr>,
     pub outputs: RocList<RocStr>,
 }
 
 impl<'job> From<glue::Job> for Job<'job> {
     fn from(job: glue::Job) -> Self {
-        let id = JobId::from(&job);
+        let id = job::Id::from(&job);
         let unwrapped = job.f0;
 
         Job {
@@ -131,35 +109,4 @@ impl Runner for Box<dyn Runner> {
     fn run(&self, job: &Job) -> Result<()> {
         self.as_ref().run(job)
     }
-}
-
-/// Some parts of `glue::Job` do not have a meaningful ordering (for example,
-/// the order of output files) while some do (for example, the ordering of
-/// command arguments.) This hasher's job is to return the same value for a
-/// non-meaningful change, but change immediately for a meaningful one.
-///
-/// Note: this data structure is going to grow the ability to refer to other
-/// jobs as soon as it's possibly feasible. When that happens, a depth-first
-/// search through the tree rooted at `top_job` will probably suffice.
-fn hash_for_glue_job(top_job: &glue::Job) -> u64 {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-
-    let job = &top_job.f0;
-
-    // TODO: when we can get commands from other jobs, we need to hash the
-    // other tool instead of relying on the derived `Hash` trait for this,
-    // for the reasons in the top doc comment here.
-    job.command.hash(&mut hasher);
-
-    job.inputFiles
-        .iter()
-        .sorted()
-        .for_each(|input_file| input_file.hash(&mut hasher));
-
-    job.outputs
-        .iter()
-        .sorted()
-        .for_each(|output| output.hash(&mut hasher));
-
-    hasher.finish()
 }
