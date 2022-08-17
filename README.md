@@ -25,3 +25,9 @@ To simplify dependency management, rbt vendors a copy of Roc's standard library 
 We keep this in sync with the Roc version from niv, but check in the files to make life easier in CI.
 
 To update this code, get into a dev shell and run `sync-roc-std`, then commit the changes.
+
+### Updating `src/glue.rs`
+
+Regenerate bindings between Roc (whose entrypoint is `Package-Config.roc`) and `src/glue.rs` by running `sync-glue` from a dev shell.
+
+If everything compiles and works, then fix any Clippy errors that have shown up in the generated code, probably by putting a `#![allow(clippy)]` directive at the top of the file.

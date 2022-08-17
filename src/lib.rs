@@ -1,10 +1,10 @@
 #![allow(non_snake_case)]
 #![allow(clippy::missing_safety_doc)]
 
-mod bindings;
 mod cli;
 mod coordinator;
 mod fake_runner;
+mod glue;
 mod rbt;
 
 use clap::Parser;

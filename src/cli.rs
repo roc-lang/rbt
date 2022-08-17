@@ -77,5 +77,5 @@ impl Cli {
 
 extern "C" {
     #[link_name = "roc__initForHost_1_exposed"]
-    fn roc_init(init: *mut crate::bindings::Rbt);
+    fn roc_init(init: *mut crate::glue::Rbt);
 }
