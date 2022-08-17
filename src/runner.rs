@@ -99,9 +99,21 @@ impl Store {
             let output_str = output.as_str();
             let workspace_src = workspace.join(output_str);
 
+            let mut perms = std::fs::metadata(&workspace_src)
+                .with_context(|| {
+                    format!(
+                        "could not find build output `{}`. Did the build produce it?",
+                        output_str
+                    )
+                })?
+                .permissions();
+            perms.set_readonly(true);
+            std::fs::set_permissions(&workspace_src, perms)
+                .with_context(|| format!("could not set permissions on `{}`", output_str))?;
+
             std::fs::rename(&workspace_src, self.join(output_str)).with_context(|| {
                 format!(
-                    "could not collect build output `{}`. Did the build produce it?",
+                    "could not move build output `{}` to the output directory",
                     workspace_src.display()
                 )
             })?;
