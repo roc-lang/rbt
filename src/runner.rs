@@ -1,7 +1,7 @@
 use crate::coordinator::{self, RunnableJob};
 use crate::rbt;
 use anyhow::{Context, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 #[derive(Debug, Default)]
@@ -17,7 +17,7 @@ impl Runner {
 
 impl coordinator::Runner for Runner {
     fn run(&self, job: &RunnableJob) -> Result<()> {
-        let workspace_dir = self.root.join("workspaces").join(format!("{}", job.id));
+        let workspace = Workspace::create(&self.root, &job)?;
 
         debug_assert!(job.inputs.is_empty(), "we don't handle inputs yet");
         debug_assert!(
@@ -34,9 +34,7 @@ impl coordinator::Runner for Runner {
             command.arg(arg.as_str());
         }
 
-        command.current_dir(&workspace_dir);
-
-        std::fs::create_dir_all(&workspace_dir).context("could not create workspace to run job")?;
+        command.current_dir(&workspace);
 
         // TODO: send stdout, stderr, etc to The Log Zone(tm)
         // TODO: rearrange this so we can stream logs
@@ -58,7 +56,7 @@ impl coordinator::Runner for Runner {
 
         for output in job.outputs {
             let output_str = output.as_str();
-            let workspace_src = workspace_dir.join(output_str);
+            let workspace_src = workspace.join(output_str);
 
             std::fs::rename(&workspace_src, build_dir.join(output_str)).with_context(|| {
                 format!(
@@ -68,9 +66,37 @@ impl coordinator::Runner for Runner {
             })?;
         }
 
-        std::fs::remove_dir_all(&workspace_dir)
-            .context("could not clean up the temporary build directory after running the job")?;
-
         Ok(())
+    }
+}
+
+struct Workspace(PathBuf);
+
+impl Workspace {
+    fn create(root: &Path, job: &RunnableJob) -> Result<Self> {
+        let workspace = Workspace(root.join("workspaces").join(job.id.to_string()));
+
+        std::fs::create_dir_all(&workspace.0).context("could not create workspace")?;
+
+        Ok(workspace)
+    }
+
+    fn join<P: AsRef<Path>>(&self, other: P) -> PathBuf {
+        self.0.join(other)
+    }
+}
+
+impl Drop for Workspace {
+    fn drop(&mut self) {
+        if let Err(problem) = std::fs::remove_dir_all(&self.0) {
+            // TODO: this should eventually be a system log line that warns of the error
+            eprintln!("[WARNING] problem removing workspace dir: {:}", problem);
+        };
+    }
+}
+
+impl AsRef<Path> for Workspace {
+    fn as_ref(&self) -> &Path {
+        &self.0
     }
 }
