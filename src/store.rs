@@ -128,7 +128,7 @@ impl Store {
             //////////////////////////////
             // Step 4: collect the file //
             //////////////////////////////
-            log::trace!("moving {} into colleciton path", &source.display());
+            log::trace!("moving {} into collection path", &source.display());
             let out = temp.path().join(&source);
             std::fs::rename(workspace.join(&source), &out).with_context(|| {
                 format!(
