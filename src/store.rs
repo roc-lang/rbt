@@ -83,6 +83,8 @@ impl Store {
             ////////////////////////////////////////////////////////////////
             // Step 2: add the file content to the content-addressed hash //
             ////////////////////////////////////////////////////////////////
+            hasher.update(output.as_bytes());
+
             let mut file = File::open(&workspace.join(output.as_str())).with_context(|| {
                 format!(
                     "couldn't open `{}` for hashing. Did the build produce it?",
