@@ -8,6 +8,7 @@ mod glue;
 mod job;
 mod runner;
 mod store;
+mod workspace;
 
 use clap::Parser;
 use std::ffi::{c_void, CStr};

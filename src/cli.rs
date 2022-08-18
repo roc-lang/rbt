@@ -24,14 +24,14 @@ impl Cli {
 
         let store = Store::new(self.root_dir.join("store")).context("could not open store")?;
 
-        let mut coordinator = Coordinator::new(store);
+        let mut coordinator = Coordinator::new(self.root_dir.join("workspaces"), store);
         coordinator.add_target(rbt.f0.default);
 
         let runner: Box<dyn crate::coordinator::Runner> = if self.use_fake_runner {
             log::info!("using fake runner");
             Box::new(crate::fake_runner::FakeRunner::default())
         } else {
-            Box::new(crate::runner::Runner::new(self.root_dir.to_owned()))
+            Box::new(crate::runner::Runner)
         };
 
         while coordinator.has_outstanding_work() {

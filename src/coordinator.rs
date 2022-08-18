@@ -1,11 +1,14 @@
 use crate::glue;
 use crate::job::{self, Job};
 use crate::store::Store;
+use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct Coordinator {
+    workspace_root: PathBuf,
     store: Store,
 
     jobs: HashMap<job::Id, Job>,
@@ -14,8 +17,9 @@ pub struct Coordinator {
 }
 
 impl Coordinator {
-    pub fn new(store: Store) -> Self {
+    pub fn new(workspace_root: PathBuf, store: Store) -> Self {
         Coordinator {
+            workspace_root,
             store,
 
             jobs: HashMap::default(),
@@ -51,7 +55,14 @@ impl Coordinator {
         log::debug!("preparing to run job {}", job.id);
 
         if self.store.for_job(&job).is_none() {
-            runner.run(job).context("could not run job")?;
+            let workspace = Workspace::create(&self.workspace_root, &job)
+                .with_context(|| format!("could not create workspace for job {}", job.id))?;
+
+            runner.run(job, &workspace).context("could not run job")?;
+
+            self.store
+                .store_from_workspace(&job, workspace.as_ref())
+                .context("could not store job output")?;
         } else {
             // TODO: put this in a proper logging framework
             log::debug!("already had output of this job; skipping");
@@ -84,11 +95,11 @@ impl Coordinator {
 }
 
 pub trait Runner {
-    fn run(&self, job: &Job) -> Result<()>;
+    fn run(&self, job: &Job, workspace: &Workspace) -> Result<()>;
 }
 
 impl Runner for Box<dyn Runner> {
-    fn run(&self, job: &Job) -> Result<()> {
-        self.as_ref().run(job)
+    fn run(&self, job: &Job, workspace: &Workspace) -> Result<()> {
+        self.as_ref().run(job, workspace)
     }
 }
