@@ -92,7 +92,9 @@ impl Store {
             // efficient (for SIMD reasons), but `std::io::copy` uses an 8KiB
             // buffer. Gonna have to do this by hand at some point to take
             // advantage of the algorithm's designed speed.
-            std::io::copy(&mut file, &mut hasher);
+            std::io::copy(&mut file, &mut hasher).with_context(|| {
+                format!("could not read `{}` to calculate hash", source.display())
+            })?;
 
             ///////////////////////////////////////////////
             // Step 3: make sure any parent paths exist  //
