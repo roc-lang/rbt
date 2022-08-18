@@ -3,7 +3,7 @@ use roc_std::{RocList, RocStr};
 use std::hash::{Hash, Hasher};
 use std::process::Command;
 
-#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Id(u64);
 
 impl From<&glue::Job> for Id {

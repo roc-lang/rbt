@@ -22,7 +22,7 @@ impl Cli {
     pub fn run(&self) -> Result<()> {
         let rbt = Self::load();
 
-        let store = Store::new(self.root_dir.join("store"));
+        let store = Store::new(self.root_dir.join("store")).context("could not open store")?;
 
         let mut coordinator = Coordinator::new(store);
         coordinator.add_target(rbt.f0.default);

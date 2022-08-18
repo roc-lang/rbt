@@ -38,18 +38,19 @@ impl Coordinator {
     }
 
     pub fn run_next<R: Runner>(&mut self, runner: &R) -> Result<()> {
-        let next = match self.ready.pop() {
+        let id = match self.ready.pop() {
             Some(id) => id,
             None => anyhow::bail!("no work ready to do"),
         };
 
-        runner
-            .run(
-                self.jobs
-                    .get(&next)
-                    .context("had a bad job ID in Coordinator.ready")?,
-            )
-            .context("could not run job")?;
+        let job = self
+            .jobs
+            .get(&id)
+            .context("had a bad job ID in Coordinator.ready")?;
+
+        println!("{:#?}", &self.store.for_job(&job));
+
+        runner.run(job).context("could not run job")?;
 
         // Now that we're done running the job, we update our bookkeeping to
         // figure out what running that job just unblocked.
@@ -59,7 +60,7 @@ impl Coordinator {
         let mut newly_unblocked = vec![]; // avoiding mutating both fields of self in the loop below
 
         self.blocked.retain(|blocked, blockers| {
-            let removed = blockers.remove(&next);
+            let removed = blockers.remove(&id);
             if !removed {
                 return false;
             }
