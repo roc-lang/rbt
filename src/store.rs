@@ -17,7 +17,7 @@ pub struct Store {
     // This is stored as JSON for now to avoid taking another dependency,
     // but it'd be good for it to be a real database (or database table)
     // eventually. SQLite or Sled or something
-    inputs_to_content: HashMap<job::Id, PathBuf>,
+    inputs_to_content: HashMap<job::Id, String>,
 }
 
 impl Store {
@@ -43,11 +43,13 @@ impl Store {
         })
     }
 
-    pub fn for_job(&self, job: &Job) -> Option<&PathBuf> {
-        self.inputs_to_content.get(&job.id)
+    pub fn for_job(&self, job: &Job) -> Option<PathBuf> {
+        self.inputs_to_content
+            .get(&job.id)
+            .map(|path| self.root.join(path))
     }
 
-    pub fn store_from_workspace(&self, job: &Job, workspace: &Path) -> Result<()> {
+    pub fn store_from_workspace(&mut self, job: &Job, workspace: &Path) -> Result<()> {
         let mut hasher = blake3::Hasher::new();
         let temp = tempfile::Builder::new()
             .prefix(&format!("rbt-job-{}", job.id))
@@ -164,7 +166,19 @@ impl Store {
         // around in case of errors.
         std::fs::rename(temp.into_path(), &final_location)
             .context("could not move temporary collection dir into the store")?;
-        Self::make_readonly(&final_location).context("could not make store path readonly")
+        Self::make_readonly(&final_location).context("could not make store path readonly")?;
+
+        self.associate_job_with_hash(&job, &final_hash)
+            .context("could not associate job with hash")
+    }
+
+    fn associate_job_with_hash(&mut self, job: &Job, hash: &str) -> Result<()> {
+        self.inputs_to_content.insert(job.id, hash.to_owned());
+
+        let file = std::fs::File::create(self.root.join("inputs_to_content.json"))
+            .context("failed to open job-to-content-hash mapping")?;
+        serde_json::to_writer(file, &self.inputs_to_content)
+            .context("failed to write job-to-content-hash mapping")
     }
 
     fn make_readonly(path: &Path) -> Result<()> {
