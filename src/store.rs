@@ -43,8 +43,7 @@ impl Store {
     }
 
     pub fn for_job(&self, job: &Job) -> Option<PathBuf> {
-        println!("{:#?}", job);
-        None
+        todo!()
     }
 
     pub fn store_from_workspace(&self, job: &Job, workspace: &Path) -> Result<()> {

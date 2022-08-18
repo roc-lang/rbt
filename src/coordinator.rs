@@ -48,8 +48,6 @@ impl Coordinator {
             .get(&id)
             .context("had a bad job ID in Coordinator.ready")?;
 
-        println!("{:#?}", &self.store.for_job(&job));
-
         runner.run(job).context("could not run job")?;
 
         // Now that we're done running the job, we update our bookkeeping to
