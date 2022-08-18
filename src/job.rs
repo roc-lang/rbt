@@ -26,10 +26,12 @@ impl From<&glue::Job> for Id {
         // for this.
         job.command.hash(&mut hasher);
 
-        job.inputFiles
-            .iter()
-            .sorted()
-            .for_each(|input_file| input_file.hash(&mut hasher));
+        // TODO: input file hashes need to change this hash. We cannot do that
+        // yet, so we cannot accept files yet!
+        debug_assert!(
+            job.inputFiles.is_empty(),
+            "we cannot handle input files in hashes yet"
+        );
 
         job.outputs
             .iter()
