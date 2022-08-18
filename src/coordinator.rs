@@ -48,6 +48,8 @@ impl Coordinator {
             .get(&id)
             .context("had a bad job ID in Coordinator.ready")?;
 
+        log::debug!("preparing to run job {}", job.id);
+
         if self.store.for_job(&job).is_none() {
             runner.run(job).context("could not run job")?;
         } else {
@@ -70,6 +72,7 @@ impl Coordinator {
 
             let no_blockers_remaining = blockers.is_empty();
             if no_blockers_remaining {
+                log::debug!("unblocked {}", blocked);
                 newly_unblocked.push(*blocked)
             }
             !no_blockers_remaining

@@ -28,6 +28,7 @@ impl Cli {
         coordinator.add_target(rbt.f0.default);
 
         let runner: Box<dyn crate::coordinator::Runner> = if self.use_fake_runner {
+            log::info!("using fake runner");
             Box::new(crate::fake_runner::FakeRunner::default())
         } else {
             Box::new(crate::runner::Runner::new(self.root_dir.to_owned()))

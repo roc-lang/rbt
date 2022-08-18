@@ -33,6 +33,7 @@ impl Store {
         };
 
         if !root.exists() {
+            log::info!("creating store root at {}", &root.display());
             std::fs::create_dir_all(&root).context("could not create specified root")?;
         }
 
@@ -109,6 +110,11 @@ impl Store {
                     continue;
                 }
 
+                log::trace!(
+                    "creating {} in {}",
+                    &ancestor.display(),
+                    temp.path().display()
+                );
                 std::fs::create_dir(temp.path().join(&ancestor)).with_context(|| {
                     format!(
                         "could not create ancestor `{}` for output `{}`",
@@ -122,6 +128,7 @@ impl Store {
             //////////////////////////////
             // Step 4: collect the file //
             //////////////////////////////
+            log::trace!("moving {} into colleciton path", &source.display());
             let out = temp.path().join(&source);
             std::fs::rename(workspace.join(&source), &out).with_context(|| {
                 format!(
@@ -146,7 +153,10 @@ impl Store {
             })?;
         }
 
-        let final_location = self.root.join(hasher.finalize().to_hex().to_string());
+        let final_hash = hasher.finalize().to_hex().to_string();
+        let final_location = self.root.join(&final_hash);
+
+        log::debug!("moving {} into store", &final_hash);
 
         // important: at this point we need to take ownership of the tempdir so
         // that it doesn't get automatically removed when it's dropped. We've
