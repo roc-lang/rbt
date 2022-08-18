@@ -15,6 +15,8 @@ impl From<&glue::Job> for Id {
     /// jobs as soon as it's feasible. When that happens, a depth-first search
     /// through the tree rooted at `top_job` will probably suffice.
     fn from(top_job: &glue::Job) -> Self {
+        // TODO: is this the best hash for this kind of data? Should we find
+        // a faster one?
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
 
         let job = &top_job.f0;
