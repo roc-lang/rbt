@@ -64,7 +64,6 @@ impl Coordinator {
                 .store_from_workspace(&job, workspace.as_ref())
                 .context("could not store job output")?;
         } else {
-            // TODO: put this in a proper logging framework
             log::debug!("already had output of this job; skipping");
         }
 
