@@ -48,7 +48,12 @@ impl Coordinator {
             .get(&id)
             .context("had a bad job ID in Coordinator.ready")?;
 
-        runner.run(job).context("could not run job")?;
+        if self.store.for_job(&job).is_none() {
+            runner.run(job).context("could not run job")?;
+        } else {
+            // TODO: put this in a proper logging framework
+            eprintln!("[INFO] already had job, skipping");
+        }
 
         // Now that we're done running the job, we update our bookkeeping to
         // figure out what running that job just unblocked.
