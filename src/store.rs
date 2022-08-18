@@ -42,8 +42,8 @@ impl Store {
         })
     }
 
-    pub fn for_job(&self, job: &Job) -> Option<PathBuf> {
-        todo!()
+    pub fn for_job(&self, job: &Job) -> Option<&PathBuf> {
+        self.inputs_to_content.get(&job.id)
     }
 
     pub fn store_from_workspace(&self, job: &Job, workspace: &Path) -> Result<()> {
