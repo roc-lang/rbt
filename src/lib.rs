@@ -91,6 +91,10 @@ pub unsafe extern "C" fn roc_getppid() -> i32 {
 pub fn rust_main() -> isize {
     let cli = cli::Cli::parse();
 
+    simple_logger::SimpleLogger::new()
+        .init()
+        .expect("failed to initialize logger");
+
     if let Err(problem) = cli.run() {
         eprintln!("{:?}", problem);
         1
