@@ -32,6 +32,10 @@ impl Store {
             Err(err) => return Err(err).context("could not open mapping from inputs to content"),
         };
 
+        if !root.exists() {
+            std::fs::create_dir_all(&root).context("could not create specified root")?;
+        }
+
         Ok(Store {
             root,
             inputs_to_content,
