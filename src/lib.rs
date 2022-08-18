@@ -7,6 +7,7 @@ mod fake_runner;
 mod glue;
 mod job;
 mod runner;
+mod store;
 
 use clap::Parser;
 use std::ffi::{c_void, CStr};

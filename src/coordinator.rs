@@ -1,16 +1,29 @@
 use crate::glue;
 use crate::job::{self, Job};
+use crate::store::Store;
 use anyhow::{Context, Result};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Coordinator {
+    store: Store,
+
     jobs: HashMap<job::Id, Job>,
     blocked: HashMap<job::Id, HashSet<job::Id>>,
     ready: Vec<job::Id>,
 }
 
 impl Coordinator {
+    pub fn new(store: Store) -> Self {
+        Coordinator {
+            store,
+
+            jobs: HashMap::default(),
+            blocked: HashMap::default(),
+            ready: Vec::default(),
+        }
+    }
+
     pub fn add_target(&mut self, top_job: glue::Job) {
         // Note: this data structure is going to grow the ability to refer to other
         // jobs as soon as it's possibly feasible. When that happens, a depth-first
