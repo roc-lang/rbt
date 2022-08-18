@@ -54,14 +54,14 @@ impl Coordinator {
 
         log::debug!("preparing to run job {}", job.id);
 
-        if self.store.for_job(&job).is_none() {
-            let workspace = Workspace::create(&self.workspace_root, &job)
+        if self.store.for_job(job).is_none() {
+            let workspace = Workspace::create(&self.workspace_root, job)
                 .with_context(|| format!("could not create workspace for job {}", job.id))?;
 
             runner.run(job, &workspace).context("could not run job")?;
 
             self.store
-                .store_from_workspace(&job, workspace.as_ref())
+                .store_from_workspace(job, workspace.as_ref())
                 .context("could not store job output")?;
         } else {
             log::debug!("already had output of this job; skipping");

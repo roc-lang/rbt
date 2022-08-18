@@ -170,7 +170,7 @@ impl Store {
             .context("could not move temporary collection dir into the store")?;
         Self::make_readonly(&final_location).context("could not make store path readonly")?;
 
-        self.associate_job_with_hash(&job, &final_hash)
+        self.associate_job_with_hash(job, &final_hash)
             .context("could not associate job with hash")
     }
 
