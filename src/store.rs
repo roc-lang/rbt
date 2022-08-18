@@ -22,9 +22,9 @@ pub struct Store {
 
 impl Store {
     pub fn new(root: PathBuf) -> Result<Self> {
-        let inputs_to_content = match std::fs::File::open(&root.join("inputs_to_content.json")) {
+        let inputs_to_content = match File::open(&root.join("inputs_to_content.json")) {
             Ok(file) => {
-                let reader = std::io::BufReader::new(file);
+                let reader = BufReader::new(file);
                 serde_json::from_reader(reader)
                     .context("could not deserialize mapping from inputs to content")?
             }
