@@ -52,7 +52,7 @@ impl Coordinator {
             runner.run(job).context("could not run job")?;
         } else {
             // TODO: put this in a proper logging framework
-            eprintln!("[INFO] already had job, skipping");
+            log::debug!("already had output of this job; skipping");
         }
 
         // Now that we're done running the job, we update our bookkeeping to

@@ -39,7 +39,7 @@ pub(crate) unsafe extern "C" fn roc_panic(c_ptr: *mut c_void, tag_id: u32) {
         0 => {
             let slice = CStr::from_ptr(c_ptr as *const c_char);
             let string = slice.to_str().unwrap();
-            eprintln!("Roc hit a panic: {}", string);
+            log::error!("Roc hit a panic: {}", string);
             std::process::exit(1);
         }
         _ => todo!(),

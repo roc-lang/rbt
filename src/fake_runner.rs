@@ -7,7 +7,7 @@ pub struct FakeRunner {}
 
 impl Runner for FakeRunner {
     fn run(&self, job: &Job) -> Result<()> {
-        eprintln!("running job: {:#?}", job);
+        log::info!("fake-running job {:?}", job);
 
         std::thread::sleep(std::time::Duration::from_millis(500));
 

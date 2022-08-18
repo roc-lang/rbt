@@ -67,8 +67,7 @@ impl Workspace {
 impl Drop for Workspace {
     fn drop(&mut self) {
         if let Err(problem) = std::fs::remove_dir_all(&self.0) {
-            // TODO: this should eventually be a system log line that warns of the error
-            eprintln!("[WARNING] problem removing workspace dir: {:}", problem);
+            log::warn!("problem removing workspace dir: {}", problem);
         };
     }
 }
