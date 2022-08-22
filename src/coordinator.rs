@@ -4,7 +4,7 @@ use crate::store::Store;
 use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub struct Coordinator {
@@ -17,9 +17,9 @@ pub struct Coordinator {
 }
 
 impl Coordinator {
-    pub fn new(workspace_root: PathBuf, store: Store) -> Self {
+    pub fn new(workspace_root: &Path, store: Store) -> Self {
         Coordinator {
-            workspace_root,
+            workspace_root: workspace_root.to_path_buf(),
             store,
 
             jobs: HashMap::default(),
