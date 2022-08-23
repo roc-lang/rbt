@@ -199,3 +199,17 @@ impl TryFrom<Metadata> for CacheKey {
         })
     }
 }
+
+#[cfg(not(target_family = "unix"))]
+impl TryFrom<Metadata> for CacheKey {
+    type Error = anyhow::Error;
+
+    fn try_from(meta: Metadata) -> Result<CacheKey> {
+        Ok(CacheKey {
+            modified: meta
+                .modified()
+                .context("mtime is not supported on this system")?,
+            len: meta.len(),
+        })
+    }
+}
