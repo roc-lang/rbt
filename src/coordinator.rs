@@ -5,7 +5,10 @@ use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use core::convert::{TryFrom, TryInto};
 use std::collections::{HashMap, HashSet};
+use std::fs::File;
 use std::fs::Metadata;
+use std::hash::{Hash, Hasher};
+use std::io::BufReader;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
@@ -22,6 +25,7 @@ pub struct Coordinator {
 
     // caches
     path_to_meta: HashMap<PathBuf, PathMetaKey>,
+    meta_to_hash: HashMap<u64, PathBuf>,
 
     // which jobs should run when?
     jobs: HashMap<job::Id, Job>,
@@ -30,19 +34,30 @@ pub struct Coordinator {
 }
 
 impl Coordinator {
-    pub fn new(workspace_root: PathBuf, store: Store) -> Self {
-        Coordinator {
+    pub fn new(workspace_root: PathBuf, store: Store) -> Result<Self> {
+        let meta_to_hash = match File::open(&workspace_root.join("file_hashes.json")) {
+            Ok(file) => {
+                let reader = BufReader::new(file);
+                serde_json::from_reader(reader)
+                    .context("could not deserialize mapping from inputs to content")?
+            }
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => HashMap::default(),
+            Err(err) => return Err(err).context("could not open file hash cache"),
+        };
+
+        Ok(Coordinator {
             workspace_root,
             store,
 
             targets: Vec::new(),
 
             path_to_meta: HashMap::default(),
+            meta_to_hash,
 
             jobs: HashMap::default(),
             blocked: HashMap::default(),
             ready: Vec::default(),
-        }
+        })
     }
 
     pub fn add_target(&mut self, job: glue::Job) {
@@ -170,7 +185,7 @@ impl Runner for Box<dyn Runner> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 struct PathMetaKey {
     // common
     modified: SystemTime,
@@ -186,6 +201,14 @@ struct PathMetaKey {
     #[cfg(target_family = "unix")]
     gid: u32,
     // TODO: extra info for Windows
+}
+
+impl From<PathMetaKey> for u64 {
+    fn from(key: PathMetaKey) -> Self {
+        let mut hasher = std::collections::hash_map::DefaultHasher::default();
+        key.hash(&mut hasher);
+        hasher.finish()
+    }
 }
 
 #[cfg(target_family = "unix")]

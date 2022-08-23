@@ -24,7 +24,8 @@ impl Cli {
 
         let store = Store::new(self.root_dir.join("store")).context("could not open store")?;
 
-        let mut coordinator = Coordinator::new(self.root_dir.to_path_buf(), store);
+        let mut coordinator = Coordinator::new(self.root_dir.to_path_buf(), store)
+            .context("could not set up coordinator")?;
         coordinator.add_target(rbt.f0.default);
 
         // done adding targets!
