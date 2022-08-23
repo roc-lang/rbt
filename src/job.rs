@@ -1,7 +1,8 @@
 use crate::glue;
+use anyhow::Result;
 use itertools::Itertools;
 use roc_std::{RocList, RocStr};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
@@ -9,41 +10,6 @@ use std::process::Command;
 
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Id(u64);
-
-impl From<&glue::Job> for Id {
-    /// We don't care about order in some places (e.g. output file) while we do
-    /// in others (e.g. command arguments.) The hash should reflect this!
-    ///
-    /// Note: this data structure is going to grow the ability to refer to other
-    /// jobs as soon as it's feasible. When that happens, a depth-first search
-    /// through the tree rooted at `top_job` will probably suffice.
-    fn from(top_job: &glue::Job) -> Self {
-        // TODO: is this the best hash for this kind of data? Should we find
-        // a faster one?
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-
-        let job = &top_job.f0;
-
-        // TODO: when we can get commands from other jobs, we need to hash the
-        // other tool and job instead of relying on the derived `Hash` trait
-        // for this.
-        job.command.hash(&mut hasher);
-
-        // TODO: input file hashes need to change this hash. We cannot do that
-        // yet, so we cannot accept files yet!
-        debug_assert!(
-            job.inputFiles.is_empty(),
-            "we cannot handle input files in hashes yet"
-        );
-
-        job.outputs
-            .iter()
-            .sorted()
-            .for_each(|output| output.hash(&mut hasher));
-
-        Id(hasher.finish())
-    }
-}
 
 impl Display for Id {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -59,21 +25,43 @@ pub struct Job {
     pub outputs: RocList<RocStr>,
 }
 
-impl From<glue::Job> for Job {
-    fn from(job: glue::Job) -> Self {
-        let id = Id::from(&job);
+impl Job {
+    pub fn from_glue(job: glue::Job, path_to_hash: &HashMap<PathBuf, String>) -> Result<Self> {
         let unwrapped = job.f0;
 
-        Job {
-            id,
-            command: unwrapped.command.f0,
-            input_files: unwrapped
-                .inputFiles
-                .iter()
-                .map(|s| s.as_str().into())
-                .collect(),
-            outputs: unwrapped.outputs,
+        // TODO: is this the best hash for this kind of data? Should we find
+        // a faster one?
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+
+        // TODO: when we can get commands from other jobs, we need to hash the
+        // other tool and job instead of relying on the derived `Hash` trait
+        // for this.
+        unwrapped.command.hash(&mut hasher);
+
+        let mut input_files: HashSet<PathBuf> = HashSet::with_capacity(unwrapped.inputFiles.len());
+        for path_str in unwrapped.inputFiles.iter().sorted() {
+            let path = PathBuf::from(path_str.as_str());
+
+            match path_to_hash.get(&path) {
+                Some(hash) => hash.hash(&mut hasher),
+                None => anyhow::bail!("couldn't find a hash for `{}`", path.display()),
+            }
+
+            input_files.insert(path);
         }
+
+        unwrapped
+            .outputs
+            .iter()
+            .sorted()
+            .for_each(|output| output.hash(&mut hasher));
+
+        Ok(Job {
+            id: Id(hasher.finish()),
+            command: unwrapped.command.f0,
+            input_files,
+            outputs: unwrapped.outputs,
+        })
     }
 }
 

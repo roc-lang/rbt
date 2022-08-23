@@ -101,13 +101,13 @@ impl Coordinator {
         // get hashes for files we haven't seen before //
         /////////////////////////////////////////////////
         let mut hasher = blake3::Hasher::new();
-        let mut path_to_hash: HashMap<&Path, String> =
+        let mut path_to_hash: HashMap<PathBuf, String> =
             HashMap::with_capacity(self.path_to_meta.len());
 
         for (path, cache_key) in &self.path_to_meta {
             let key = u64::from(cache_key);
             if let Some(hash) = self.meta_to_hash.get(&key) {
-                path_to_hash.insert(path, hash.to_owned());
+                path_to_hash.insert(path.to_path_buf(), hash.to_owned());
                 continue;
             }
 
@@ -127,10 +127,8 @@ impl Coordinator {
             log::debug!("hash of `{}` was {}", path.display(), hash);
             self.meta_to_hash.insert(key, hash.to_string());
 
-            path_to_hash.insert(path, hash.to_string());
+            path_to_hash.insert(path.to_path_buf(), hash.to_string());
         }
-
-        dbg!(&path_to_hash);
 
         let file_hashes = File::create(self.workspace_root.join("file_hashes.json"))
             .context("could not open file hash cache to store new hashes")?;
@@ -143,7 +141,9 @@ impl Coordinator {
             // refer to other jobs as soon as it's possibly feasible. When
             // that happens, a depth-first search through the tree rooted at
             // `glue_job` will probably suffice.
-            let job: Job = glue_job.into();
+            let job = Job::from_glue(glue_job, &path_to_hash)
+                .context("could not convert glue job to actual job")?;
+
             self.ready.push(job.id);
             self.jobs.insert(job.id, job);
         }
