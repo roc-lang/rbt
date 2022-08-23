@@ -27,6 +27,11 @@ impl Cli {
         let mut coordinator = Coordinator::new(self.root_dir.to_path_buf(), store);
         coordinator.add_target(rbt.f0.default);
 
+        // done adding targets!
+        coordinator
+            .prepare_for_work()
+            .context("could not prepare for work")?;
+
         let runner: Box<dyn crate::coordinator::Runner> = if self.use_fake_runner {
             log::info!("using fake runner");
             Box::new(crate::fake_runner::FakeRunner::default())
