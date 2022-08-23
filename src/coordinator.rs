@@ -101,10 +101,13 @@ impl Coordinator {
         // get hashes for files we haven't seen before //
         /////////////////////////////////////////////////
         let mut hasher = blake3::Hasher::new();
+        let mut path_to_hash: HashMap<&Path, String> =
+            HashMap::with_capacity(self.path_to_meta.len());
 
         for (path, cache_key) in &self.path_to_meta {
             let key = u64::from(cache_key);
-            if self.meta_to_hash.contains_key(&key) {
+            if let Some(hash) = self.meta_to_hash.get(&key) {
+                path_to_hash.insert(path, hash.to_owned());
                 continue;
             }
 
@@ -119,9 +122,15 @@ impl Coordinator {
             // advantage of the algorithm's designed speed.
             std::io::copy(&mut file, &mut hasher)?;
 
-            log::debug!("hash of `{}` was {}", path.display(), hasher.finalize());
-            self.meta_to_hash.insert(key, hasher.finalize().to_string());
+            let hash = hasher.finalize();
+
+            log::debug!("hash of `{}` was {}", path.display(), hash);
+            self.meta_to_hash.insert(key, hash.to_string());
+
+            path_to_hash.insert(path, hash.to_string());
         }
+
+        dbg!(&path_to_hash);
 
         let file_hashes = File::create(self.workspace_root.join("file_hashes.json"))
             .context("could not open file hash cache to store new hashes")?;
