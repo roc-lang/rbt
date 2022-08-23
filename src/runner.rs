@@ -3,6 +3,7 @@ use crate::job::Job;
 use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use path_absolutize::Absolutize;
+use std::fs;
 use std::process::Command;
 
 #[cfg(target_family = "unix")]
@@ -17,6 +18,16 @@ pub struct Runner;
 impl coordinator::Runner for Runner {
     fn run(&self, job: &Job, workspace: &Workspace) -> Result<()> {
         for file in &job.input_files {
+            if let Some(parent_base) = file.parent() {
+                let parent = workspace.join(parent_base);
+
+                if !parent.exists() {
+                    fs::create_dir_all(parent).with_context(|| {
+                        format!("could not create parent for `{}`", file.display())
+                    })?;
+                }
+            }
+
             let source = file.absolutize().with_context(|| {
                 format!("could not convert `{}` to an absolute path", file.display())
             })?;
