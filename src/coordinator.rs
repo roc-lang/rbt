@@ -17,8 +17,13 @@ pub struct Coordinator {
     workspace_root: PathBuf,
     store: Store,
 
+    // initialization phase
     targets: Vec<glue::Job>,
 
+    // caches
+    path_to_meta: HashMap<PathBuf, PathMetaKey>,
+
+    // which jobs should run when?
     jobs: HashMap<job::Id, Job>,
     blocked: HashMap<job::Id, HashSet<job::Id>>,
     ready: Vec<job::Id>,
@@ -31,6 +36,8 @@ impl Coordinator {
             store,
 
             targets: Vec::new(),
+
+            path_to_meta: HashMap::default(),
 
             jobs: HashMap::default(),
             blocked: HashMap::default(),
@@ -53,7 +60,6 @@ impl Coordinator {
 
         // TODO: perf hint for later: we could be doing this in parallel
         // using rayon
-        let mut cache_keys: HashMap<PathBuf, PathMetaKey> = HashMap::new();
         for input_file in input_files.drain() {
             // TODO: collect errors instead of bailing immediately
             let meta = input_file.metadata().with_context(|| {
@@ -74,10 +80,10 @@ impl Coordinator {
                 )
             })?;
 
-            cache_keys.insert(input_file, cache_key);
+            self.path_to_meta.insert(input_file, cache_key);
         }
 
-        dbg!(cache_keys);
+        dbg!(&self.path_to_meta);
 
         for glue_job in self.targets.drain(..) {
             // Note: this data structure is going to grow the ability to
