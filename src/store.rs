@@ -180,6 +180,7 @@ impl Store {
 
         let file = std::fs::File::create(self.root.join("inputs_to_content.json"))
             .context("failed to open job-to-content-hash mapping")?;
+        // TODO: BufWriter?
         serde_json::to_writer(file, &self.inputs_to_content)
             .context("failed to write job-to-content-hash mapping")
     }

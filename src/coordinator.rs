@@ -5,8 +5,7 @@ use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use core::convert::{TryFrom, TryInto};
 use std::collections::{HashMap, HashSet};
-use std::fs::File;
-use std::fs::Metadata;
+use std::fs::{File, Metadata};
 use std::hash::{Hash, Hasher};
 use std::io::BufReader;
 use std::path::PathBuf;
@@ -25,7 +24,7 @@ pub struct Coordinator {
 
     // caches
     path_to_meta: HashMap<PathBuf, PathMetaKey>,
-    meta_to_hash: HashMap<u64, PathBuf>,
+    meta_to_hash: HashMap<u64, String>,
 
     // which jobs should run when?
     jobs: HashMap<job::Id, Job>,
@@ -98,7 +97,37 @@ impl Coordinator {
             self.path_to_meta.insert(input_file, cache_key);
         }
 
-        dbg!(&self.path_to_meta);
+        /////////////////////////////////////////////////
+        // get hashes for files we haven't seen before //
+        /////////////////////////////////////////////////
+        let mut hasher = blake3::Hasher::new();
+
+        for (path, cache_key) in &self.path_to_meta {
+            let key = u64::from(cache_key);
+            if self.meta_to_hash.contains_key(&key) {
+                continue;
+            }
+
+            let mut file = File::open(&path)
+                .with_context(|| format!("couldn't open `{}` for hashing.", path.display()))?;
+
+            hasher.reset();
+
+            // TODO: docs for Blake3 say that a 16 KiB buffer is the most
+            // efficient (for SIMD reasons), but `std::io::copy` uses an 8KiB
+            // buffer. Gonna have to do this by hand at some point to take
+            // advantage of the algorithm's designed speed.
+            std::io::copy(&mut file, &mut hasher)?;
+
+            log::debug!("hash of `{}` was {}", path.display(), hasher.finalize());
+            self.meta_to_hash.insert(key, hasher.finalize().to_string());
+        }
+
+        let file_hashes = File::create(self.workspace_root.join("file_hashes.json"))
+            .context("could not open file hash cache to store new hashes")?;
+        // TODO: BufWriter?
+        serde_json::to_writer(file_hashes, &self.meta_to_hash)
+            .context("failed to write hash cache to disk")?;
 
         for glue_job in self.targets.drain(..) {
             // Note: this data structure is going to grow the ability to
@@ -203,8 +232,8 @@ struct PathMetaKey {
     // TODO: extra info for Windows
 }
 
-impl From<PathMetaKey> for u64 {
-    fn from(key: PathMetaKey) -> Self {
+impl From<&PathMetaKey> for u64 {
+    fn from(key: &PathMetaKey) -> Self {
         let mut hasher = std::collections::hash_map::DefaultHasher::default();
         key.hash(&mut hasher);
         hasher.finish()
