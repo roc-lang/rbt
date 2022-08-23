@@ -1,8 +1,10 @@
 use crate::glue;
 use itertools::Itertools;
 use roc_std::{RocList, RocStr};
+use std::collections::HashSet;
 use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
+use std::path::PathBuf;
 use std::process::Command;
 
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
@@ -53,7 +55,7 @@ impl Display for Id {
 pub struct Job {
     pub id: Id,
     pub command: glue::R3,
-    pub input_files: RocList<RocStr>,
+    pub input_files: HashSet<PathBuf>,
     pub outputs: RocList<RocStr>,
 }
 
@@ -65,7 +67,11 @@ impl From<glue::Job> for Job {
         Job {
             id,
             command: unwrapped.command.f0,
-            input_files: unwrapped.inputFiles,
+            input_files: unwrapped
+                .inputFiles
+                .iter()
+                .map(|s| s.as_str().into())
+                .collect(),
             outputs: unwrapped.outputs,
         }
     }
