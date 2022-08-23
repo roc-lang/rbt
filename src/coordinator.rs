@@ -53,7 +53,7 @@ impl Coordinator {
 
         // TODO: perf hint for later: we could be doing this in parallel
         // using rayon
-        let mut cache_keys: HashMap<PathBuf, CacheKey> = HashMap::new();
+        let mut cache_keys: HashMap<PathBuf, PathMetaKey> = HashMap::new();
         for input_file in input_files.drain() {
             // TODO: collect errors instead of bailing immediately
             let meta = input_file.metadata().with_context(|| {
@@ -165,7 +165,7 @@ impl Runner for Box<dyn Runner> {
 }
 
 #[derive(Debug)]
-struct CacheKey {
+struct PathMetaKey {
     // common
     modified: SystemTime,
     len: u64,
@@ -183,11 +183,11 @@ struct CacheKey {
 }
 
 #[cfg(target_family = "unix")]
-impl TryFrom<Metadata> for CacheKey {
+impl TryFrom<Metadata> for PathMetaKey {
     type Error = anyhow::Error;
 
-    fn try_from(meta: Metadata) -> Result<CacheKey> {
-        Ok(CacheKey {
+    fn try_from(meta: Metadata) -> Result<PathMetaKey> {
+        Ok(PathMetaKey {
             modified: meta
                 .modified()
                 .context("mtime is not supported on this system")?,
@@ -201,11 +201,11 @@ impl TryFrom<Metadata> for CacheKey {
 }
 
 #[cfg(not(target_family = "unix"))]
-impl TryFrom<Metadata> for CacheKey {
+impl TryFrom<Metadata> for PathMetaKey {
     type Error = anyhow::Error;
 
-    fn try_from(meta: Metadata) -> Result<CacheKey> {
-        Ok(CacheKey {
+    fn try_from(meta: Metadata) -> Result<PathMetaKey> {
+        Ok(PathMetaKey {
             modified: meta
                 .modified()
                 .context("mtime is not supported on this system")?,
