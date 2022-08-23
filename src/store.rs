@@ -161,15 +161,22 @@ impl Store {
         let final_hash = hasher.finalize().to_hex().to_string();
         let final_location = self.root.join(&final_hash);
 
-        log::debug!("moving {} into store", &final_hash);
+        if final_location.exists() {
+            log::debug!(
+                "we have already stored {}, so I'm skipping the move!",
+                final_hash
+            );
+        } else {
+            log::debug!("moving {} into store", &final_hash);
 
-        // important: at this point we need to take ownership of the tempdir so
-        // that it doesn't get automatically removed when it's dropped. We've
-        // so far avoided that to avoid leaving temporary directories laying
-        // around in case of errors.
-        std::fs::rename(temp.into_path(), &final_location)
-            .context("could not move temporary collection dir into the store")?;
-        Self::make_readonly(&final_location).context("could not make store path readonly")?;
+            // important: at this point we need to take ownership of the tempdir so
+            // that it doesn't get automatically removed when it's dropped. We've
+            // so far avoided that to avoid leaving temporary directories laying
+            // around in case of errors.
+            std::fs::rename(temp.into_path(), &final_location)
+                .context("could not move temporary collection dir into the store")?;
+            Self::make_readonly(&final_location).context("could not make store path readonly")?;
+        }
 
         self.associate_job_with_hash(job, &final_hash)
             .context("could not associate job with hash")
