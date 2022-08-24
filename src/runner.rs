@@ -42,7 +42,7 @@ impl coordinator::Runner for Runner {
         }
 
         let store = Store::create(&self.root, job)?;
-        store.take_outputs_from_workspace(job, &workspace)?;
+        store.take_outputs_from_workspace(job, workspace)?;
 
         Ok(())
     }
@@ -94,7 +94,7 @@ impl Store {
         self.0.join(other)
     }
 
-    fn take_outputs_from_workspace(&self, job: &RunnableJob, workspace: &Workspace) -> Result<()> {
+    fn take_outputs_from_workspace(&self, job: &RunnableJob, workspace: Workspace) -> Result<()> {
         for output in job.outputs {
             let output_str = output.as_str();
             let workspace_src = workspace.join(output_str);
