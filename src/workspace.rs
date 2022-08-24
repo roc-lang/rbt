@@ -12,6 +12,10 @@ impl Workspace {
 
         Ok(workspace)
     }
+
+    pub fn join<P: AsRef<Path>>(&self, other: P) -> PathBuf {
+        self.0.join(other)
+    }
 }
 
 impl Drop for Workspace {

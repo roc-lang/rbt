@@ -1,4 +1,5 @@
 use crate::job::{self, Job};
+use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -49,7 +50,7 @@ impl Store {
             .map(|path| self.root.join(path))
     }
 
-    pub fn store_from_workspace(&mut self, job: &Job, workspace: &Path) -> Result<()> {
+    pub fn store_from_workspace(&mut self, job: &Job, workspace: Workspace) -> Result<()> {
         let mut hasher = blake3::Hasher::new();
         let temp = tempfile::Builder::new()
             .prefix(&format!("rbt-job-{}", job.id))

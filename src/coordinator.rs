@@ -61,7 +61,7 @@ impl Coordinator {
             runner.run(job, &workspace).context("could not run job")?;
 
             self.store
-                .store_from_workspace(job, workspace.as_ref())
+                .store_from_workspace(job, workspace)
                 .context("could not store job output")?;
         } else {
             log::debug!("already had output of this job; skipping");
