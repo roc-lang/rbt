@@ -25,7 +25,9 @@ impl Builder {
         Builder {
             workspace_root: workspace_root.to_path_buf(),
             store,
-            targets: Vec::new(),
+
+            // it's very likely we'll have at least one target
+            targets: Vec::with_capacity(1),
         }
     }
 
