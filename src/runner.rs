@@ -54,7 +54,7 @@ impl Workspace {
     fn create(root: &Path, job: &RunnableJob) -> Result<Self> {
         let workspace = Workspace(root.join("workspaces").join(job.id.to_string()));
 
-        std::fs::create_dir_all(&workspace.0).context("could not create workspace")?;
+        std::fs::create_dir_all(&workspace).context("could not create workspace")?;
 
         Ok(workspace)
     }
