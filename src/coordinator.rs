@@ -36,7 +36,12 @@ impl Builder {
     }
 
     pub fn build(mut self) -> Result<Coordinator> {
-        let meta_to_hash = match File::open(&self.workspace_root.join("file_hashes.json")) {
+        // We're currently storing the mapping from PathMetaKey to content
+        // hash as a JSON object, so we need to load it first thing. In the
+        // longer term, we'll probably move to using some sort of KV store,
+        // at which point this deserialization will just be opening the database.
+        let file_hashes_path = self.workspace_root.join("file_hashes.json");
+        let meta_to_hash = match File::open(&file_hashes_path) {
             Ok(file) => {
                 let reader = BufReader::new(file);
                 serde_json::from_reader(reader)
@@ -58,13 +63,20 @@ impl Builder {
             ready: Vec::default(),
         };
 
+        // We assume that there will be at least some overlap in inputs (e.g. many
+        // targets looking at the same config file.) That assumption means that
+        // it makes sense to deduplicate them before doing a bunch of duplicate
+        // filesystem operations.
         let mut input_files: HashSet<PathBuf> = HashSet::new();
-
         for glue_job in &self.targets {
             for file in &glue_job.f0.inputFiles {
                 input_files.insert(file.as_str().into());
             }
         }
+
+        /////////////////////////////////////////////
+        // Phase 1: check which files have changed //
+        /////////////////////////////////////////////
 
         // TODO: perf hint for later: we could be doing this in parallel
         // using rayon
@@ -91,10 +103,13 @@ impl Builder {
             coordinator.path_to_meta.insert(input_file, cache_key);
         }
 
-        /////////////////////////////////////////////////
-        // get hashes for files we haven't seen before //
-        /////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////
+        // Phase 2a: get hashes for metadata keys we haven't seen before //
+        ///////////////////////////////////////////////////////////////////
         let mut hasher = blake3::Hasher::new();
+
+        // we keep track of path->hash in addition to path->meta->hash while
+        // so we use the more direct version while calculating the job hashes.
         let mut path_to_hash: HashMap<PathBuf, String> =
             HashMap::with_capacity(coordinator.path_to_meta.len());
 
@@ -124,12 +139,18 @@ impl Builder {
             path_to_hash.insert(path.to_path_buf(), hash.to_string());
         }
 
-        let file_hashes = File::create(&coordinator.workspace_root.join("file_hashes.json"))
+        ////////////////////////////////////////////////////////////////
+        // Phase 2b: keep track of the hashes to avoid work next time //
+        ////////////////////////////////////////////////////////////////
+        let file_hashes = File::create(file_hashes_path)
             .context("could not open file hash cache to store new hashes")?;
         // TODO: BufWriter?
         serde_json::to_writer(file_hashes, &coordinator.meta_to_hash)
             .context("failed to write hash cache to disk")?;
 
+        ///////////////////////////////////////////////////////////////////////////
+        // Phase 3: get the hahes to determine what jobs we actually need to run //
+        ///////////////////////////////////////////////////////////////////////////
         for glue_job in self.targets.drain(..) {
             // Note: this data structure is going to grow the ability to
             // refer to other jobs as soon as it's possibly feasible. When
