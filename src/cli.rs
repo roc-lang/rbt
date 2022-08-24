@@ -1,4 +1,4 @@
-use crate::coordinator::Coordinator;
+use crate::coordinator;
 use crate::glue;
 use crate::store::Store;
 use anyhow::{Context, Result};
@@ -24,14 +24,12 @@ impl Cli {
 
         let store = Store::new(self.root_dir.join("store")).context("could not open store")?;
 
-        let mut coordinator = Coordinator::new(self.root_dir.to_path_buf(), store)
-            .context("could not set up coordinator")?;
-        coordinator.add_target(rbt.f0.default);
+        let mut builder = coordinator::Builder::new(self.root_dir.to_path_buf(), store);
+        builder.add_target(rbt.f0.default);
 
-        // done adding targets!
-        coordinator
-            .prepare_for_work()
-            .context("could not prepare for work")?;
+        let mut coordinator = builder
+            .build()
+            .context("could not initialize coordinator")?;
 
         let runner: Box<dyn crate::coordinator::Runner> = if self.use_fake_runner {
             log::info!("using fake runner");

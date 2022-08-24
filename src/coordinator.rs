@@ -14,27 +14,27 @@ use std::time::SystemTime;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::MetadataExt;
 
-#[derive(Debug)]
-pub struct Coordinator {
+pub struct Builder {
     workspace_root: PathBuf,
     store: Store,
-
-    // initialization phase
     targets: Vec<glue::Job>,
-
-    // caches
-    path_to_meta: HashMap<PathBuf, PathMetaKey>,
-    meta_to_hash: HashMap<u64, String>,
-
-    // which jobs should run when?
-    jobs: HashMap<job::Id, Job>,
-    blocked: HashMap<job::Id, HashSet<job::Id>>,
-    ready: Vec<job::Id>,
 }
 
-impl Coordinator {
-    pub fn new(workspace_root: PathBuf, store: Store) -> Result<Self> {
-        let meta_to_hash = match File::open(&workspace_root.join("file_hashes.json")) {
+impl Builder {
+    pub fn new(workspace_root: PathBuf, store: Store) -> Self {
+        Builder {
+            workspace_root: workspace_root.to_path_buf(),
+            store,
+            targets: Vec::new(),
+        }
+    }
+
+    pub fn add_target(&mut self, job: glue::Job) {
+        self.targets.push(job);
+    }
+
+    pub fn build(mut self) -> Result<Coordinator> {
+        let meta_to_hash = match File::open(&self.workspace_root.join("file_hashes.json")) {
             Ok(file) => {
                 let reader = BufReader::new(file);
                 serde_json::from_reader(reader)
@@ -44,11 +44,9 @@ impl Coordinator {
             Err(err) => return Err(err).context("could not open file hash cache"),
         };
 
-        Ok(Coordinator {
-            workspace_root,
-            store,
-
-            targets: Vec::new(),
+        let mut coordinator = Coordinator {
+            workspace_root: self.workspace_root,
+            store: self.store,
 
             path_to_meta: HashMap::default(),
             meta_to_hash,
@@ -56,14 +54,8 @@ impl Coordinator {
             jobs: HashMap::default(),
             blocked: HashMap::default(),
             ready: Vec::default(),
-        })
-    }
+        };
 
-    pub fn add_target(&mut self, job: glue::Job) {
-        self.targets.push(job);
-    }
-
-    pub fn prepare_for_work(&mut self) -> Result<()> {
         let mut input_files: HashSet<PathBuf> = HashSet::new();
 
         for glue_job in &self.targets {
@@ -94,7 +86,7 @@ impl Coordinator {
                 )
             })?;
 
-            self.path_to_meta.insert(input_file, cache_key);
+            coordinator.path_to_meta.insert(input_file, cache_key);
         }
 
         /////////////////////////////////////////////////
@@ -102,11 +94,11 @@ impl Coordinator {
         /////////////////////////////////////////////////
         let mut hasher = blake3::Hasher::new();
         let mut path_to_hash: HashMap<PathBuf, String> =
-            HashMap::with_capacity(self.path_to_meta.len());
+            HashMap::with_capacity(coordinator.path_to_meta.len());
 
-        for (path, cache_key) in &self.path_to_meta {
+        for (path, cache_key) in &coordinator.path_to_meta {
             let key = u64::from(cache_key);
-            if let Some(hash) = self.meta_to_hash.get(&key) {
+            if let Some(hash) = coordinator.meta_to_hash.get(&key) {
                 path_to_hash.insert(path.to_path_buf(), hash.to_owned());
                 continue;
             }
@@ -125,15 +117,15 @@ impl Coordinator {
             let hash = hasher.finalize();
 
             log::debug!("hash of `{}` was {}", path.display(), hash);
-            self.meta_to_hash.insert(key, hash.to_string());
+            coordinator.meta_to_hash.insert(key, hash.to_string());
 
             path_to_hash.insert(path.to_path_buf(), hash.to_string());
         }
 
-        let file_hashes = File::create(self.workspace_root.join("file_hashes.json"))
+        let file_hashes = File::create(&coordinator.workspace_root.join("file_hashes.json"))
             .context("could not open file hash cache to store new hashes")?;
         // TODO: BufWriter?
-        serde_json::to_writer(file_hashes, &self.meta_to_hash)
+        serde_json::to_writer(file_hashes, &coordinator.meta_to_hash)
             .context("failed to write hash cache to disk")?;
 
         for glue_job in self.targets.drain(..) {
@@ -144,24 +136,35 @@ impl Coordinator {
             let job = Job::from_glue(glue_job, &path_to_hash)
                 .context("could not convert glue job to actual job")?;
 
-            self.ready.push(job.id);
-            self.jobs.insert(job.id, job);
+            coordinator.ready.push(job.id);
+            coordinator.jobs.insert(job.id, job);
         }
 
-        Ok(())
+        Ok(coordinator)
     }
+}
 
+#[derive(Debug)]
+pub struct Coordinator {
+    workspace_root: PathBuf,
+    store: Store,
+
+    // caches
+    path_to_meta: HashMap<PathBuf, PathMetaKey>,
+    meta_to_hash: HashMap<u64, String>,
+
+    // which jobs should run when?
+    jobs: HashMap<job::Id, Job>,
+    blocked: HashMap<job::Id, HashSet<job::Id>>,
+    ready: Vec<job::Id>,
+}
+
+impl Coordinator {
     pub fn has_outstanding_work(&self) -> bool {
         !self.blocked.is_empty() || !self.ready.is_empty()
     }
 
     pub fn run_next<R: Runner>(&mut self, runner: &R) -> Result<()> {
-        debug_assert_eq!(
-            self.targets.len(),
-            0,
-            "there were still unprocessed targets. Did `prepare_for_work` run?"
-        );
-
         let id = match self.ready.pop() {
             Some(id) => id,
             None => anyhow::bail!("no work ready to do"),
