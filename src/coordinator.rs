@@ -91,7 +91,7 @@ impl<'job> Coordinator<'job> {
         //
         // As an implementation note, this will probably end up in a separate
         // function once we're running tasks in parallel!
-        let mut newly_unblocked = Vec::default(); // avoiding mutating both fields of self in the loop below
+        let mut newly_unblocked = vec![]; // avoiding mutating both fields of self in the loop below
 
         self.blocked.retain(|blocked, blockers| {
             let removed = blockers.remove(&next);
