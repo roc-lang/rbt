@@ -105,7 +105,7 @@ impl<'job> Coordinator<'job> {
             }
             !no_blockers_remaining
         });
-        self.ready.append(&mut newly_unblocked);
+        self.ready.extend(newly_unblocked);
 
         Ok(())
     }
