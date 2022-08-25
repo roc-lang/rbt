@@ -23,7 +23,7 @@ pub struct Builder {
 impl Builder {
     pub fn new(workspace_root: PathBuf, store: Store) -> Self {
         Builder {
-            workspace_root: workspace_root.to_path_buf(),
+            workspace_root,
             store,
 
             // it's very likely we'll have at least one target
