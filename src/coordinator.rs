@@ -1,71 +1,23 @@
-use crate::rbt;
+use crate::glue;
+use crate::job::{self, Job};
 use anyhow::{Context, Result};
-use roc_std::{RocList, RocStr};
 use std::collections::{HashMap, HashSet};
-use std::hash::{Hash, Hasher};
-use std::process::Command;
-
-#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
-pub struct JobId(u64);
-
-impl From<u64> for JobId {
-    fn from(unwrapped: u64) -> Self {
-        JobId(unwrapped)
-    }
-}
-
-impl std::fmt::Display for JobId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:x}", self.0)
-    }
-}
 
 #[derive(Debug, Default)]
-pub struct Coordinator<'job> {
-    jobs: HashMap<JobId, RunnableJob<'job>>,
-    blocked: HashMap<JobId, HashSet<JobId>>,
-    ready: Vec<JobId>,
+pub struct Coordinator {
+    jobs: HashMap<job::Id, Job>,
+    blocked: HashMap<job::Id, HashSet<job::Id>>,
+    ready: Vec<job::Id>,
 }
 
-impl<'job> Coordinator<'job> {
-    pub fn add_target(&mut self, target_job: &'job rbt::Job) {
-        let mut todo = vec![target_job];
-
-        while let Some(job) = todo.pop() {
-            // TODO: figure out the right hasher for our use case and use that instead
-            let mut hasher = std::collections::hash_map::DefaultHasher::new();
-            job.hash(&mut hasher);
-            let id = hasher.finish().into();
-
-            let runnable_job = RunnableJob {
-                id,
-                command: &job.command,
-                inputs: job
-                    .inputs
-                    .iter()
-                    .map(|(name, dep)| {
-                        let mut dep_hasher = std::collections::hash_map::DefaultHasher::new();
-                        dep.hash(&mut dep_hasher);
-
-                        (name.as_str(), dep_hasher.finish().into())
-                    })
-                    .collect(),
-                input_files: &job.input_files,
-                outputs: &job.outputs,
-            };
-
-            let blockers: HashSet<JobId> = runnable_job.inputs.values().copied().collect();
-
-            if blockers.is_empty() {
-                self.ready.push(id);
-            } else {
-                self.blocked.insert(id, blockers);
-            }
-
-            self.jobs.insert(id, runnable_job);
-
-            todo.append(&mut job.inputs.values().collect());
-        }
+impl Coordinator {
+    pub fn add_target(&mut self, top_job: glue::Job) {
+        // Note: this data structure is going to grow the ability to refer to other
+        // jobs as soon as it's possibly feasible. When that happens, a depth-first
+        // search through the tree rooted at `top_job` will probably suffice.
+        let job: Job = top_job.into();
+        self.ready.push(job.id);
+        self.jobs.insert(job.id, job);
     }
 
     pub fn has_outstanding_work(&self) -> bool {
@@ -111,36 +63,12 @@ impl<'job> Coordinator<'job> {
     }
 }
 
-#[derive(Debug)]
-pub struct RunnableJob<'job> {
-    pub id: JobId,
-    pub command: &'job rbt::Command,
-    pub inputs: HashMap<&'job str, JobId>,
-    pub input_files: &'job RocList<RocStr>,
-    pub outputs: &'job RocList<RocStr>,
-}
-
-impl<'job> From<&RunnableJob<'job>> for Command {
-    fn from(job: &RunnableJob) -> Self {
-        let mut command = match &job.command.tool {
-            // TODO: in the future, we'll also get binaries from other job's output
-            rbt::Tool::SystemTool { name } => Command::new(name.to_string()),
-        };
-
-        for arg in &job.command.args {
-            command.arg(arg.as_str());
-        }
-
-        command
-    }
-}
-
 pub trait Runner {
-    fn run(&self, job: &RunnableJob) -> Result<()>;
+    fn run(&self, job: &Job) -> Result<()>;
 }
 
 impl Runner for Box<dyn Runner> {
-    fn run(&self, job: &RunnableJob) -> Result<()> {
+    fn run(&self, job: &Job) -> Result<()> {
         self.as_ref().run(job)
     }
 }
