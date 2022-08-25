@@ -7,6 +7,8 @@ mod fake_runner;
 mod glue;
 mod job;
 mod runner;
+mod store;
+mod workspace;
 
 use clap::Parser;
 use std::ffi::{c_void, CStr};
@@ -38,7 +40,7 @@ pub(crate) unsafe extern "C" fn roc_panic(c_ptr: *mut c_void, tag_id: u32) {
         0 => {
             let slice = CStr::from_ptr(c_ptr as *const c_char);
             let string = slice.to_str().unwrap();
-            eprintln!("Roc hit a panic: {}", string);
+            log::error!("Roc hit a panic: {}", string);
             std::process::exit(1);
         }
         _ => todo!(),
@@ -89,6 +91,10 @@ pub unsafe extern "C" fn roc_getppid() -> i32 {
 #[no_mangle]
 pub fn rust_main() -> isize {
     let cli = cli::Cli::parse();
+
+    simple_logger::SimpleLogger::new()
+        .init()
+        .expect("failed to initialize logger");
 
     if let Err(problem) = cli.run() {
         eprintln!("{:?}", problem);

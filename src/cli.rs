@@ -1,5 +1,6 @@
 use crate::coordinator::Coordinator;
 use crate::glue;
+use crate::store::Store;
 use anyhow::{Context, Result};
 use clap::Parser;
 use core::mem::MaybeUninit;
@@ -14,20 +15,23 @@ pub struct Cli {
     use_fake_runner: bool,
 
     #[clap(long, default_value = ".rbt")]
-    isolator_root: PathBuf,
+    root_dir: PathBuf,
 }
 
 impl Cli {
     pub fn run(&self) -> Result<()> {
         let rbt = Self::load();
 
-        let mut coordinator = Coordinator::default();
+        let store = Store::new(self.root_dir.join("store")).context("could not open store")?;
+
+        let mut coordinator = Coordinator::new(self.root_dir.join("workspaces"), store);
         coordinator.add_target(rbt.f0.default);
 
         let runner: Box<dyn crate::coordinator::Runner> = if self.use_fake_runner {
+            log::info!("using fake runner");
             Box::new(crate::fake_runner::FakeRunner::default())
         } else {
-            Box::new(crate::runner::Runner::new(self.isolator_root.to_owned()))
+            Box::new(crate::runner::Runner)
         };
 
         while coordinator.has_outstanding_work() {

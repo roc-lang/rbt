@@ -1,15 +1,42 @@
 use crate::glue;
+use itertools::Itertools;
 use roc_std::{RocList, RocStr};
 use std::hash::{Hash, Hasher};
 use std::process::Command;
 
-#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Id(u64);
 
 impl From<&glue::Job> for Id {
-    fn from(job: &glue::Job) -> Self {
+    /// We don't care about order in some places (e.g. output file) while we do
+    /// in others (e.g. command arguments.) The hash should reflect this!
+    ///
+    /// Note: this data structure is going to grow the ability to refer to other
+    /// jobs as soon as it's feasible. When that happens, a depth-first search
+    /// through the tree rooted at `top_job` will probably suffice.
+    fn from(top_job: &glue::Job) -> Self {
+        // TODO: is this the best hash for this kind of data? Should we find
+        // a faster one?
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        job.hash(&mut hasher);
+
+        let job = &top_job.f0;
+
+        // TODO: when we can get commands from other jobs, we need to hash the
+        // other tool and job instead of relying on the derived `Hash` trait
+        // for this.
+        job.command.hash(&mut hasher);
+
+        // TODO: input file hashes need to change this hash. We cannot do that
+        // yet, so we cannot accept files yet!
+        debug_assert!(
+            job.inputFiles.is_empty(),
+            "we cannot handle input files in hashes yet"
+        );
+
+        job.outputs
+            .iter()
+            .sorted()
+            .for_each(|output| output.hash(&mut hasher));
 
         Id(hasher.finish())
     }

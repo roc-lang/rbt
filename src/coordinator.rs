@@ -1,16 +1,33 @@
 use crate::glue;
 use crate::job::{self, Job};
+use crate::store::Store;
+use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Coordinator {
+    workspace_root: PathBuf,
+    store: Store,
+
     jobs: HashMap<job::Id, Job>,
     blocked: HashMap<job::Id, HashSet<job::Id>>,
     ready: Vec<job::Id>,
 }
 
 impl Coordinator {
+    pub fn new(workspace_root: PathBuf, store: Store) -> Self {
+        Coordinator {
+            workspace_root,
+            store,
+
+            jobs: HashMap::default(),
+            blocked: HashMap::default(),
+            ready: Vec::default(),
+        }
+    }
+
     pub fn add_target(&mut self, top_job: glue::Job) {
         // Note: this data structure is going to grow the ability to refer to other
         // jobs as soon as it's possibly feasible. When that happens, a depth-first
@@ -25,18 +42,30 @@ impl Coordinator {
     }
 
     pub fn run_next<R: Runner>(&mut self, runner: &R) -> Result<()> {
-        let next = match self.ready.pop() {
+        let id = match self.ready.pop() {
             Some(id) => id,
             None => anyhow::bail!("no work ready to do"),
         };
 
-        runner
-            .run(
-                self.jobs
-                    .get(&next)
-                    .context("had a bad job ID in Coordinator.ready")?,
-            )
-            .context("could not run job")?;
+        let job = self
+            .jobs
+            .get(&id)
+            .context("had a bad job ID in Coordinator.ready")?;
+
+        log::debug!("preparing to run job {}", job.id);
+
+        if self.store.for_job(job).is_none() {
+            let workspace = Workspace::create(&self.workspace_root, job)
+                .with_context(|| format!("could not create workspace for job {}", job.id))?;
+
+            runner.run(job, &workspace).context("could not run job")?;
+
+            self.store
+                .store_from_workspace(job, workspace)
+                .context("could not store job output")?;
+        } else {
+            log::debug!("already had output of this job; skipping");
+        }
 
         // Now that we're done running the job, we update our bookkeeping to
         // figure out what running that job just unblocked.
@@ -46,13 +75,14 @@ impl Coordinator {
         let mut newly_unblocked = vec![]; // avoiding mutating both fields of self in the loop below
 
         self.blocked.retain(|blocked, blockers| {
-            let removed = blockers.remove(&next);
+            let removed = blockers.remove(&id);
             if !removed {
                 return false;
             }
 
             let no_blockers_remaining = blockers.is_empty();
             if no_blockers_remaining {
+                log::debug!("unblocked {}", blocked);
                 newly_unblocked.push(*blocked)
             }
             !no_blockers_remaining
@@ -64,11 +94,11 @@ impl Coordinator {
 }
 
 pub trait Runner {
-    fn run(&self, job: &Job) -> Result<()>;
+    fn run(&self, job: &Job, workspace: &Workspace) -> Result<()>;
 }
 
 impl Runner for Box<dyn Runner> {
-    fn run(&self, job: &Job) -> Result<()> {
-        self.as_ref().run(job)
+    fn run(&self, job: &Job, workspace: &Workspace) -> Result<()> {
+        self.as_ref().run(job, workspace)
     }
 }
