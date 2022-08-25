@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 /// This struct manages all the levels of storage that we need in order to avoid
 /// doing as much work as possible. This mostly involves managing several layers
@@ -60,36 +60,15 @@ impl Store {
         let mut output_dirs: HashSet<PathBuf> = HashSet::new();
 
         for output in job.outputs.iter().sorted() {
-            let source = PathBuf::from(output.as_str());
-
-            ///////////////////////////////////////////////////
-            // Step 1: Validate that the path we got is safe //
-            ///////////////////////////////////////////////////
-            for component in source.components() {
-                match component {
-                    Component::Prefix(_) | Component::RootDir =>  anyhow::bail!(
-                        "Got `{}` as an output, but absolute paths are not allowed as outputs. Remove the absolute prefix to fix this!",
-                        source.display(),
-                    ),
-
-                    Component::ParentDir => anyhow::bail!(
-                        "Got `{}` as an output, but relative paths containing `..` are not allowed as inputs. Remove the `..` to fix this!",
-                        source.display(),
-                    ),
-
-                    Component::CurDir | Component::Normal(_) => (),
-                };
-            }
-
             ////////////////////////////////////////////////////////////////
-            // Step 2: add the file content to the content-addressed hash //
+            // Step 1: add the file content to the content-addressed hash //
             ////////////////////////////////////////////////////////////////
-            hasher.update(output.as_bytes());
+            hasher.update(output.to_string_lossy().as_bytes());
 
-            let mut file = File::open(&workspace.join(output.as_str())).with_context(|| {
+            let mut file = File::open(&workspace.join(output)).with_context(|| {
                 format!(
                     "couldn't open `{}` for hashing. Did the build produce it?",
-                    output
+                    output.display()
                 )
             })?;
 
@@ -98,13 +77,13 @@ impl Store {
             // buffer. Gonna have to do this by hand at some point to take
             // advantage of the algorithm's designed speed.
             std::io::copy(&mut file, &mut hasher).with_context(|| {
-                format!("could not read `{}` to calculate hash", source.display())
+                format!("could not read `{}` to calculate hash", output.display())
             })?;
 
             ///////////////////////////////////////////////
-            // Step 3: make sure any parent paths exist  //
+            // Step 2: make sure any parent paths exist  //
             ///////////////////////////////////////////////
-            let mut ancestors: Vec<&Path> = source.ancestors().skip(1).collect();
+            let mut ancestors: Vec<&Path> = output.ancestors().skip(1).collect();
             ancestors.pop(); // we've made sure this is relative, so the first item is ""
             ancestors.reverse(); // go `[a, a/b, a/b/c]` instead of `[a/b/c, a/b, a]`
 
@@ -124,21 +103,21 @@ impl Store {
                     format!(
                         "could not create ancestor `{}` for output `{}`",
                         ancestor.display(),
-                        source.display(),
+                        output.display(),
                     )
                 })?;
                 output_dirs.insert(ancestor);
             }
 
             //////////////////////////////
-            // Step 4: collect the file //
+            // Step 3: collect the file //
             //////////////////////////////
-            log::trace!("moving {} into collection path", &source.display());
-            let out = temp.path().join(&source);
-            std::fs::rename(workspace.join(&source), &out).with_context(|| {
+            log::trace!("moving {} into collection path", &output.display());
+            let out = temp.path().join(&output);
+            std::fs::rename(workspace.join(&output), &out).with_context(|| {
                 format!(
                     "could not move `{}` from workspace to store",
-                    source.display()
+                    output.display()
                 )
             })?;
 

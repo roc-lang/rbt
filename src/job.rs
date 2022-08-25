@@ -1,11 +1,10 @@
 use crate::glue;
 use anyhow::Result;
 use itertools::Itertools;
-use roc_std::{RocList, RocStr};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
-use std::path::PathBuf;
+use std::path::{Component, PathBuf};
 use std::process::Command;
 
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
@@ -22,7 +21,7 @@ pub struct Job {
     pub id: Id,
     pub command: glue::R3,
     pub input_files: HashSet<PathBuf>,
-    pub outputs: RocList<RocStr>,
+    pub outputs: HashSet<PathBuf>,
 }
 
 impl Job {
@@ -50,17 +49,44 @@ impl Job {
             input_files.insert(path);
         }
 
-        unwrapped
-            .outputs
-            .iter()
-            .sorted()
-            .for_each(|output| output.hash(&mut hasher));
+        let mut outputs = HashSet::new();
+        for output_str in unwrapped.outputs.iter().sorted() {
+            let output = PathBuf::from(output_str.as_str());
+
+            if outputs.contains(&output) {
+                continue;
+            }
+
+            // verify that the specified path is safe. We can't allow accessing
+            // any path outside the workspace. To get this, we don't allow
+            // any parent path segments (`..`) This restriction also enforces
+            // unambiguous paths in the Roc API (e.g. you wouldn't want to add
+            // "foo/../bar" as an output path!)
+            for component in output.components() {
+                match component {
+                    Component::Prefix(_) | Component::RootDir => anyhow::bail!(
+                        "Got `{}` as an output, but absolute paths are not allowed as outputs. Remove the absolute prefix to fix this!",
+                        output.display(),
+                    ),
+
+                    Component::ParentDir => anyhow::bail!(
+                        "Got `{}` as an output, but relative paths containing `..` are not allowed as inputs. Remove the `..` to fix this!",
+                        output.display(),
+                    ),
+
+                    Component::CurDir | Component::Normal(_) => (),
+                };
+            }
+
+            output.hash(&mut hasher);
+            outputs.insert(output);
+        }
 
         Ok(Job {
             id: Id(hasher.finish()),
             command: unwrapped.command.f0,
             input_files,
-            outputs: unwrapped.outputs,
+            outputs,
         })
     }
 }
