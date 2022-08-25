@@ -3,13 +3,20 @@ use anyhow::{Context, Result};
 use roc_std::{RocList, RocStr};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
+use std::process::Command;
 
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
-struct JobId(u64);
+pub struct JobId(u64);
 
 impl From<u64> for JobId {
     fn from(unwrapped: u64) -> Self {
         JobId(unwrapped)
+    }
+}
+
+impl std::fmt::Display for JobId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:x}", self.0)
     }
 }
 
@@ -31,6 +38,7 @@ impl<'job> Coordinator<'job> {
             let id = hasher.finish().into();
 
             let runnable_job = RunnableJob {
+                id,
                 command: &job.command,
                 inputs: job
                     .inputs
@@ -61,7 +69,7 @@ impl<'job> Coordinator<'job> {
     }
 
     pub fn has_outstanding_work(&self) -> bool {
-        !self.blocked.is_empty() && !self.ready.is_empty()
+        !self.blocked.is_empty() || !self.ready.is_empty()
     }
 
     pub fn run_next<R: Runner>(&mut self, runner: &R) -> Result<()> {
@@ -78,16 +86,26 @@ impl<'job> Coordinator<'job> {
             )
             .context("could not run job")?;
 
-        for (blocked, blockers) in self.blocked.iter_mut() {
-            if blockers.remove(&next) && blockers.is_empty() {
-                self.ready.push(*blocked);
+        // Now that we're done running the job, we update our bookkeeping to
+        // figure out what running that job just unblocked.
+        //
+        // As an implementation note, this will probably end up in a separate
+        // function once we're running tasks in parallel!
+        let mut newly_unblocked = vec![]; // avoiding mutating both fields of self in the loop below
 
-                // TODO: it would be more performant to remove the
-                // newly-unblocked item from self.blocked, but there's
-                // already a mutable borrow. Possibly rearrange the code
-                // to do some mutable filtering thing.
+        self.blocked.retain(|blocked, blockers| {
+            let removed = blockers.remove(&next);
+            if !removed {
+                return false;
             }
-        }
+
+            let no_blockers_remaining = blockers.is_empty();
+            if no_blockers_remaining {
+                newly_unblocked.push(*blocked)
+            }
+            !no_blockers_remaining
+        });
+        self.ready.extend(newly_unblocked);
 
         Ok(())
     }
@@ -95,12 +113,34 @@ impl<'job> Coordinator<'job> {
 
 #[derive(Debug)]
 pub struct RunnableJob<'job> {
+    pub id: JobId,
     pub command: &'job rbt::Command,
-    inputs: HashMap<&'job str, JobId>, // not pub because inputs will eventually be provided in Runner.run
+    pub inputs: HashMap<&'job str, JobId>,
     pub input_files: &'job RocList<RocStr>,
     pub outputs: &'job RocList<RocStr>,
 }
 
+impl<'job> From<&RunnableJob<'job>> for Command {
+    fn from(job: &RunnableJob) -> Self {
+        let mut command = match &job.command.tool {
+            // TODO: in the future, we'll also get binaries from other job's output
+            rbt::Tool::SystemTool { name } => Command::new(name.to_string()),
+        };
+
+        for arg in &job.command.args {
+            command.arg(arg.as_str());
+        }
+
+        command
+    }
+}
+
 pub trait Runner {
     fn run(&self, job: &RunnableJob) -> Result<()>;
+}
+
+impl Runner for Box<dyn Runner> {
+    fn run(&self, job: &RunnableJob) -> Result<()> {
+        self.as_ref().run(job)
+    }
 }

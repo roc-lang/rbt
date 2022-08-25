@@ -10,7 +10,10 @@ init =
 hello : Job
 hello =
     job {
-        command: exec (systemTool "bash") ["-c", "echo 'Hello, World!' > out"],
+        command: exec (systemTool "bash") [
+            "-c",
+            "echo 'Hello, World!' > out",
+        ],
         inputFiles: [],
         outputs: ["out"],
     }
