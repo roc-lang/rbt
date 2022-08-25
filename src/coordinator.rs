@@ -64,7 +64,7 @@ impl Coordinator {
                 .store_from_workspace(job, workspace)
                 .context("could not store job output")?;
         } else {
-            log::debug!("already had output of job {}; skipping", &job);
+            log::debug!("already had output of job {}; skipping", job);
         }
 
         // Now that we're done running the job, we update our bookkeeping to
