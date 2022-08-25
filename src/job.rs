@@ -1,6 +1,7 @@
 use crate::glue;
 use itertools::Itertools;
 use roc_std::{RocList, RocStr};
+use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
 use std::process::Command;
 
@@ -42,8 +43,8 @@ impl From<&glue::Job> for Id {
     }
 }
 
-impl std::fmt::Display for Id {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for Id {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:x}", self.0)
     }
 }
@@ -79,5 +80,38 @@ impl From<&Job> for Command {
         }
 
         command
+    }
+}
+
+impl Display for Job {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // intention: make a best-effort version of part of how the command
+        // would look if it were invoked from a shell. It's OK for right now
+        // if it wouldn't work (due to unescaped quotes or whatever.) Point is
+        // for us to have some human-readable output in addition to the ID.
+        let mut chars = 0;
+
+        write!(f, "{} (", self.id)?;
+
+        let base = self.command.tool.f0.to_string();
+        chars += base.len();
+
+        write!(f, "{}", base)?;
+
+        for arg in &self.command.args {
+            if chars >= 20 {
+                continue;
+            }
+
+            if arg.contains(' ') {
+                write!(f, " \"{}\"", arg)?;
+                chars += arg.len() + 3;
+            } else {
+                write!(f, " {}", arg)?;
+                chars += arg.len() + 1;
+            }
+        }
+
+        write!(f, ")")
     }
 }

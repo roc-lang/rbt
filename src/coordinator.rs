@@ -52,7 +52,7 @@ impl Coordinator {
             .get(&id)
             .context("had a bad job ID in Coordinator.ready")?;
 
-        log::debug!("preparing to run job {}", job.id);
+        log::debug!("preparing to run job {}", job);
 
         if self.store.for_job(job).is_none() {
             let workspace = Workspace::create(&self.workspace_root, job)
@@ -64,7 +64,7 @@ impl Coordinator {
                 .store_from_workspace(job, workspace)
                 .context("could not store job output")?;
         } else {
-            log::debug!("already had output of this job; skipping");
+            log::debug!("already had output of job {}; skipping", job);
         }
 
         // Now that we're done running the job, we update our bookkeeping to
