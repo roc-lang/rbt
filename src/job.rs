@@ -6,12 +6,6 @@ use std::process::Command;
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
 pub struct Id(u64);
 
-impl From<u64> for Id {
-    fn from(unwrapped: u64) -> Self {
-        Id(unwrapped)
-    }
-}
-
 impl From<&glue::Job> for Id {
     fn from(job: &glue::Job) -> Self {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
