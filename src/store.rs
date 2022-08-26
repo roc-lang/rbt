@@ -56,15 +56,19 @@ impl Store {
 
         if item.exists_in(&self.root) {
             log::debug!("we have already stored {}, so I'm skipping the move!", item,);
+
+            self.associate_job_with_hash(job, &item.hash().to_string())
+                .context("could not associate job with hash")
         } else {
             log::debug!("moving {} into store", item);
 
-            item.move_into(&self.root)
-                .with_context(|| format!("could not move {} into the store", item))?;
-        }
+            let hash = item
+                .move_into(&self.root)
+                .context("could not move item into the store")?;
 
-        self.associate_job_with_hash(job, &item.to_string())
-            .context("could not associate job with hash")
+            self.associate_job_with_hash(job, &hash.to_string())
+                .context("could not associate job with hash")
+        }
     }
 
     fn associate_job_with_hash(&mut self, job: &Job, hash: &str) -> Result<()> {
@@ -80,23 +84,19 @@ impl Store {
 
 #[derive(Debug)]
 struct ContentAddressedItem<'job> {
-    hasher: blake3::Hasher,
     workspace: Workspace,
     job: &'job Job,
+    hash: blake3::Hash,
 }
 
 impl<'job> ContentAddressedItem<'job> {
     fn load(job: &'job Job, workspace: Workspace) -> Result<Self> {
-        let mut item = ContentAddressedItem {
-            hasher: blake3::Hasher::new(),
-            workspace,
-            job,
-        };
+        let mut hasher = blake3::Hasher::new();
 
         for path in job.outputs.iter().sorted() {
-            item.hasher.update(path.to_string_lossy().as_bytes());
+            hasher.update(path.to_string_lossy().as_bytes());
 
-            let mut file = File::open(&item.workspace.join(path)).with_context(|| {
+            let mut file = File::open(&workspace.join(path)).with_context(|| {
                 format!(
                     "couldn't open `{}` for hashing. Did the build produce it?",
                     path.display()
@@ -107,12 +107,20 @@ impl<'job> ContentAddressedItem<'job> {
             // efficient (for SIMD reasons), but `std::io::copy` uses an 8KiB
             // buffer. Gonna have to do this by hand at some point to take
             // advantage of the algorithm's designed speed.
-            std::io::copy(&mut file, &mut item.hasher).with_context(|| {
+            std::io::copy(&mut file, &mut hasher).with_context(|| {
                 format!("could not read `{}` to calculate hash", path.display())
             })?;
         }
 
-        Ok(item)
+        Ok(ContentAddressedItem {
+            workspace,
+            job,
+            hash: hasher.finalize(),
+        })
+    }
+
+    fn hash(&self) -> &blake3::Hash {
+        &self.hash
     }
 
     fn final_path(&self, root: &Path) -> PathBuf {
@@ -123,7 +131,11 @@ impl<'job> ContentAddressedItem<'job> {
         self.final_path(root).exists()
     }
 
-    fn move_into(&self, root: &Path) -> Result<()> {
+    /// Move this item into the store. This consumes the item, since it won't be
+    /// safe to do this twice (we move files from the owned `Workspace` / passed
+    /// in with `load`) Returns the only safe thing to use after calling this:
+    /// the hash.
+    fn move_into(self, root: &Path) -> Result<blake3::Hash> {
         let final_path = self.final_path(root);
 
         let temp = tempfile::Builder::new()
@@ -217,7 +229,7 @@ impl<'job> ContentAddressedItem<'job> {
             .context("could not move temporary collection directory into the store")?;
         Self::make_readonly(&final_path).context("could not make store path readonly")?;
 
-        Ok(())
+        Ok(self.hash)
     }
 
     fn make_readonly(path: &Path) -> Result<()> {
@@ -233,6 +245,6 @@ impl<'job> ContentAddressedItem<'job> {
 
 impl<'job> Display for ContentAddressedItem<'job> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.hasher.finalize().fmt(f)
+        self.hash.fmt(f)
     }
 }
