@@ -118,12 +118,16 @@ impl<'job> Output<'job> {
         Ok(output)
     }
 
+    fn final_path(&self, root: &Path) -> PathBuf {
+        root.join(self.to_string())
+    }
+
     fn exists_in(&self, root: &Path) -> bool {
-        root.join(self.to_string()).exists()
+        self.final_path(root).exists()
     }
 
     fn move_into(&self, root: &Path) -> Result<()> {
-        let final_location = root.join(self.hasher.finalize().to_string());
+        let final_path = self.final_path(root);
 
         let temp = tempfile::Builder::new()
             .prefix(&format!("rbt-job-{}", self.job.id))
@@ -194,9 +198,9 @@ impl<'job> Output<'job> {
         // that it doesn't get automatically removed when it's dropped. We've
         // so far avoided that to avoid leaving temporary directories laying
         // around in case of errors.
-        std::fs::rename(temp.into_path(), &final_location)
+        std::fs::rename(temp.into_path(), &final_path)
             .context("could not move temporary collection dir into the store")?;
-        Self::make_readonly(&final_location).context("could not make store path readonly")?;
+        Self::make_readonly(&final_path).context("could not make store path readonly")?;
 
         Ok(())
     }
