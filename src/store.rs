@@ -165,7 +165,7 @@ impl<'job> ContentAddressedItem<'job> {
             // dance below, where we remove both ends of the (non-double-ended)
             // iterator.
             let mut ancestors: Vec<&Path> = output.ancestors().skip(1).collect();
-            ancestors.pop();
+            ancestors.pop(); // removing the full path at the end of the list
 
             // // the collection is now ordered `[a/b/c, a/b, a]` instead of
             // `[a, a/b, a/b/c]`, but we need it to be shortest-path-first to
