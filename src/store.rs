@@ -50,6 +50,20 @@ impl Store {
             .map(|path| self.root.join(path))
     }
 
+    /// Figure out if we need to make a new content-addressable item from the
+    /// job's output, then store it if necessary. After running this function,
+    /// `to_job` should return the correct store path.
+    ///
+    /// Some assumptions we're making:
+    ///
+    ///  1. The job already ran successfully and left files for us in the
+    ///     Workspace directory.
+    ///  2. The caller has already checked `for_job`, and that we definitely
+    ///     know we need to store the ouput.
+    ///  3. All the paths in the Job's `output` field have been sanitized (that
+    ///     is, they don't include any paths leading to the root or other
+    ///     drives, or contain `..` elements that would take the path out of
+    ///     the workspace root.)
     pub fn store_from_workspace(&mut self, job: &Job, workspace: Workspace) -> Result<()> {
         let item = ContentAddressedItem::load(job, workspace)
             .context("could get content addressable item from job")?;
