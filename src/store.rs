@@ -134,42 +134,60 @@ impl<'job> Output<'job> {
             .tempdir_in(&root)
             .context("couldn't create temporary directory for hashing")?;
 
-        let mut output_dirs: HashSet<PathBuf> = HashSet::new();
+        // We optimize disk IO based on the fact that the new temporary directory
+        // is completely empty: if we keep track of the directories we create,
+        // we can safely assume that any errors we see are not because the path
+        // already exists. No pre-creation checks or special error handling
+        // necessary!
+        let mut created_dirs: HashSet<PathBuf> = HashSet::new();
 
         for output in self.job.outputs.iter().sorted() {
-            ///////////////////////////////////////////////
-            // Step 2: make sure any parent paths exist  //
-            ///////////////////////////////////////////////
+            // Before we can move the file into the store, we want to make
+            // sure any parent paths exist. Luckily for us, `Path.ancestors`
+            // exists. Unluckily for us, it puts stuff we don't care about on
+            // either end of the iterator: at the beginning, we have a blank
+            // string (it would be `/` for absolute paths, but we already
+            // verified we only have relative paths when constructing the
+            // `Job`.) At the end, we have the full path to the file, including
+            // the filename--better not make that directory! So we have to do the
+            // dance below, where we remove both ends of the (non-double-ended)
+            // iterator.
             let mut ancestors: Vec<&Path> = output.ancestors().skip(1).collect();
-            ancestors.pop(); // we've made sure this is relative, so the first item is ""
-            ancestors.reverse(); // go `[a, a/b, a/b/c]` instead of `[a/b/c, a/b, a]`
+            ancestors.pop();
+
+            // // the collection is now ordered `[a/b/c, a/b, a]` instead of
+            // `[a, a/b, a/b/c]`, but we need it to be shortest-path-first to
+            // successfully create the directories in order. Reverse!
+            ancestors.reverse();
 
             for ancestor_path in ancestors {
                 let ancestor = ancestor_path.to_path_buf();
 
-                if output_dirs.contains(&ancestor) {
+                if created_dirs.contains(&ancestor) {
                     continue;
                 }
 
                 log::trace!(
-                    "creating {} in {}",
+                    "creating parent directory {} in {}",
                     &ancestor.display(),
                     temp.path().display()
                 );
                 std::fs::create_dir(temp.path().join(&ancestor)).with_context(|| {
                     format!(
-                        "could not create ancestor `{}` for output `{}`",
+                        "could not create parent directory `{}` for output `{}`",
                         ancestor.display(),
                         output.display(),
                     )
                 })?;
-                output_dirs.insert(ancestor);
+                created_dirs.insert(ancestor);
             }
 
-            //////////////////////////////
-            // Step 3: collect the file //
-            //////////////////////////////
-            log::trace!("moving {} into collection path", &output.display());
+            // Now that we have all our parent directories, we can move the
+            // file over. Note that we're *moving* this file instead of copying
+            // it. We no longer need the workspace around for debugging since
+            // we only move things into the store if the job succeeded, so
+            // we'll be removing everything in it shortly anyway!
+            log::trace!("moving `{}` into store path", &output.display());
             let out = temp.path().join(&output);
             std::fs::rename(self.workspace.join(&output), &out).with_context(|| {
                 format!(
@@ -186,9 +204,9 @@ impl<'job> Output<'job> {
             })?;
         }
 
-        // Finish up by making sure everything is readonly and store it in the
-        // final location.
-        for dir in &output_dirs {
+        // Now that we're all done moving files over and making them read-only,
+        // we can safely make all the directories read-only too.
+        for dir in &created_dirs {
             Self::make_readonly(&temp.path().join(&dir)).with_context(|| {
                 format!("could not make `{}` read-only in the store", dir.display(),)
             })?;
@@ -199,7 +217,7 @@ impl<'job> Output<'job> {
         // so far avoided that to avoid leaving temporary directories laying
         // around in case of errors.
         std::fs::rename(temp.into_path(), &final_path)
-            .context("could not move temporary collection dir into the store")?;
+            .context("could not move temporary collection directory into the store")?;
         Self::make_readonly(&final_path).context("could not make store path readonly")?;
 
         Ok(())
