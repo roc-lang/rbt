@@ -1,6 +1,7 @@
 use crate::glue;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use itertools::Itertools;
+use roc_std::RocStr;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
@@ -39,7 +40,8 @@ impl Job {
 
         let mut input_files: HashSet<PathBuf> = HashSet::with_capacity(unwrapped.inputFiles.len());
         for path_str in unwrapped.inputFiles.iter().sorted() {
-            let path = PathBuf::from(path_str.as_str());
+            let path =
+                sanitize_file_path(&path_str).context("got an unacceptable input file path")?;
 
             match path_to_hash.get(&path) {
                 Some(hash) => hash.hash(&mut hasher),
@@ -51,31 +53,11 @@ impl Job {
 
         let mut outputs = HashSet::new();
         for output_str in unwrapped.outputs.iter().sorted() {
-            let output = PathBuf::from(output_str.as_str());
+            let output =
+                sanitize_file_path(&output_str).context("got an unacceptable output file path")?;
 
             if outputs.contains(&output) {
                 continue;
-            }
-
-            // verify that the specified path is safe. We can't allow accessing
-            // any path outside the workspace. To get this, we don't allow
-            // any parent path segments (`..`) This restriction also enforces
-            // unambiguous paths in the Roc API (e.g. you wouldn't want to add
-            // "foo/../bar" as an output path!)
-            for component in output.components() {
-                match component {
-                    Component::Prefix(_) | Component::RootDir => anyhow::bail!(
-                        "Got `{}` as an output, but absolute paths are not allowed as outputs. Remove the absolute prefix to fix this!",
-                        output.display(),
-                    ),
-
-                    Component::ParentDir => anyhow::bail!(
-                        "Got `{}` as an output, but relative paths containing `..` are not allowed as inputs. Remove the `..` to fix this!",
-                        output.display(),
-                    ),
-
-                    Component::CurDir | Component::Normal(_) => (),
-                };
             }
 
             output.hash(&mut hasher);
@@ -134,4 +116,30 @@ impl Display for Job {
 
         write!(f, ")")
     }
+}
+
+pub fn sanitize_file_path(roc_str: &RocStr) -> Result<PathBuf> {
+    let sanitized: PathBuf = roc_str.as_str().into();
+
+    // verify that the specified path is safe. We can't allow accessing any
+    // path outside the workspace. To get this, we don't allow any parent path
+    // segments (`..`) This restriction also enforces unambiguous paths in the
+    // Roc API (e.g. you wouldn't want to add "foo/../bar" as an output path!)
+    for component in sanitized.components() {
+        match component {
+            Component::Prefix(_) | Component::RootDir => anyhow::bail!(
+                "Absolute paths like `{}` are not allowed. Remove the absolute prefix to fix this!",
+                sanitized.display(),
+            ),
+
+            Component::ParentDir => anyhow::bail!(
+                "Relative paths containing `..` (like `{}`) are not allowed. Remove the `..` to fix this!",
+                sanitized.display(),
+            ),
+
+            Component::CurDir | Component::Normal(_) => (),
+        };
+    }
+
+    Ok(sanitized)
 }
