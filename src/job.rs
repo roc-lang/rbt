@@ -41,7 +41,7 @@ impl Job {
         let mut input_files: HashSet<PathBuf> = HashSet::with_capacity(unwrapped.inputFiles.len());
         for path_str in unwrapped.inputFiles.iter().sorted() {
             let path =
-                sanitize_file_path(&path_str).context("got an unacceptable input file path")?;
+                sanitize_file_path(path_str).context("got an unacceptable input file path")?;
 
             match path_to_hash.get(&path) {
                 Some(hash) => hash.hash(&mut hasher),
@@ -54,7 +54,7 @@ impl Job {
         let mut outputs = HashSet::new();
         for output_str in unwrapped.outputs.iter().sorted() {
             let output =
-                sanitize_file_path(&output_str).context("got an unacceptable output file path")?;
+                sanitize_file_path(output_str).context("got an unacceptable output file path")?;
 
             if outputs.contains(&output) {
                 continue;
