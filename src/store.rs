@@ -90,6 +90,8 @@ struct ContentAddressedItem<'job> {
 }
 
 impl<'job> ContentAddressedItem<'job> {
+    /// Load all the outputs from a job and workspace combo, creating a hash
+    /// as we go.
     fn load(job: &'job Job, workspace: Workspace) -> Result<Self> {
         let mut hasher = blake3::Hasher::new();
 
