@@ -130,8 +130,8 @@ impl<'job> Output<'job> {
         let final_path = self.final_path(root);
 
         let temp = tempfile::Builder::new()
-            .prefix(&format!("rbt-job-{}", self.job.id))
-            .tempdir()
+            .prefix(&format!("tmp-{}", self))
+            .tempdir_in(&root)
             .context("couldn't create temporary directory for hashing")?;
 
         let mut output_dirs: HashSet<PathBuf> = HashSet::new();
