@@ -96,6 +96,8 @@ impl Store {
     }
 }
 
+/// ContentAddressedItem is responsible for hashing the outputs of a job inside
+/// a workspace and (maybe) moving those outputs into the store.
 #[derive(Debug)]
 struct ContentAddressedItem<'job> {
     workspace: Workspace,
