@@ -2,6 +2,7 @@ use crate::job::Job;
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
+#[derive(Debug)]
 pub struct Workspace(PathBuf);
 
 impl Workspace {
