@@ -129,6 +129,7 @@ impl<'job> ContentAddressedItem<'job> {
         root.join(self.to_string())
     }
 
+    /// Does this item exist as a path within the specified root?
     fn exists_in(&self, root: &Path) -> bool {
         self.final_path(root).exists()
     }
