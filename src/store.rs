@@ -8,9 +8,8 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
-/// This struct manages all the levels of storage that we need in order to avoid
-/// doing as much work as possible. This mostly involves managing several layers
-/// of caches:
+/// Store is responsible for managing a content-addressed store below some path
+/// and managing the associations between input job hashes and those paths.
 #[derive(Debug)]
 pub struct Store {
     root: PathBuf,
