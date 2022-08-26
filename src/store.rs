@@ -51,22 +51,19 @@ impl Store {
     }
 
     pub fn store_from_workspace(&mut self, job: &Job, workspace: Workspace) -> Result<()> {
-        let output = Output::load(job, workspace).context("could get output from job")?;
+        let item = ContentAddressedItem::load(job, workspace)
+            .context("could get content addressable item from job")?;
 
-        if output.exists_in(&self.root) {
-            log::debug!(
-                "we have already stored {}, so I'm skipping the move!",
-                output,
-            );
+        if item.exists_in(&self.root) {
+            log::debug!("we have already stored {}, so I'm skipping the move!", item,);
         } else {
-            log::debug!("moving {} into store", output);
+            log::debug!("moving {} into store", item);
 
-            output
-                .move_into(&self.root)
-                .with_context(|| format!("could not move {} into the store", output))?;
+            item.move_into(&self.root)
+                .with_context(|| format!("could not move {} into the store", item))?;
         }
 
-        self.associate_job_with_hash(job, &output.to_string())
+        self.associate_job_with_hash(job, &item.to_string())
             .context("could not associate job with hash")
     }
 
@@ -82,24 +79,24 @@ impl Store {
 }
 
 #[derive(Debug)]
-struct Output<'job> {
+struct ContentAddressedItem<'job> {
     hasher: blake3::Hasher,
     workspace: Workspace,
     job: &'job Job,
 }
 
-impl<'job> Output<'job> {
+impl<'job> ContentAddressedItem<'job> {
     fn load(job: &'job Job, workspace: Workspace) -> Result<Self> {
-        let mut output = Output {
+        let mut item = ContentAddressedItem {
             hasher: blake3::Hasher::new(),
             workspace,
             job,
         };
 
         for path in job.outputs.iter().sorted() {
-            output.hasher.update(path.to_string_lossy().as_bytes());
+            item.hasher.update(path.to_string_lossy().as_bytes());
 
-            let mut file = File::open(&output.workspace.join(path)).with_context(|| {
+            let mut file = File::open(&item.workspace.join(path)).with_context(|| {
                 format!(
                     "couldn't open `{}` for hashing. Did the build produce it?",
                     path.display()
@@ -110,12 +107,12 @@ impl<'job> Output<'job> {
             // efficient (for SIMD reasons), but `std::io::copy` uses an 8KiB
             // buffer. Gonna have to do this by hand at some point to take
             // advantage of the algorithm's designed speed.
-            std::io::copy(&mut file, &mut output.hasher).with_context(|| {
+            std::io::copy(&mut file, &mut item.hasher).with_context(|| {
                 format!("could not read `{}` to calculate hash", path.display())
             })?;
         }
 
-        Ok(output)
+        Ok(item)
     }
 
     fn final_path(&self, root: &Path) -> PathBuf {
@@ -234,7 +231,7 @@ impl<'job> Output<'job> {
     }
 }
 
-impl<'job> Display for Output<'job> {
+impl<'job> Display for ContentAddressedItem<'job> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.hasher.finalize().fmt(f)
     }
