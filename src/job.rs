@@ -7,6 +7,7 @@ use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
 use std::path::{Component, PathBuf};
 use std::process::Command;
+use xxhash_rust::xxh3::Xxh3;
 
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Id(u64);
@@ -29,9 +30,7 @@ impl Job {
     pub fn from_glue(job: glue::Job, path_to_hash: &HashMap<PathBuf, String>) -> Result<Self> {
         let unwrapped = job.into_Job();
 
-        // TODO: is this the best hash for this kind of data? Should we find
-        // a faster one?
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        let mut hasher = Xxh3::new();
 
         // TODO: when we can get commands from other jobs, we need to hash the
         // other tool and job instead of relying on the derived `Hash` trait
