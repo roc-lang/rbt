@@ -27,7 +27,7 @@ pub struct Job {
 
 impl Job {
     pub fn from_glue(job: glue::Job, path_to_hash: &HashMap<PathBuf, String>) -> Result<Self> {
-        let unwrapped = job.f0;
+        let unwrapped = job.into_Job();
 
         // TODO: is this the best hash for this kind of data? Should we find
         // a faster one?
@@ -70,7 +70,7 @@ impl Job {
 
         Ok(Job {
             id: Id(hasher.finish()),
-            command: unwrapped.command.f0,
+            command: unwrapped.command.into_Command(),
             input_files,
             outputs,
         })
@@ -79,7 +79,7 @@ impl Job {
 
 impl From<&Job> for Command {
     fn from(job: &Job) -> Self {
-        let mut command = Command::new(&job.command.tool.f0.to_string());
+        let mut command = Command::new(&job.command.tool.as_SystemTool().to_string());
 
         for arg in &job.command.args {
             command.arg(arg.as_str());
@@ -99,7 +99,7 @@ impl Display for Job {
 
         write!(f, "{} (", self.id)?;
 
-        let base = self.command.tool.f0.to_string();
+        let base = self.command.tool.as_SystemTool().to_string();
         chars += base.len();
 
         write!(f, "{}", base)?;

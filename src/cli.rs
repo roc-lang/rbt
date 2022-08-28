@@ -25,7 +25,7 @@ impl Cli {
         let store = Store::new(self.root_dir.join("store")).context("could not open store")?;
 
         let mut builder = coordinator::Builder::new(self.root_dir.to_path_buf(), store);
-        builder.add_target(rbt.f0.default);
+        builder.add_target(rbt.into_Rbt().default);
 
         let mut coordinator = builder
             .build()
