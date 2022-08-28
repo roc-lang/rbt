@@ -26,7 +26,7 @@
 #[repr(C)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Rbt {
-    pub f0: R1,
+    f0: R1,
 }
 
 #[cfg(any(
@@ -52,7 +52,7 @@ pub struct R1 {
 #[repr(C)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Job {
-    pub f0: R2,
+    f0: R2,
 }
 
 #[cfg(any(
@@ -80,7 +80,7 @@ pub struct R2 {
 #[repr(C)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Command {
-    pub f0: R3,
+    f0: R3,
 }
 
 #[cfg(any(
@@ -107,7 +107,7 @@ pub struct R3 {
 #[repr(C)]
 #[derive(Clone, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Tool {
-    pub f0: roc_std::RocStr,
+    f0: roc_std::RocStr,
 }
 
 impl Rbt {
@@ -130,10 +130,10 @@ impl Rbt {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Other `into_` methods return a payload, but since the Rbt tag
-    /// has no payload, this does nothing and is only here for completeness.
-    pub fn into_Rbt(self) {
-        ()
+    /// Since `Rbt` only has one tag (namely, `Rbt`),
+    /// convert it to `Rbt`'s payload.
+    pub fn into_Rbt(self) -> R1 {
+        self.f0
     }
 
     #[cfg(any(
@@ -143,10 +143,10 @@ impl Rbt {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Other `as` methods return a payload, but since the Rbt tag
-    /// has no payload, this does nothing and is only here for completeness.
-    pub fn as_Rbt(&self) {
-        ()
+    /// Since `Rbt` only has one tag (namely, `Rbt`),
+    /// convert it to `Rbt`'s payload.
+    pub fn as_Rbt(&self) -> &R1 {
+        &self.f0
     }
 }
 
@@ -183,10 +183,10 @@ impl Job {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Other `into_` methods return a payload, but since the Job tag
-    /// has no payload, this does nothing and is only here for completeness.
-    pub fn into_Job(self) {
-        ()
+    /// Since `Job` only has one tag (namely, `Job`),
+    /// convert it to `Job`'s payload.
+    pub fn into_Job(self) -> R2 {
+        self.f0
     }
 
     #[cfg(any(
@@ -196,10 +196,10 @@ impl Job {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Other `as` methods return a payload, but since the Job tag
-    /// has no payload, this does nothing and is only here for completeness.
-    pub fn as_Job(&self) {
-        ()
+    /// Since `Job` only has one tag (namely, `Job`),
+    /// convert it to `Job`'s payload.
+    pub fn as_Job(&self) -> &R2 {
+        &self.f0
     }
 }
 
@@ -236,10 +236,10 @@ impl Command {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Other `into_` methods return a payload, but since the Command tag
-    /// has no payload, this does nothing and is only here for completeness.
-    pub fn into_Command(self) {
-        ()
+    /// Since `Command` only has one tag (namely, `Command`),
+    /// convert it to `Command`'s payload.
+    pub fn into_Command(self) -> R3 {
+        self.f0
     }
 
     #[cfg(any(
@@ -249,10 +249,10 @@ impl Command {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Other `as` methods return a payload, but since the Command tag
-    /// has no payload, this does nothing and is only here for completeness.
-    pub fn as_Command(&self) {
-        ()
+    /// Since `Command` only has one tag (namely, `Command`),
+    /// convert it to `Command`'s payload.
+    pub fn as_Command(&self) -> &R3 {
+        &self.f0
     }
 }
 
@@ -289,10 +289,10 @@ impl Tool {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Other `into_` methods return a payload, but since the SystemTool tag
-    /// has no payload, this does nothing and is only here for completeness.
-    pub fn into_SystemTool(self) {
-        ()
+    /// Since `SystemTool` only has one tag (namely, `SystemTool`),
+    /// convert it to `SystemTool`'s payload.
+    pub fn into_SystemTool(self) -> roc_std::RocStr {
+        self.f0
     }
 
     #[cfg(any(
@@ -302,10 +302,10 @@ impl Tool {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Other `as` methods return a payload, but since the SystemTool tag
-    /// has no payload, this does nothing and is only here for completeness.
-    pub fn as_SystemTool(&self) {
-        ()
+    /// Since `SystemTool` only has one tag (namely, `SystemTool`),
+    /// convert it to `SystemTool`'s payload.
+    pub fn as_SystemTool(&self) -> &roc_std::RocStr {
+        &self.f0
     }
 }
 
