@@ -26,7 +26,7 @@
 #[repr(C)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Rbt {
-    f0: R1,
+    f0: RbtPayload,
 }
 
 #[cfg(any(
@@ -38,7 +38,7 @@ pub struct Rbt {
 ))]
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct R1 {
+pub struct RbtPayload {
     pub default: Job,
 }
 
@@ -52,7 +52,7 @@ pub struct R1 {
 #[repr(C)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Job {
-    f0: R2,
+    f0: JobPayload,
 }
 
 #[cfg(any(
@@ -64,7 +64,7 @@ pub struct Job {
 ))]
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[repr(C)]
-pub struct R2 {
+pub struct JobPayload {
     pub command: Command,
     pub inputFiles: roc_std::RocList<roc_std::RocStr>,
     pub outputs: roc_std::RocList<roc_std::RocStr>,
@@ -80,7 +80,7 @@ pub struct R2 {
 #[repr(C)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Command {
-    f0: R3,
+    f0: CommandPayload,
 }
 
 #[cfg(any(
@@ -92,7 +92,7 @@ pub struct Command {
 ))]
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[repr(C)]
-pub struct R3 {
+pub struct CommandPayload {
     pub args: roc_std::RocList<roc_std::RocStr>,
     pub tool: Tool,
 }
@@ -119,7 +119,7 @@ impl Rbt {
         target_arch = "x86_64"
     ))]
     /// A tag named Rbt, with the given payload.
-    pub fn Rbt(f0: R1) -> Self {
+    pub fn Rbt(f0: RbtPayload) -> Self {
         Self { f0 }
     }
 
@@ -132,7 +132,7 @@ impl Rbt {
     ))]
     /// Since `Rbt` only has one tag (namely, `Rbt`),
     /// convert it to `Rbt`'s payload.
-    pub fn into_Rbt(self) -> R1 {
+    pub fn into_Rbt(self) -> RbtPayload {
         self.f0
     }
 
@@ -145,7 +145,7 @@ impl Rbt {
     ))]
     /// Since `Rbt` only has one tag (namely, `Rbt`),
     /// convert it to `Rbt`'s payload.
-    pub fn as_Rbt(&self) -> &R1 {
+    pub fn as_Rbt(&self) -> &RbtPayload {
         &self.f0
     }
 }
@@ -172,7 +172,7 @@ impl Job {
         target_arch = "x86_64"
     ))]
     /// A tag named Job, with the given payload.
-    pub fn Job(f0: R2) -> Self {
+    pub fn Job(f0: JobPayload) -> Self {
         Self { f0 }
     }
 
@@ -185,7 +185,7 @@ impl Job {
     ))]
     /// Since `Job` only has one tag (namely, `Job`),
     /// convert it to `Job`'s payload.
-    pub fn into_Job(self) -> R2 {
+    pub fn into_Job(self) -> JobPayload {
         self.f0
     }
 
@@ -198,7 +198,7 @@ impl Job {
     ))]
     /// Since `Job` only has one tag (namely, `Job`),
     /// convert it to `Job`'s payload.
-    pub fn as_Job(&self) -> &R2 {
+    pub fn as_Job(&self) -> &JobPayload {
         &self.f0
     }
 }
@@ -225,7 +225,7 @@ impl Command {
         target_arch = "x86_64"
     ))]
     /// A tag named Command, with the given payload.
-    pub fn Command(f0: R3) -> Self {
+    pub fn Command(f0: CommandPayload) -> Self {
         Self { f0 }
     }
 
@@ -238,7 +238,7 @@ impl Command {
     ))]
     /// Since `Command` only has one tag (namely, `Command`),
     /// convert it to `Command`'s payload.
-    pub fn into_Command(self) -> R3 {
+    pub fn into_Command(self) -> CommandPayload {
         self.f0
     }
 
@@ -251,7 +251,7 @@ impl Command {
     ))]
     /// Since `Command` only has one tag (namely, `Command`),
     /// convert it to `Command`'s payload.
-    pub fn as_Command(&self) -> &R3 {
+    pub fn as_Command(&self) -> &CommandPayload {
         &self.f0
     }
 }

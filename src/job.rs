@@ -20,7 +20,7 @@ impl Display for Id {
 #[derive(Debug)]
 pub struct Job {
     pub id: Id,
-    pub command: glue::R3,
+    pub command: glue::CommandPayload,
     pub input_files: HashSet<PathBuf>,
     pub outputs: HashSet<PathBuf>,
 }

@@ -11,10 +11,14 @@ initForHost = init
 # TODO: once `roc glue` knows how to resolve them, these should move back
 # into Rbt.roc so we can stop copying the definitions over every time we make
 # a change!
-Tool : [SystemTool { name : Str }]
+SystemToolPayload : { name : Str }
+Tool : [SystemTool SystemToolPayload]
 
-Command : [Command { tool : Tool, args : List Str }]
+CommandPayload : { tool : Tool, args : List Str }
+Command : [Command CommandPayload]
 
-Job : [Job { command : Command, inputFiles : List Str, outputs : List Str }]
+JobPayload : { command : Command, inputFiles : List Str, outputs : List Str }
+Job : [Job JobPayload]
 
-Rbt : [Rbt { default : Job }]
+RbtPayload : { default : Job }
+Rbt : [Rbt RbtPayload]
