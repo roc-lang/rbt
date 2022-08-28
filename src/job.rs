@@ -146,3 +146,33 @@ pub fn sanitize_file_path(roc_str: &RocStr) -> Result<PathBuf> {
 
     Ok(sanitized)
 }
+
+mod test {
+    use super::*;
+    use roc_std::RocList;
+
+    #[test]
+    fn job_hash_stability() {
+        // It's important that job IDs don't change accidentally over time. For
+        // example, if we update a dependency and the hash here suddenly changes,
+        // we should look into it and consider a smooth migration path for
+        // callers. Similarly, it might be inappropriate new optional fields in the
+        // Roc API to contribute to the ID, since doing so would mean completely
+        // re-running all build steps.
+        let glue_job = glue::Job::Job(glue::JobPayload {
+            command: glue::Command::Command(glue::CommandPayload {
+                tool: glue::Tool::SystemTool(RocStr::from("bash")),
+                args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
+            }),
+            inputFiles: RocList::from_slice(&["input_file".into()]),
+            outputs: RocList::from_slice(&["ouput_file".into()]),
+        });
+
+        let mut path_to_hash: HashMap<PathBuf, String> = HashMap::new();
+        path_to_hash.insert("input_file".into(), "hashhashhash".into());
+
+        let job = Job::from_glue(glue_job, &path_to_hash).unwrap();
+
+        assert_eq!(Id(9236546748343508395), job.id);
+    }
+}
