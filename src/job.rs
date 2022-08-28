@@ -147,6 +147,7 @@ pub fn sanitize_file_path(roc_str: &RocStr) -> Result<PathBuf> {
     Ok(sanitized)
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
     use roc_std::RocList;
