@@ -9,7 +9,15 @@ A very early work in progress!
 ## Hacking
 
 For now, you'll need to have [the `nix` package manager](https://nixos.org/download.html) installed.
-After that, you can either run `nix-shell` to get into a development shell, or [install `direnv`](https://direnv.net/) and run `direnv allow` to do the same whenever you `cd` here.
+After that, you can either `nix-shell` to get into a development shell.
+
+If you want this to happen automatically, one way is to:
+
+1. [install `direnv`](https://direnv.net/)
+2. add `use nix` to `.envrc` (which is ignored in the repo)
+3. run `direnv allow`
+
+At which point, you'll enter a shell whenever you `cd` here.
 
 ### Repo Maintenance
 
