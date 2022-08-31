@@ -57,6 +57,10 @@ impl Job {
                 sanitize_file_path(output_str).context("got an unacceptable output file path")?;
 
             if outputs.contains(&output) {
+                log::warn!(
+                    "`{}` appears twice in the list of outputs",
+                    output.display()
+                );
                 continue;
             }
 
