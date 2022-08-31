@@ -43,7 +43,8 @@ impl Store {
         })
     }
 
-    /// If an output exists for a job, what is it? If we don't know, return `None`.
+    /// If an output exists for a job, what is it? If we don't have a stored
+    /// output for the job, return `None`.
     pub fn for_job(&self, job: &Job) -> Option<PathBuf> {
         self.inputs_to_content
             .get(&job.id)
