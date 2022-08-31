@@ -23,22 +23,9 @@
     target_arch = "x86",
     target_arch = "x86_64"
 ))]
-#[repr(C)]
-#[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
-pub struct Rbt {
-    f0: RbtPayload,
-}
-
-#[cfg(any(
-    target_arch = "arm",
-    target_arch = "aarch64",
-    target_arch = "wasm32",
-    target_arch = "x86",
-    target_arch = "x86_64"
-))]
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct RbtPayload {
+pub struct Rbt {
     pub default: Job,
 }
 
@@ -108,59 +95,6 @@ pub struct CommandPayload {
 #[derive(Clone, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Tool {
     f0: roc_std::RocStr,
-}
-
-impl Rbt {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// A tag named Rbt, with the given payload.
-    pub fn Rbt(f0: RbtPayload) -> Self {
-        Self { f0 }
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Since `Rbt` only has one tag (namely, `Rbt`),
-    /// convert it to `Rbt`'s payload.
-    pub fn into_Rbt(self) -> RbtPayload {
-        self.f0
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Since `Rbt` only has one tag (namely, `Rbt`),
-    /// convert it to `Rbt`'s payload.
-    pub fn as_Rbt(&self) -> &RbtPayload {
-        &self.f0
-    }
-}
-
-impl core::fmt::Debug for Rbt {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_tuple("Rbt::Rbt").field(&self.f0).finish()
-    }
 }
 
 impl Job {

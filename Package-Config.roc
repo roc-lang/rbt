@@ -20,5 +20,4 @@ Command : [Command CommandPayload]
 JobPayload : { command : Command, inputFiles : List Str, outputs : List Str }
 Job : [Job JobPayload]
 
-RbtPayload : { default : Job }
-Rbt : [Rbt RbtPayload]
+Rbt : { default : Job }
