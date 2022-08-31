@@ -14,7 +14,7 @@ After that, you can either `nix-shell` to get into a development shell.
 If you want this to happen automatically, one way is to:
 
 1. [install `direnv`](https://direnv.net/)
-2. add `use nix` to `.envrc` (which is ignored in the repo)
+2. `echo "use nix" >> .envrc`
 3. run `direnv allow`
 
 At which point, you'll enter a shell whenever you `cd` here.
