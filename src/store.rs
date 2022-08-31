@@ -113,7 +113,10 @@ impl<'job> ContentAddressedItem<'job> {
         let mut hasher = blake3::Hasher::new();
 
         for path in job.outputs.iter().sorted() {
-            hasher.update(path.to_string_lossy().as_bytes());
+            match path.to_str() {
+                Some(str) => hasher.update(str.as_bytes()),
+                None => anyhow::bail!("got a non-unicode path `{}`, but Roc should never have produced a Str with invalid unicode.", path.display()),
+            };
 
             let mut file = File::open(&workspace.join(path)).with_context(|| {
                 format!(
