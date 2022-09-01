@@ -33,10 +33,10 @@ job : { command : Command, inputFiles : List Str, outputs : List Str } -> Job
 job = \stuff ->
     Job { command: stuff.command, inputFiles: stuff.inputFiles, outputs: stuff.outputs }
 
-Rbt : [Rbt { default : Job }]
+Rbt : { default : Job }
 
 init : { default : Job } -> Rbt
-init = \rbt -> Rbt rbt
+init = \rbt -> rbt
 
 tool : Job, Str -> Tool
 tool = \_, _ ->
