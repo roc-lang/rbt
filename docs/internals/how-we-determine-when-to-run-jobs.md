@@ -1,6 +1,6 @@
 # How We Determine When to Run Jobs
 
-rbt tries to avoid unnecessary re-runs of jobs whenever possible.
+rbt tries to avoid re-running jobs it has seen before.
 To do this, we manage several levels of caches.
 
 Here's a quick summary about how the process works.
@@ -9,27 +9,23 @@ Afterwards, we'll go into more detail about each stage.
 1. Each job produces a cache key from its local fields (command, args, environment, etc.)
 2. rbt's coordinator module adds information about input files and jobs to the key.
 3. If we have an output path for the combined key, we skip the build.
-4. Otherwise, we run the build and store a content-addressed hash.
+4. Otherwise, we run the build and hash and store the output.
 
 ## Job Hashes
 
-`Job` definitions create the first level of cache key by hashing the information it can get without doing I/O: command, args, input file names, etc.
+`Job` definitions create a cache key by hashing the information they can get without doing I/O: command, args, input file names, etc.
 
-Wherever possible, these keys avoid ordering or duplication: for example, the input file set `["a", "b"]` is not going to produce a different build just by being `["b", "a"]` or `["a", "b", "a"]`, so we'll treat that field as a set.
-Note that not all validations are possible to enforce in the Roc API, but for those that will become possible (e.g. accepting sets directly instead of lists) we plan to break the API in releases before 1.0.0.
+Wherever possible, these keys avoid ordering or duplication: for example, the input files `["a", "b"]` are not going to produce a different build just by being `["b", "a"]` or `["a", "b", "a"]`, so we'll treat that field as a set.
+(Note that we'll likely change this field to be an actual set before 1.0.0!)
 
-It's important that `Job` does not do any filesystem operations when calculating this key, since multiple jobs reading and hashing the same configuration file (for example) would create a lot of unnecessary work.
-The coordinator takes care of that work instead.
-We do, however, include the paths of file inputs and outputs, and then names of job inputs.
-For example, what if we include `["a", "b"]`, then "b" moves to "c" but has the same contents?
-If we did not include the path change, the cache key would not change and the build might not be re-run.
-(Although re-run might not be *strictly* necessary in this case, but rbt doesn't have enough information about the toolchains in your build to know this!)
+It's important that `Job` does not do any filesystem operations when calculating this key, since multiple jobs reading and hashing the same configuration file (for example) would be a lot of duplicated work.
+We do, however, include the paths of file inputs and outputs and the names of job inputs so we can track file moves that should cause rebuilds.
 
 ## Input Hashes
 
 At the start of an rbt build, we collect all the files for all jobs and deduplicate their paths.
-For each path, we try to find the hash in a store (the key is metadata about the file.)
-If we don't have the hash, we calculate it using [BLAKE3](https://en.wikipedia.org/wiki/BLAKE_(hash_function)#BLAKE3).
+For each path, we get metadata about the file (details below) and use it to look up the file's content hash in a persistent store.
+If we don't have the hash, we calculate and store it using [BLAKE3](https://en.wikipedia.org/wiki/BLAKE_(hash_function)#BLAKE3).
 
 Then, for each `Job`, we produce a final key by combining the input hashes of all the files and content-addresseable store paths of input jobs (see below) with the job's base key.
 
