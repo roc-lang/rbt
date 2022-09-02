@@ -42,7 +42,7 @@ impl Builder {
         // longer term, we'll probably move to using some sort of KV store,
         // at which point this deserialization will just be opening the database.
         let file_hashes_path = self.workspace_root.join("file_hashes.json");
-        let meta_to_hash = match File::open(&file_hashes_path) {
+        let mut meta_to_hash: HashMap<u64, String> = match File::open(&file_hashes_path) {
             Ok(file) => {
                 let reader = BufReader::new(file);
                 serde_json::from_reader(reader)
@@ -50,18 +50,6 @@ impl Builder {
             }
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => HashMap::default(),
             Err(err) => return Err(err).context("could not open file hash cache"),
-        };
-
-        let mut coordinator = Coordinator {
-            workspace_root: self.workspace_root,
-            store: self.store,
-
-            path_to_meta: HashMap::default(),
-            meta_to_hash,
-
-            jobs: HashMap::default(),
-            blocked: HashMap::default(),
-            ready: Vec::default(),
         };
 
         // We assume that there will be at least some overlap in inputs (i.e. at
@@ -77,13 +65,27 @@ impl Builder {
             }
         }
 
+        let mut coordinator = Coordinator {
+            workspace_root: self.workspace_root,
+            store: self.store,
+
+            path_to_hash: HashMap::with_capacity(input_files.len()),
+
+            jobs: HashMap::default(),
+            blocked: HashMap::default(),
+            ready: Vec::default(),
+        };
+
         /////////////////////////////////////////////
         // Phase 1: check which files have changed //
         /////////////////////////////////////////////
 
+        let mut path_to_meta: HashMap<PathBuf, PathMetaKey> =
+            HashMap::with_capacity(input_files.len());
+
         // TODO: perf hint for later: we could be doing this in parallel
         // using rayon
-        for input_file in input_files.drain() {
+        for input_file in input_files {
             // TODO: collect errors instead of bailing immediately
             let meta = input_file.metadata().with_context(|| {
                 format!("could not read metadata for `{}`", input_file.display())
@@ -103,7 +105,7 @@ impl Builder {
                 )
             })?;
 
-            coordinator.path_to_meta.insert(input_file, cache_key);
+            path_to_meta.insert(input_file, cache_key);
         }
 
         ///////////////////////////////////////////////////////////////////
@@ -111,15 +113,12 @@ impl Builder {
         ///////////////////////////////////////////////////////////////////
         let mut hasher = blake3::Hasher::new();
 
-        // we keep track of path->hash in addition to path->meta->hash while
-        // so we use the more direct version while calculating the job hashes.
-        let mut path_to_hash: HashMap<PathBuf, String> =
-            HashMap::with_capacity(coordinator.path_to_meta.len());
-
-        for (path, cache_key) in &coordinator.path_to_meta {
+        for (path, cache_key) in path_to_meta.iter() {
             let key = u64::from(cache_key);
-            if let Some(hash) = coordinator.meta_to_hash.get(&key) {
-                path_to_hash.insert(path.to_path_buf(), hash.to_owned());
+            if let Some(hash) = meta_to_hash.get(&key) {
+                coordinator
+                    .path_to_hash
+                    .insert(path.to_path_buf(), hash.to_owned());
                 continue;
             }
 
@@ -137,9 +136,11 @@ impl Builder {
             let hash = hasher.finalize();
 
             log::debug!("hash of `{}` was {}", path.display(), hash);
-            coordinator.meta_to_hash.insert(key, hash.to_string());
+            meta_to_hash.insert(key, hash.to_string());
 
-            path_to_hash.insert(path.to_path_buf(), hash.to_string());
+            coordinator
+                .path_to_hash
+                .insert(path.to_path_buf(), hash.to_string());
         }
 
         ////////////////////////////////////////////////////////////////
@@ -148,7 +149,7 @@ impl Builder {
         let file_hashes = File::create(file_hashes_path)
             .context("could not open file hash cache to store new hashes")?;
         // TODO: BufWriter?
-        serde_json::to_writer(file_hashes, &coordinator.meta_to_hash)
+        serde_json::to_writer(file_hashes, &meta_to_hash)
             .context("failed to write hash cache to disk")?;
 
         ///////////////////////////////////////////////////////////////////////////
@@ -180,8 +181,7 @@ pub struct Coordinator {
     store: Store,
 
     // caches
-    path_to_meta: HashMap<PathBuf, PathMetaKey>,
-    meta_to_hash: HashMap<u64, String>,
+    path_to_hash: HashMap<PathBuf, String>,
 
     // which jobs should run when?
     jobs: HashMap<job::Id, Job>,
