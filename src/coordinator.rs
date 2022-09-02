@@ -162,6 +162,10 @@ impl Builder {
             let job =
                 Job::from_glue(glue_job).context("could not convert glue job to actual job")?;
 
+            // TODO: pushing to `ready` immediately is only reasonable when
+            // we don't have job inputs as dependencies, but we don't have that
+            // yet. This'll need to change when we do or we'll have some very
+            // broken runs!
             coordinator.ready.push(job.id);
             coordinator.jobs.insert(job.id, job);
         }
