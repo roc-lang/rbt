@@ -64,10 +64,10 @@ impl Builder {
             ready: Vec::default(),
         };
 
-        // We assume that there will be at least some overlap in inputs (e.g. many
-        // targets looking at the same config file.) That assumption means that
-        // it makes sense to deduplicate them before doing a bunch of duplicate
-        // filesystem operations.
+        // We assume that there will be at least some overlap in inputs (i.e. at
+        // least two targets needing the same file.) That assumption means that
+        // it makes sense to deduplicate them to avoid duplicating filesystem
+        // operations.
         let mut input_files: HashSet<PathBuf> = HashSet::new();
         for glue_job in &self.targets {
             for file in &glue_job.as_Job().inputFiles {
