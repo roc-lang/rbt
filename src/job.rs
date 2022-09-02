@@ -2,7 +2,7 @@ use crate::glue;
 use anyhow::{Context, Result};
 use itertools::Itertools;
 use roc_std::RocStr;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
 use std::path::{Component, PathBuf};
@@ -27,7 +27,7 @@ pub struct Job {
 }
 
 impl Job {
-    pub fn from_glue(job: glue::Job, path_to_hash: &HashMap<PathBuf, String>) -> Result<Self> {
+    pub fn from_glue(job: glue::Job) -> Result<Self> {
         let unwrapped = job.into_Job();
 
         let mut hasher = Xxh3::new();
@@ -42,11 +42,7 @@ impl Job {
             let path =
                 sanitize_file_path(path_str).context("got an unacceptable input file path")?;
 
-            match path_to_hash.get(&path) {
-                Some(hash) => hash.hash(&mut hasher),
-                None => anyhow::bail!("couldn't find a hash for `{}`", path.display()),
-            }
-
+            path.hash(&mut hasher);
             input_files.insert(path);
         }
 

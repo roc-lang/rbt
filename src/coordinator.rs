@@ -159,8 +159,8 @@ impl Builder {
             // refer to other jobs as soon as it's possibly feasible. When
             // that happens, a depth-first search through the tree rooted at
             // `glue_job` will probably suffice.
-            let job = Job::from_glue(glue_job, &path_to_hash)
-                .context("could not convert glue job to actual job")?;
+            let job =
+                Job::from_glue(glue_job).context("could not convert glue job to actual job")?;
 
             coordinator.ready.push(job.id);
             coordinator.jobs.insert(job.id, job);
