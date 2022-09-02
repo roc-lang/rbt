@@ -5,9 +5,33 @@ use roc_std::RocStr;
 use std::collections::HashSet;
 use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
-use std::path::{Component, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use xxhash_rust::xxh3::Xxh3;
+
+pub struct KeyBuilder(Xxh3);
+
+impl KeyBuilder {
+    fn new() -> Self {
+        Self(Xxh3::new())
+    }
+
+    pub fn based_on(id: &Key) -> Self {
+        let mut builder = Self::new();
+        id.hash(&mut builder.0);
+
+        builder
+    }
+
+    pub fn add_file(&mut self, path: &Path, content_hash: &str) {
+        path.hash(&mut self.0);
+        content_hash.hash(&mut self.0);
+    }
+
+    pub fn finalize(self) -> Key {
+        Key(self.0.finish())
+    }
+}
 
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Key(u64);
@@ -20,7 +44,7 @@ impl Display for Key {
 
 #[derive(Debug)]
 pub struct Job {
-    pub id: Key,
+    pub base_key: Key,
     pub command: glue::CommandPayload,
     pub input_files: HashSet<PathBuf>,
     pub outputs: HashSet<PathBuf>,
@@ -64,7 +88,7 @@ impl Job {
         }
 
         Ok(Job {
-            id: Key(hasher.finish()),
+            base_key: Key(hasher.finish()),
             command: unwrapped.command.into_Command(),
             input_files,
             outputs,
@@ -92,7 +116,7 @@ impl Display for Job {
         // for us to have some human-readable output in addition to the ID.
         let mut chars = 0;
 
-        write!(f, "{} (", self.id)?;
+        write!(f, "{} (", self.base_key)?;
 
         let base = self.command.tool.as_SystemTool().to_string();
         chars += base.len();

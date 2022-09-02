@@ -45,9 +45,9 @@ impl Store {
 
     /// If an output exists for a job, what is it? If we don't have a stored
     /// output for the job, return `None`.
-    pub fn for_job(&self, job: &Job) -> Option<PathBuf> {
+    pub fn for_job(&self, key: &job::Key) -> Option<PathBuf> {
         self.inputs_to_content
-            .get(&job.id)
+            .get(key)
             .map(|path| self.root.join(path))
     }
 
@@ -65,14 +65,19 @@ impl Store {
     ///     is, they don't include any paths leading to the root or other
     ///     drives, or contain `..` elements that would take the path out of
     ///     the workspace root.)
-    pub fn store_from_workspace(&mut self, job: &Job, workspace: Workspace) -> Result<()> {
+    pub fn store_from_workspace(
+        &mut self,
+        key: job::Key,
+        job: &Job,
+        workspace: Workspace,
+    ) -> Result<()> {
         let item = ContentAddressedItem::load(job, workspace)
             .context("could get content addressable item from job")?;
 
         if item.exists_in(&self.root) {
             log::debug!("we have already stored {}, so I'm skipping the move!", item,);
 
-            self.associate_job_with_hash(job, &item.hash().to_string())
+            self.associate_job_with_hash(key, &item.hash().to_string())
                 .context("could not associate job with hash")
         } else {
             log::debug!("moving {} into store", item);
@@ -81,13 +86,13 @@ impl Store {
                 .move_into(&self.root)
                 .context("could not move item into the store")?;
 
-            self.associate_job_with_hash(job, &hash.to_string())
+            self.associate_job_with_hash(key, &hash.to_string())
                 .context("could not associate job with hash")
         }
     }
 
-    fn associate_job_with_hash(&mut self, job: &Job, hash: &str) -> Result<()> {
-        self.inputs_to_content.insert(job.id, hash.to_owned());
+    fn associate_job_with_hash(&mut self, key: job::Key, hash: &str) -> Result<()> {
+        self.inputs_to_content.insert(key, hash.to_owned());
 
         let file = std::fs::File::create(self.root.join("inputs_to_content.json"))
             .context("failed to open job-to-content-hash mapping")?;
@@ -134,7 +139,7 @@ impl<'job> ContentAddressedItem<'job> {
             })?;
         }
 
-        Ok(ContentAddressedItem {
+        Ok(Self {
             workspace,
             job,
             hash: hasher.finalize(),

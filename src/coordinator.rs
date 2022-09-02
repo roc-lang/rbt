@@ -180,8 +180,8 @@ impl Builder {
             // we don't have job inputs as dependencies, but we don't have that
             // yet. This'll need to change when we do or we'll have some very
             // broken runs!
-            coordinator.ready.push(job.id);
-            coordinator.jobs.insert(job.id, job);
+            coordinator.ready.push(job.base_key);
+            coordinator.jobs.insert(job.base_key, job);
         }
 
         Ok(coordinator)
@@ -220,14 +220,25 @@ impl Coordinator {
 
         log::debug!("preparing to run job {}", job);
 
-        if self.store.for_job(job).is_none() {
-            let workspace = Workspace::create(&self.workspace_root, job)
-                .with_context(|| format!("could not create workspace for job {}", job.id))?;
+        // figure out the final key based on the job's dependencies
+        let mut key_builder = job::KeyBuilder::based_on(&job.base_key);
+        for path in &job.input_files {
+            match self.path_to_hash.get(path) {
+                Some(hash) => key_builder.add_file(&path, hash),
+                None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.display()),
+            }
+        }
+        let key = key_builder.finalize();
+
+        // build (or don't) based on the final key!
+        if self.store.for_job(&key).is_none() {
+            let workspace = Workspace::create(&self.workspace_root, &key)
+                .with_context(|| format!("could not create workspace for {}", job))?;
 
             runner.run(job, &workspace).context("could not run job")?;
 
             self.store
-                .store_from_workspace(job, workspace)
+                .store_from_workspace(key, &job, workspace)
                 .context("could not store job output")?;
         } else {
             log::debug!("already had output of job {}; skipping", job);
