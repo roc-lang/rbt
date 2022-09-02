@@ -224,7 +224,7 @@ impl Coordinator {
         let mut key_builder = job::KeyBuilder::based_on(&job.base_key);
         for path in &job.input_files {
             match self.path_to_hash.get(path) {
-                Some(hash) => key_builder.add_file(&path, hash),
+                Some(hash) => key_builder.add_file(path, hash),
                 None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.display()),
             }
         }
@@ -238,7 +238,7 @@ impl Coordinator {
             runner.run(job, &workspace).context("could not run job")?;
 
             self.store
-                .store_from_workspace(key, &job, workspace)
+                .store_from_workspace(key, job, workspace)
                 .context("could not store job output")?;
         } else {
             log::debug!("already had output of job {}; skipping", job);
