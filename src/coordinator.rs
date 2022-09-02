@@ -48,9 +48,9 @@ impl Builder {
         // For more higher-level explanation of what we're going for, refer
         // to docs/internals/how-we-determine-when-to-run-jobs.md.
 
-        // We're currently storing the mapping from PathMetaKey to content
-        // hash as a JSON object, so we need to load it first thing. In the
-        // longer term, we'll probably move to using some sort of KV store,
+        // We're currently storing the mapping from PathMetaKey to content hash as
+        // a JSON object, so we need to load it before we can do anything else. In
+        // the longer term, we'll probably move to using some sort of KV store,
         // at which point this deserialization will just be opening the database.
         let file_hashes_path = self.workspace_root.join("file_hashes.json");
         let mut meta_to_hash: HashMap<u64, String> = match File::open(&file_hashes_path) {
