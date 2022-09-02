@@ -37,6 +37,17 @@ impl Builder {
     }
 
     pub fn build(mut self) -> Result<Coordinator> {
+        // Here's the overview of what we're about to do: for each file in
+        // each target job, we're going to look at metadata for that file and
+        // use that metadata to look up the file's hash (if we don't have it
+        // already, we'll read the file and calculate it.) We'll use all those
+        // hashes to construct a mapping from path->hash that coordinator can
+        // use to determine which jobs need to be run or skipped once the build
+        // is running.
+        //
+        // For more higher-level explanation of what we're going for, refer
+        // to docs/internals/how-we-determine-when-to-run-jobs.md.
+
         // We're currently storing the mapping from PathMetaKey to content
         // hash as a JSON object, so we need to load it first thing. In the
         // longer term, we'll probably move to using some sort of KV store,
