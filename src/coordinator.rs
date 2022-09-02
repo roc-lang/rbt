@@ -106,7 +106,7 @@ impl Builder {
 
             if meta.is_dir() {
                 anyhow::bail!(
-                    "One of your jobs specifies `{}`, a directory, as a dependency. I can only handle files.",
+                    "One of your jobs specifies `{}` as a dependency. It's a directory, but I can only handle files.",
                     input_file.display(),
                 )
             };
