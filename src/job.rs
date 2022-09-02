@@ -10,9 +10,9 @@ use std::process::Command;
 use xxhash_rust::xxh3::Xxh3;
 
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
-pub struct Id(u64);
+pub struct Key(u64);
 
-impl Display for Id {
+impl Display for Key {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:x}", self.0)
     }
@@ -20,7 +20,7 @@ impl Display for Id {
 
 #[derive(Debug)]
 pub struct Job {
-    pub id: Id,
+    pub id: Key,
     pub command: glue::CommandPayload,
     pub input_files: HashSet<PathBuf>,
     pub outputs: HashSet<PathBuf>,
@@ -64,7 +64,7 @@ impl Job {
         }
 
         Ok(Job {
-            id: Id(hasher.finish()),
+            id: Key(hasher.finish()),
             command: unwrapped.command.into_Command(),
             input_files,
             outputs,
@@ -170,6 +170,6 @@ mod test {
 
         let job = Job::from_glue(glue_job, &path_to_hash).unwrap();
 
-        assert_eq!(Id(9236546748343508395), job.id);
+        assert_eq!(Key(9236546748343508395), job.id);
     }
 }

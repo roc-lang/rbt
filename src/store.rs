@@ -17,7 +17,7 @@ pub struct Store {
     // This is stored as JSON for now to avoid taking another dependency,
     // but it'd be good for it to be a real database (or database table)
     // eventually. SQLite or Sled or something
-    inputs_to_content: HashMap<job::Id, String>,
+    inputs_to_content: HashMap<job::Key, String>,
 }
 
 impl Store {
