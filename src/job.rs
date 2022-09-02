@@ -189,11 +189,8 @@ mod test {
             outputs: RocList::from_slice(&["ouput_file".into()]),
         });
 
-        let mut path_to_hash: HashMap<PathBuf, String> = HashMap::new();
-        path_to_hash.insert("input_file".into(), "hashhashhash".into());
+        let job = Job::from_glue(glue_job).unwrap();
 
-        let job = Job::from_glue(glue_job, &path_to_hash).unwrap();
-
-        assert_eq!(Key(9236546748343508395), job.id);
+        assert_eq!(Key(16382010323901725809), job.base_key);
     }
 }
