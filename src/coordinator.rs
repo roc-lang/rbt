@@ -82,9 +82,11 @@ impl Builder {
 
             path_to_hash: HashMap::with_capacity(input_files.len()),
 
-            jobs: HashMap::default(),
+            // On capacities: we'll have at least as many jobs as we have targets,
+            // each of which will have at least one leaf node.
+            jobs: HashMap::with_capacity(self.targets.len()),
             blocked: HashMap::default(),
-            ready: Vec::default(),
+            ready: Vec::with_capacity(self.targets.len()),
         };
 
         /////////////////////////////////////////////
