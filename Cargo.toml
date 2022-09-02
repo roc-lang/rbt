@@ -21,6 +21,7 @@ simple_logger = { version = "2.2.0", features = ["stderr"] }
 sled = "0.34"
 tempfile = "3.2"
 walkdir = "2.3"
+xxhash-rust = { version = "0.8.5", features = ["xxh3"] }
 zerocopy = "0.6"
 
 [lib]

@@ -648,6 +648,7 @@ dependencies = [
  "sled",
  "tempfile",
  "walkdir",
+ "xxhash-rust",
  "zerocopy",
 ]
 
@@ -973,6 +974,12 @@ dependencies = [
  "winapi 0.2.8",
  "winapi-build",
 ]
+
+[[package]]
+name = "xxhash-rust"
+version = "0.8.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "074914ea4eec286eb8d1fd745768504f420a1f7b7919185682a4a267bed7d2e7"
 
 [[package]]
 name = "zerocopy"

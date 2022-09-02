@@ -10,6 +10,7 @@ use std::hash::{Hash, Hasher};
 use std::io::BufReader;
 use std::path::PathBuf;
 use std::time::SystemTime;
+use xxhash_rust::xxh3::Xxh3;
 
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::MetadataExt;
@@ -271,7 +272,7 @@ struct PathMetaKey {
 
 impl From<&PathMetaKey> for u64 {
     fn from(key: &PathMetaKey) -> Self {
-        let mut hasher = std::collections::hash_map::DefaultHasher::default();
+        let mut hasher = Xxh3::new();
         key.hash(&mut hasher);
         hasher.finish()
     }
