@@ -10,7 +10,7 @@ let
   ];
 
   roc = pkgs.callPackage sources.roc {
-    cargoSha256 = "sha256-jFN0Ne/0wCCZl/oNmZE5/Sw5l+qNxShI3xlP4ikFMlw=";
+    cargoSha256 = "sha256-gX/0ORINVfEu6bMoSJX/+tbiLysFkTSdE2f83SBphCY=";
   };
 in pkgs.mkShell {
   buildInputs = with pkgs;
