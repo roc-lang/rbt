@@ -104,6 +104,10 @@ impl From<&Job> for Command {
             command.arg(arg.as_str());
         }
 
+        for item in &job.command.env {
+            command.env(item.key.as_str(), item.value.as_str());
+        }
+
         command
     }
 }

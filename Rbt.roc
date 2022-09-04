@@ -19,11 +19,11 @@ systemTool : Str -> Tool
 systemTool = \name ->
     SystemTool { name }
 
-Command : [Command { tool : Tool, args : List Str }]
+Command : [Command { tool : Tool, args : List Str, env : Dict Str Str }]
 
-exec : Tool, List Str -> Command
-exec = \execTool, args ->
-    Command { tool: execTool, args }
+exec : Tool, List Str, Dict Str Str -> Command
+exec = \execTool, args, env ->
+    Command { tool: execTool, args, env }
 
 Job : [Job { command : Command, inputFiles : List Str, outputs : List Str }]
 

@@ -81,6 +81,7 @@ pub struct Command {
 #[repr(C)]
 pub struct CommandPayload {
     pub args: roc_std::RocList<roc_std::RocStr>,
+    pub env: roc_std::RocDict<roc_std::RocStr, roc_std::RocStr>,
     pub tool: Tool,
 }
 

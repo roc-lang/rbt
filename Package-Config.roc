@@ -14,7 +14,7 @@ initForHost = init
 SystemToolPayload : { name : Str }
 Tool : [SystemTool SystemToolPayload]
 
-CommandPayload : { tool : Tool, args : List Str }
+CommandPayload : { tool : Tool, args : List Str, env : Dict Str Str }
 Command : [Command CommandPayload]
 
 JobPayload : { command : Command, inputFiles : List Str, outputs : List Str }

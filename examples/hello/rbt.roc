@@ -10,10 +10,13 @@ init =
 hello : Job
 hello =
     job {
-        command: exec (systemTool "bash") [
-            "-c",
-            "echo 'Hello, World!' > out",
-        ],
+        command: exec
+            (systemTool "bash")
+            [
+                "-c",
+                "echo 'Hello, World!' > out",
+            ]
+            Dict.empty,
         inputFiles: [],
         outputs: ["out"],
     }
