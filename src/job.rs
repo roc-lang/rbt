@@ -174,7 +174,7 @@ pub fn sanitize_file_path(roc_str: &RocStr) -> Result<PathBuf> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use roc_std::RocList;
+    use roc_std::{RocDict, RocList};
 
     #[test]
     fn job_hash_stability() {
@@ -188,6 +188,7 @@ mod test {
             command: glue::Command::Command(glue::CommandPayload {
                 tool: glue::Tool::SystemTool(RocStr::from("bash")),
                 args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
+                env: RocDict::default(),
             }),
             inputFiles: RocList::from_slice(&["input_file".into()]),
             outputs: RocList::from_slice(&["ouput_file".into()]),
@@ -195,6 +196,6 @@ mod test {
 
         let job = Job::from_glue(glue_job).unwrap();
 
-        assert_eq!(Key(16382010323901725809), job.base_key);
+        assert_eq!(Key(17026310291888492093), job.base_key);
     }
 }
