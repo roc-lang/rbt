@@ -170,7 +170,7 @@ where
 
         let new_len = self.len() + slice.len();
         let non_null_elements = if let Some((elements, storage)) = self.elements_and_storage() {
-            // Decrement the list's refence count.
+            // Decrement the list's reference count.
             let mut copy = storage.get();
             let is_unique = copy.decrease();
 

@@ -166,7 +166,7 @@ mod test {
                 args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
             }),
             inputFiles: RocList::from_slice(&["input_file".into()]),
-            outputs: RocList::from_slice(&["ouput_file".into()]),
+            outputs: RocList::from_slice(&["output_file".into()]),
         });
 
         let mut path_to_hash: HashMap<PathBuf, String> = HashMap::new();
@@ -174,6 +174,6 @@ mod test {
 
         let job = Job::from_glue(glue_job, &path_to_hash).unwrap();
 
-        assert_eq!(Id(9236546748343508395), job.id);
+        assert_eq!(Id(6522741008595488362), job.id);
     }
 }
