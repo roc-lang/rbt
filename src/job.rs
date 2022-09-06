@@ -10,6 +10,7 @@ use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use xxhash_rust::xxh3::Xxh3;
 
+/// Conversion from a base key to a final one.
 pub struct KeyBuilder(Xxh3);
 
 impl KeyBuilder {
@@ -37,12 +38,19 @@ impl KeyBuilder {
     }
 }
 
+/// See docs on `Key`
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Deserialize)]
 pub struct Base;
 
+/// See docs on `Key`
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Deserialize)]
 pub struct Final;
 
+/// A cache key for a job. This has a phantom type parameter because we calculate
+/// cache keys over multipole stages. The first (corresponding to `Base`) is just
+/// the information passed in from a `glue::Job`. The second includes information
+/// we'd have to do I/O for (like file hashes.) For more on the architecture,
+/// see `docs/internals/how-we-determine-when-to-run-jobs.md`.
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Key<Finality> {
     key: u64,
