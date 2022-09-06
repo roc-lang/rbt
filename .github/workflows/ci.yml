@@ -43,3 +43,10 @@ jobs:
         with:
           command: test
           args: --release
+
+  typos:
+    name: typos
+    runs-on: ubuntu-latest
+    steps:
+      - name: typos
+        uses: crate-ci/typos@v1.0.4
