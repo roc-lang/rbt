@@ -5,6 +5,7 @@ use roc_std::RocStr;
 use std::collections::HashSet;
 use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
+use std::marker::PhantomData;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use xxhash_rust::xxh3::Xxh3;
@@ -16,7 +17,7 @@ impl KeyBuilder {
         Self(Xxh3::new())
     }
 
-    pub fn based_on(id: &Key) -> Self {
+    pub fn based_on(id: &Key<Base>) -> Self {
         let mut builder = Self::new();
         id.hash(&mut builder.0);
 
@@ -28,23 +29,35 @@ impl KeyBuilder {
         content_hash.hash(&mut self.0);
     }
 
-    pub fn finalize(self) -> Key {
-        Key(self.0.finish())
+    pub fn finalize(self) -> Key<Final> {
+        Key {
+            key: self.0.finish(),
+            phantom: PhantomData,
+        }
     }
 }
 
-#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
-pub struct Key(u64);
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Deserialize)]
+pub struct Base;
 
-impl Display for Key {
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Deserialize)]
+pub struct Final;
+
+#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub struct Key<Finality> {
+    key: u64,
+    phantom: PhantomData<Finality>,
+}
+
+impl<Finality> Display for Key<Finality> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:x}", self.0)
+        write!(f, "{:x}", self.key)
     }
 }
 
 #[derive(Debug)]
 pub struct Job {
-    pub base_key: Key,
+    pub base_key: Key<Base>,
     pub command: glue::CommandPayload,
     pub input_files: HashSet<PathBuf>,
     pub outputs: HashSet<PathBuf>,
@@ -88,7 +101,10 @@ impl Job {
         }
 
         Ok(Job {
-            base_key: Key(hasher.finish()),
+            base_key: Key {
+                key: hasher.finish(),
+                phantom: PhantomData,
+            },
             command: unwrapped.command.into_Command(),
             input_files,
             outputs,

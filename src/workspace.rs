@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 pub struct Workspace(PathBuf);
 
 impl Workspace {
-    pub fn create(root: &Path, key: &job::Key) -> Result<Self> {
+    pub fn create(root: &Path, key: &job::Key<job::Final>) -> Result<Self> {
         let workspace = Workspace(root.join("workspaces").join(key.to_string()));
 
         std::fs::create_dir_all(&workspace.0).context("could not create workspace")?;

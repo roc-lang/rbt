@@ -17,7 +17,7 @@ pub struct Store {
     // This is stored as JSON for now to avoid taking another dependency,
     // but it'd be good for it to be a real database (or database table)
     // eventually. SQLite or Sled or something
-    inputs_to_content: HashMap<job::Key, String>,
+    inputs_to_content: HashMap<job::Key<job::Final>, String>,
 }
 
 impl Store {
@@ -45,7 +45,7 @@ impl Store {
 
     /// If an output exists for a job, what is it? If we don't have a stored
     /// output for the job, return `None`.
-    pub fn for_job(&self, key: &job::Key) -> Option<PathBuf> {
+    pub fn for_job(&self, key: &job::Key<job::Final>) -> Option<PathBuf> {
         self.inputs_to_content
             .get(key)
             .map(|path| self.root.join(path))
@@ -67,7 +67,7 @@ impl Store {
     ///     the workspace root.)
     pub fn store_from_workspace(
         &mut self,
-        key: job::Key,
+        key: job::Key<job::Final>,
         job: &Job,
         workspace: Workspace,
     ) -> Result<()> {
@@ -91,7 +91,7 @@ impl Store {
         }
     }
 
-    fn associate_job_with_hash(&mut self, key: job::Key, hash: &str) -> Result<()> {
+    fn associate_job_with_hash(&mut self, key: job::Key<job::Final>, hash: &str) -> Result<()> {
         self.inputs_to_content.insert(key, hash.to_owned());
 
         let file = std::fs::File::create(self.root.join("inputs_to_content.json"))

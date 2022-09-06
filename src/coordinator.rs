@@ -197,9 +197,9 @@ pub struct Coordinator {
     path_to_hash: HashMap<PathBuf, String>,
 
     // which jobs should run when?
-    jobs: HashMap<job::Key, Job>,
-    blocked: HashMap<job::Key, HashSet<job::Key>>,
-    ready: Vec<job::Key>,
+    jobs: HashMap<job::Key<job::Base>, Job>,
+    blocked: HashMap<job::Key<job::Base>, HashSet<job::Key<job::Base>>>,
+    ready: Vec<job::Key<job::Base>>,
 }
 
 impl Coordinator {
