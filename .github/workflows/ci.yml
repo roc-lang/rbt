@@ -43,6 +43,3 @@ jobs:
         with:
           command: test
           args: --release
-
-      - name: spellchecking
-        uses: crate-ci/typos@v1.0.4
