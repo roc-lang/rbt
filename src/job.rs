@@ -215,6 +215,12 @@ mod test {
 
         let job = Job::from_glue(glue_job).unwrap();
 
-        assert_eq!(Key(16382010323901725809), job.base_key);
+        assert_eq!(
+            Key {
+                key: 16382010323901725809,
+                phantom: PhantomData
+            },
+            job.base_key
+        );
     }
 }
