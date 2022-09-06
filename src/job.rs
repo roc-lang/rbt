@@ -52,6 +52,7 @@ pub struct Final;
 /// we'd have to do I/O for (like file hashes.) For more on the architecture,
 /// see `docs/internals/how-we-determine-when-to-run-jobs.md`.
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[serde(transparent)]
 pub struct Key<Finality> {
     key: u64,
     phantom: PhantomData<Finality>,
