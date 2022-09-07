@@ -55,6 +55,6 @@ impl Cli {
 }
 
 extern "C" {
-    #[link_name = "roc__initForHost_1_exposed"]
+    #[link_name = "roc__initForHost_1_exposed_generic"]
     fn roc_init(init: *mut crate::glue::Rbt);
 }
