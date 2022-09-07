@@ -24,15 +24,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "roc": {
-        "branch": "main",
+        "branch": "fix-glue-segfault",
         "description": "Roc is a language for making delightful software.",
         "homepage": "https://roc-lang.org",
         "owner": "roc-lang",
         "repo": "roc",
-        "rev": "f879798b179fdc81b871f1a344936055249637c3",
-        "sha256": "1zs2y4ywf83l7yjpprvfc45dz15xavl9cwwnyyf2jb4qj1pk368v",
+        "rev": "3a12aa26ccb347a2374c01e960d37f77b8b3b8b0",
+        "sha256": "024asbs88sbxim6m74lkk94w9s684hg62sap2z24clfvd7rb156j",
         "type": "tarball",
-        "url": "https://github.com/roc-lang/roc/archive/f879798b179fdc81b871f1a344936055249637c3.tar.gz",
+        "url": "https://github.com/roc-lang/roc/archive/3a12aa26ccb347a2374c01e960d37f77b8b3b8b0.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
