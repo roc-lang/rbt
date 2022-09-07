@@ -8,6 +8,8 @@ fn test_hello_world() {
 
     Command::new("roc")
         .arg("run")
+        // TODO: we're only doing this until we get a fix for the surgical linker on Linux!
+        .arg("--linker=legacy")
         .arg("examples/hello/rbt.roc")
         .arg("--")
         .arg("--root-dir")
