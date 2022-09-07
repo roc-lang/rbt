@@ -26,11 +26,11 @@ jobs:
         with:
           toolchain: stable
 
-      - name: download Roc nightly build
+      - name: download Roc nightly build (Linux)
         if: startsWith(matrix.os, 'ubuntu')
         run: ./ci/download_latest_nightly.sh linux_x86_64
 
-      - name: download Roc nightly build
+      - name: download Roc nightly build (macOS)
         if: startsWith(matrix.os, 'macos')
         run: ./ci/download_latest_nightly.sh macos_x86_64
 
