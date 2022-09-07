@@ -123,7 +123,7 @@ impl Job {
 
 impl From<&Job> for Command {
     fn from(job: &Job) -> Self {
-        let mut command = Command::new(&job.command.tool.as_SystemTool().to_string());
+        let mut command = Command::new(&job.command.tool.as_SystemTool().name.to_string());
 
         for arg in &job.command.args {
             command.arg(arg.as_str());
@@ -143,7 +143,7 @@ impl Display for Job {
 
         write!(f, "{} (", self.base_key)?;
 
-        let base = self.command.tool.as_SystemTool().to_string();
+        let base = self.command.tool.as_SystemTool().name.to_string();
         chars += base.len();
 
         write!(f, "{}", base)?;
