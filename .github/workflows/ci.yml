@@ -17,6 +17,8 @@ jobs:
     timeout-minutes: 90
     env:
       FORCE_COLOR: 1
+      RUST_BACKTRACE: full
+
     steps:
       - uses: actions/checkout@v2
         with:
