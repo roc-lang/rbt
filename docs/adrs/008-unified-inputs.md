@@ -82,3 +82,15 @@ greeting : Job # has at least `englishGreeting.txt` in its outputs
 
 This can be extended with filesystem matchers (our version of glob matches) and dynamic dependency discoverers later, without breaking the API.
 (As a matter of fact, matchers might take over `FromSource`'s job!)
+
+# Benefits
+
+This API:
+
+- Lets us specify exactly how jobs want the filesystem to be set up before they run
+- Lets us warn about conflicts between different files.
+- Lets us see exactly where we're trying to source files from.
+  This means we can see when a file would not exist and warn about that.
+  (`allOutputsOf` defeats this a bit since it automatically depends on whatever files are available, but overall I think it's a win.)
+- Opens up new optimization opportunities for caching: if we know that we only depend on certain files from some build, we could calculate a sub-hash for those.
+  (Probably means redoing how the store stores things to be based on files instead of directories, though, in order to not have abysmal performance.)
