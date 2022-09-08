@@ -17,7 +17,10 @@ Tool : [SystemTool SystemToolPayload]
 CommandPayload : { tool : Tool, args : List Str }
 Command : [Command CommandPayload]
 
-JobPayload : { command : Command, inputFiles : List Str, outputs : List Str }
+InputPath : [Path Str]
+Input : [SourceInput InputPath]
+
+JobPayload : { command : Command, inputs : List Input, outputs : List Str }
 Job : [Job JobPayload]
 
 Rbt : { default : Job }

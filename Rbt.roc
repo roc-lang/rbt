@@ -1,5 +1,5 @@
 interface Rbt
-    exposes [Rbt, init, Job, job, Command, exec, Tool, tool, systemTool]
+    exposes [Rbt, init, Job, job, Command, exec, Tool, tool, systemTool, file, path]
     imports []
 
 # TODO: these are all out of order due to https://github.com/rtfeldman/roc/issues/1642. Once that's fixed, they should rearrange into the order in `exposes`
@@ -25,13 +25,25 @@ exec : Tool, List Str -> Command
 exec = \execTool, args ->
     Command { tool: execTool, args }
 
-Job : [Job { command : Command, inputFiles : List Str, outputs : List Str }]
+InputPath : [Path Str]
+
+# Use the path exactly as given, with no shenanigans.
+path : Str -> InputPath
+path = \str -> Path str
+
+Input : [SourceInput InputPath]
+
+# Add the given file to the job's workspace (the working directory where the
+# command is called.)
+file : Str -> Input
+file = \inputPath -> SourceInput (path inputPath)
+
+Job : [Job { command : Command, inputs : List Input, outputs : List Str }]
 
 # TODO: these fields are all required until https://github.com/rtfeldman/roc/issues/1844 is fixed
 # TODO: destructuring is broken, see https://github.com/rtfeldman/roc/issues/2512
-job : { command : Command, inputFiles : List Str, outputs : List Str } -> Job
-job = \stuff ->
-    Job { command: stuff.command, inputFiles: stuff.inputFiles, outputs: stuff.outputs }
+job : { command : Command, inputs : List Input, outputs : List Str } -> Job
+job = \config -> Job config
 
 Rbt : { default : Job }
 
