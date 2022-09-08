@@ -207,7 +207,7 @@ mod test {
         // re-running all build steps.
         let glue_job = glue::Job::Job(glue::JobPayload {
             command: glue::Command::Command(glue::CommandPayload {
-                tool: glue::Tool::SystemTool(RocStr::from("bash")),
+                tool: glue::Tool::SystemTool(glue::SystemToolPayload{ name: RocStr::from("bash")}),
                 args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
             }),
             inputFiles: RocList::from_slice(&["input_file".into()]),
