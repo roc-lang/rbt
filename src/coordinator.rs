@@ -69,9 +69,9 @@ impl Builder {
         // operations.
         let mut input_files: HashSet<PathBuf> = HashSet::new();
         for glue_job in &self.targets {
-            for file in &glue_job.as_Job().inputFiles {
+            for input in &glue_job.as_Job().inputs {
                 input_files.insert(
-                    job::sanitize_file_path(file).context("got an unacceptable input file path")?,
+                    job::sanitize_file_path(input.as_SourceInput().as_Path()).context("got an unacceptable input file path")?,
                 );
             }
         }
