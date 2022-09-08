@@ -3,7 +3,7 @@
 Decision: rbt will set two layered targets for build isolation.
 
 1. We should run a reasonably isolated build on all supported operating systems without any special configuration or permissions.
-2. We can optionally do nicer things if privileged actions are availble (e.g. launching a container, or having OS-specific functionality available.)
+2. We can optionally do nicer things if privileged actions are available (e.g. launching a container, or having OS-specific functionality available.)
 
 "Reasonably isolated" in the first layer is defined as the functionality available on all platforms.
 Specifically:

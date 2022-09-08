@@ -17,6 +17,7 @@ in pkgs.mkShell {
     [
       niv.niv
       git
+      typos
 
       # roc tools
       roc

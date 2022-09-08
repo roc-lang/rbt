@@ -211,14 +211,14 @@ mod test {
                 args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
             }),
             inputFiles: RocList::from_slice(&["input_file".into()]),
-            outputs: RocList::from_slice(&["ouput_file".into()]),
+            outputs: RocList::from_slice(&["output_file".into()]),
         });
 
         let job = Job::from_glue(glue_job).unwrap();
 
         assert_eq!(
             Key {
-                key: 16382010323901725809,
+                key: 243796661244433339,
                 phantom: PhantomData
             },
             job.base_key

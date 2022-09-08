@@ -1,6 +1,6 @@
 # ADR 006: What's a Job?
 
-We want to be able to specify builds in Roc (I mean, it's right there in the name!)
+We want to be able to specify builds in rbt (I mean, it's right there in the name!)
 
 To do that, we need to have a good idea about the kinds of data we're working with and how they relate to one another.
 

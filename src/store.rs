@@ -60,7 +60,7 @@ impl Store {
     ///  1. The job already ran successfully and left files for us in the
     ///     Workspace directory.
     ///  2. The caller has already checked `for_job`, and that we definitely
-    ///     know we need to store the ouput.
+    ///     know we need to store the output.
     ///  3. All the paths in the Job's `output` field have been sanitized (that
     ///     is, they don't include any paths leading to the root or other
     ///     drives, or contain `..` elements that would take the path out of
