@@ -24,9 +24,11 @@ for DAYS_AGO in 0 1 2; do
   if test $? -ne 0; then
     printf "no release found for %s and %s\n" "$TARGET_DATE" "$OS_ARCH"
     continue
+  else
+    break
   fi
-  set -e
 done
+set -e
 
 
 if test "$(wc -l <<< "$RELEASE_FILE")" -gt 1; then
