@@ -1,4 +1,4 @@
-use crate::job::Job;
+use crate::job;
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 pub struct Workspace(PathBuf);
 
 impl Workspace {
-    pub fn create(root: &Path, job: &Job) -> Result<Self> {
-        let workspace = Workspace(root.join("workspaces").join(job.id.to_string()));
+    pub fn create(root: &Path, key: &job::Key<job::Final>) -> Result<Self> {
+        let workspace = Workspace(root.join("workspaces").join(key.to_string()));
 
         std::fs::create_dir_all(&workspace.0).context("could not create workspace")?;
 

@@ -2,32 +2,78 @@ use crate::glue;
 use anyhow::{Context, Result};
 use itertools::Itertools;
 use roc_std::RocStr;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
-use std::path::{Component, PathBuf};
+use std::marker::PhantomData;
+use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use xxhash_rust::xxh3::Xxh3;
 
-#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
-pub struct Id(u64);
+/// Conversion from a base key to a final one.
+pub struct KeyBuilder(Xxh3);
 
-impl Display for Id {
+impl KeyBuilder {
+    fn new() -> Self {
+        Self(Xxh3::new())
+    }
+
+    pub fn based_on(id: &Key<Base>) -> Self {
+        let mut builder = Self::new();
+        id.hash(&mut builder.0);
+
+        builder
+    }
+
+    pub fn add_file(&mut self, path: &Path, content_hash: &str) {
+        path.hash(&mut self.0);
+        content_hash.hash(&mut self.0);
+    }
+
+    pub fn finalize(self) -> Key<Final> {
+        Key {
+            key: self.0.finish(),
+            phantom: PhantomData,
+        }
+    }
+}
+
+/// See docs on `Key`
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Deserialize)]
+pub struct Base;
+
+/// See docs on `Key`
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Deserialize)]
+pub struct Final;
+
+/// A cache key for a job. This has a phantom type parameter because we calculate
+/// cache keys over multipole stages. The first (corresponding to `Base`) is just
+/// the information passed in from a `glue::Job`. The second includes information
+/// we'd have to do I/O for (like file hashes.) For more on the architecture,
+/// see `docs/internals/how-we-determine-when-to-run-jobs.md`.
+#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[serde(transparent)]
+pub struct Key<Finality> {
+    key: u64,
+    phantom: PhantomData<Finality>,
+}
+
+impl<Finality> Display for Key<Finality> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:x}", self.0)
+        write!(f, "{:x}", self.key)
     }
 }
 
 #[derive(Debug)]
 pub struct Job {
-    pub id: Id,
+    pub base_key: Key<Base>,
     pub command: glue::CommandPayload,
     pub input_files: HashSet<PathBuf>,
     pub outputs: HashSet<PathBuf>,
 }
 
 impl Job {
-    pub fn from_glue(job: glue::Job, path_to_hash: &HashMap<PathBuf, String>) -> Result<Self> {
+    pub fn from_glue(job: glue::Job) -> Result<Self> {
         let unwrapped = job.into_Job();
 
         let mut hasher = Xxh3::new();
@@ -42,11 +88,7 @@ impl Job {
             let path =
                 sanitize_file_path(path_str).context("got an unacceptable input file path")?;
 
-            match path_to_hash.get(&path) {
-                Some(hash) => hash.hash(&mut hasher),
-                None => anyhow::bail!("couldn't find a hash for `{}`", path.display()),
-            }
-
+            path.hash(&mut hasher);
             input_files.insert(path);
         }
 
@@ -68,7 +110,10 @@ impl Job {
         }
 
         Ok(Job {
-            id: Id(hasher.finish()),
+            base_key: Key {
+                key: hasher.finish(),
+                phantom: PhantomData,
+            },
             command: unwrapped.command.into_Command(),
             input_files,
             outputs,
@@ -96,7 +141,7 @@ impl Display for Job {
         // for us to have some human-readable output in addition to the ID.
         let mut chars = 0;
 
-        write!(f, "{} (", self.id)?;
+        write!(f, "{} (", self.base_key)?;
 
         let base = self.command.tool.as_SystemTool().to_string();
         chars += base.len();
@@ -169,11 +214,14 @@ mod test {
             outputs: RocList::from_slice(&["output_file".into()]),
         });
 
-        let mut path_to_hash: HashMap<PathBuf, String> = HashMap::new();
-        path_to_hash.insert("input_file".into(), "hashhashhash".into());
+        let job = Job::from_glue(glue_job).unwrap();
 
-        let job = Job::from_glue(glue_job, &path_to_hash).unwrap();
-
-        assert_eq!(Id(6522741008595488362), job.id);
+        assert_eq!(
+            Key {
+                key: 243796661244433339,
+                phantom: PhantomData
+            },
+            job.base_key
+        );
     }
 }

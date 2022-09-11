@@ -37,12 +37,23 @@ impl Builder {
     }
 
     pub fn build(mut self) -> Result<Coordinator> {
-        // We're currently storing the mapping from PathMetaKey to content
-        // hash as a JSON object, so we need to load it first thing. In the
-        // longer term, we'll probably move to using some sort of KV store,
+        // Here's the overview of what we're about to do: for each file in
+        // each target job, we're going to look at metadata for that file and
+        // use that metadata to look up the file's hash (if we don't have it
+        // already, we'll read the file and calculate it.) We'll use all those
+        // hashes to construct a mapping from path->hash that coordinator can
+        // use to determine which jobs need to be run or skipped once the build
+        // is running.
+        //
+        // For more higher-level explanation of what we're going for, refer
+        // to docs/internals/how-we-determine-when-to-run-jobs.md.
+
+        // We're currently storing the mapping from PathMetaKey to content hash as
+        // a JSON object, so we need to load it before we can do anything else. In
+        // the longer term, we'll probably move to using some sort of KV store,
         // at which point this deserialization will just be opening the database.
         let file_hashes_path = self.workspace_root.join("file_hashes.json");
-        let meta_to_hash = match File::open(&file_hashes_path) {
+        let mut meta_to_hash: HashMap<u64, String> = match File::open(&file_hashes_path) {
             Ok(file) => {
                 let reader = BufReader::new(file);
                 serde_json::from_reader(reader)
@@ -52,22 +63,10 @@ impl Builder {
             Err(err) => return Err(err).context("could not open file hash cache"),
         };
 
-        let mut coordinator = Coordinator {
-            workspace_root: self.workspace_root,
-            store: self.store,
-
-            path_to_meta: HashMap::default(),
-            meta_to_hash,
-
-            jobs: HashMap::default(),
-            blocked: HashMap::default(),
-            ready: Vec::default(),
-        };
-
-        // We assume that there will be at least some overlap in inputs (e.g. many
-        // targets looking at the same config file.) That assumption means that
-        // it makes sense to deduplicate them before doing a bunch of duplicate
-        // filesystem operations.
+        // We assume that there will be at least some overlap in inputs (i.e. at
+        // least two targets needing the same file.) That assumption means that
+        // it makes sense to deduplicate them to avoid duplicating filesystem
+        // operations.
         let mut input_files: HashSet<PathBuf> = HashSet::new();
         for glue_job in &self.targets {
             for file in &glue_job.as_Job().inputFiles {
@@ -77,13 +76,29 @@ impl Builder {
             }
         }
 
+        let mut coordinator = Coordinator {
+            workspace_root: self.workspace_root,
+            store: self.store,
+
+            path_to_hash: HashMap::with_capacity(input_files.len()),
+
+            // On capacities: we'll have at least as many jobs as we have targets,
+            // each of which will have at least one leaf node.
+            jobs: HashMap::with_capacity(self.targets.len()),
+            blocked: HashMap::default(),
+            ready: Vec::with_capacity(self.targets.len()),
+        };
+
         /////////////////////////////////////////////
         // Phase 1: check which files have changed //
         /////////////////////////////////////////////
 
+        let mut path_to_meta: HashMap<PathBuf, PathMetaKey> =
+            HashMap::with_capacity(input_files.len());
+
         // TODO: perf hint for later: we could be doing this in parallel
         // using rayon
-        for input_file in input_files.drain() {
+        for input_file in input_files {
             // TODO: collect errors instead of bailing immediately
             let meta = input_file.metadata().with_context(|| {
                 format!("could not read metadata for `{}`", input_file.display())
@@ -91,7 +106,7 @@ impl Builder {
 
             if meta.is_dir() {
                 anyhow::bail!(
-                    "One of your jobs specifies `{}`, a directory, as a dependency. I can only handle files.",
+                    "One of your jobs specifies `{}` as a dependency. It's a directory, but I can only handle files.",
                     input_file.display(),
                 )
             };
@@ -103,7 +118,7 @@ impl Builder {
                 )
             })?;
 
-            coordinator.path_to_meta.insert(input_file, cache_key);
+            path_to_meta.insert(input_file, cache_key);
         }
 
         ///////////////////////////////////////////////////////////////////
@@ -111,15 +126,12 @@ impl Builder {
         ///////////////////////////////////////////////////////////////////
         let mut hasher = blake3::Hasher::new();
 
-        // we keep track of path->hash in addition to path->meta->hash while
-        // so we use the more direct version while calculating the job hashes.
-        let mut path_to_hash: HashMap<PathBuf, String> =
-            HashMap::with_capacity(coordinator.path_to_meta.len());
-
-        for (path, cache_key) in &coordinator.path_to_meta {
+        for (path, cache_key) in path_to_meta.iter() {
             let key = u64::from(cache_key);
-            if let Some(hash) = coordinator.meta_to_hash.get(&key) {
-                path_to_hash.insert(path.to_path_buf(), hash.to_owned());
+            if let Some(hash) = meta_to_hash.get(&key) {
+                coordinator
+                    .path_to_hash
+                    .insert(path.to_path_buf(), hash.to_owned());
                 continue;
             }
 
@@ -137,9 +149,11 @@ impl Builder {
             let hash = hasher.finalize();
 
             log::debug!("hash of `{}` was {}", path.display(), hash);
-            coordinator.meta_to_hash.insert(key, hash.to_string());
+            meta_to_hash.insert(key, hash.to_string());
 
-            path_to_hash.insert(path.to_path_buf(), hash.to_string());
+            coordinator
+                .path_to_hash
+                .insert(path.to_path_buf(), hash.to_string());
         }
 
         ////////////////////////////////////////////////////////////////
@@ -148,7 +162,7 @@ impl Builder {
         let file_hashes = File::create(file_hashes_path)
             .context("could not open file hash cache to store new hashes")?;
         // TODO: BufWriter?
-        serde_json::to_writer(file_hashes, &coordinator.meta_to_hash)
+        serde_json::to_writer(file_hashes, &meta_to_hash)
             .context("failed to write hash cache to disk")?;
 
         ///////////////////////////////////////////////////////////////////////////
@@ -159,11 +173,15 @@ impl Builder {
             // refer to other jobs as soon as it's possibly feasible. When
             // that happens, a depth-first search through the tree rooted at
             // `glue_job` will probably suffice.
-            let job = Job::from_glue(glue_job, &path_to_hash)
-                .context("could not convert glue job to actual job")?;
+            let job =
+                Job::from_glue(glue_job).context("could not convert glue job to actual job")?;
 
-            coordinator.ready.push(job.id);
-            coordinator.jobs.insert(job.id, job);
+            // TODO: pushing to `ready` immediately is only reasonable when
+            // we don't have job inputs as dependencies, but we don't have that
+            // yet. This'll need to change when we do or we'll have some very
+            // broken runs!
+            coordinator.ready.push(job.base_key);
+            coordinator.jobs.insert(job.base_key, job);
         }
 
         Ok(coordinator)
@@ -176,13 +194,12 @@ pub struct Coordinator {
     store: Store,
 
     // caches
-    path_to_meta: HashMap<PathBuf, PathMetaKey>,
-    meta_to_hash: HashMap<u64, String>,
+    path_to_hash: HashMap<PathBuf, String>,
 
     // which jobs should run when?
-    jobs: HashMap<job::Id, Job>,
-    blocked: HashMap<job::Id, HashSet<job::Id>>,
-    ready: Vec<job::Id>,
+    jobs: HashMap<job::Key<job::Base>, Job>,
+    blocked: HashMap<job::Key<job::Base>, HashSet<job::Key<job::Base>>>,
+    ready: Vec<job::Key<job::Base>>,
 }
 
 impl Coordinator {
@@ -203,14 +220,25 @@ impl Coordinator {
 
         log::debug!("preparing to run job {}", job);
 
-        if self.store.for_job(job).is_none() {
-            let workspace = Workspace::create(&self.workspace_root, job)
-                .with_context(|| format!("could not create workspace for job {}", job.id))?;
+        // figure out the final key based on the job's dependencies
+        let mut key_builder = job::KeyBuilder::based_on(&job.base_key);
+        for path in &job.input_files {
+            match self.path_to_hash.get(path) {
+                Some(hash) => key_builder.add_file(path, hash),
+                None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.display()),
+            }
+        }
+        let key = key_builder.finalize();
+
+        // build (or don't) based on the final key!
+        if self.store.for_job(&key).is_none() {
+            let workspace = Workspace::create(&self.workspace_root, &key)
+                .with_context(|| format!("could not create workspace for {}", job))?;
 
             runner.run(job, &workspace).context("could not run job")?;
 
             self.store
-                .store_from_workspace(job, workspace)
+                .store_from_workspace(key, job, workspace)
                 .context("could not store job output")?;
         } else {
             log::debug!("already had output of job {}; skipping", job);
