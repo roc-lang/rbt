@@ -13,8 +13,8 @@ RELEASE_FILES="$(echo "$RELEASE_JSON" | jq --raw-output '.assets | map(.browser_
 
 for DAYS_AGO in 0 1 2; do
   case "$(uname -s)" in
-    Darwin) TARGET_DATE="$(date '+%Y-%m-%d' -v "-${DAYS_AGO}d")";;
-    *) TARGET_DATE="$(date '+%Y-%m-%d' --date "${DAYS_AGO} days ago")";;
+    Darwin) TARGET_DATE="$(date -v "-${DAYS_AGO}d" '+%Y-%m-%d')";;
+    *) TARGET_DATE="$(date --date "${DAYS_AGO} days ago" '+%Y-%m-%d')";;
   esac
 
   printf "trying release for %s and %s\n" "$TARGET_DATE" "$OS_ARCH"
