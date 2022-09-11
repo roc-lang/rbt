@@ -8,12 +8,22 @@ if test -z "$OS_ARCH"; then
   exit 1
 fi
 
+RELEASE_JSON="$(curl -sS https://api.github.com/repos/roc-lang/roc/releases/tags/nightly)"
+RELEASE_FILES="$(echo "$RELEASE_JSON" | jq --raw-output '.assets | map(.browser_download_url) | join("\n")')"
 
-TODAY="$(date '+%Y-%m-%d')"
-printf "finding release for %s and %s\n" "$TODAY" "$OS_ARCH"
+for DAYS_AGO in 0 1 2; do
+  TARGET_DATE="$(date '+%Y-%m-%d' --date "${DAYS_AGO} days ago")"
+  printf "trying release for %s and %s\n" "$TARGET_DATE" "$OS_ARCH"
 
-RELEASE_FILES="$(curl -sS https://api.github.com/repos/roc-lang/roc/releases/tags/nightly | jq --raw-output '.assets | map(.browser_download_url) | join("\n")')"
-RELEASE_FILE="$(grep -e roc_nightly <<< "$RELEASE_FILES" | grep "$OS_ARCH" | grep "$TODAY")"
+  set +e
+  RELEASE_FILE="$(grep -e roc_nightly <<< "$RELEASE_FILES" | grep "$OS_ARCH" | grep "$TARGET_DATE")"
+  if test $? -ne 0; then
+    printf "no release found for %s and %s\n" "$TARGET_DATE" "$OS_ARCH"
+    continue
+  fi
+  set -e
+done
+
 
 if test "$(wc -l <<< "$RELEASE_FILE")" -gt 1; then
   printf "I got more than one release for %s and %s:\n\n%s\n" "$TODAY" "$OS_ARCH" "$RELEASE_FILE"
