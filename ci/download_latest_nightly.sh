@@ -12,7 +12,11 @@ RELEASE_JSON="$(curl -sS https://api.github.com/repos/roc-lang/roc/releases/tags
 RELEASE_FILES="$(echo "$RELEASE_JSON" | jq --raw-output '.assets | map(.browser_download_url) | join("\n")')"
 
 for DAYS_AGO in 0 1 2; do
-  TARGET_DATE="$(date '+%Y-%m-%d' --date "${DAYS_AGO} days ago")"
+  case "$(uname -s)" in
+    Darwin) TARGET_DATE="$(date '+%Y-%m-%d' -v "-${DAYS_AGO}d")";;
+    *) TARGET_DATE="$(date '+%Y-%m-%d' --date "${DAYS_AGO} days ago")";;
+  esac
+
   printf "trying release for %s and %s\n" "$TARGET_DATE" "$OS_ARCH"
 
   set +e
