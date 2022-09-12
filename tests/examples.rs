@@ -19,7 +19,8 @@ mod examples {
             .arg(root.path().display().to_string())
             .current_dir("examples/hello")
             .timeout(Duration::from_secs(10))
-            .unwrap();
+            .assert()
+            .success();
 
         let store_path = root
             .path()
