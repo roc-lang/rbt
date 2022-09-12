@@ -1,5 +1,5 @@
 interface Rbt
-    exposes [Rbt, init, Job, job, Command, exec, Tool, tool, systemTool, file, path]
+    exposes [Rbt, init, Job, job, Command, exec, Tool, tool, systemTool, file]
     imports []
 
 # TODO: these are all out of order due to https://github.com/rtfeldman/roc/issues/1642. Once that's fixed, they should rearrange into the order in `exposes`
@@ -26,10 +26,6 @@ exec = \execTool, args ->
     Command { tool: execTool, args }
 
 InputPath : [Path Str]
-
-# Use the path exactly as given, with no shenanigans.
-path : Str -> InputPath
-path = \str -> Path str
 
 Input : [SourceInput InputPath]
 
