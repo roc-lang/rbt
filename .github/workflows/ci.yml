@@ -56,6 +56,9 @@ jobs:
         with:
           clean: "true"
 
+      - name: download Roc nightly build (Linux)
+        run: ./ci/download_latest_nightly.sh linux_x86_64
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -68,3 +71,6 @@ jobs:
 
       - name: typos
         uses: crate-ci/typos@v1.0.4
+
+      - name: roc format
+        run: find . -name '*.roc' | roc format --check
