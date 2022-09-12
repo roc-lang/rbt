@@ -19,7 +19,8 @@ mod end_to_end {
             .arg(root.path().display().to_string())
             .current_dir("tests/end_to_end/file_inputs")
             .timeout(Duration::from_secs(10))
-            .unwrap();
+            .assert()
+            .success();
 
         let store_path = root
             .path()
