@@ -49,7 +49,7 @@ jobs:
           args: --release
 
   platform-generic:
-    name: cargo fmt, typos
+    name: cargo fmt, roc format, typos
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
