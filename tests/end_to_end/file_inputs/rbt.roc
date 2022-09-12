@@ -20,4 +20,3 @@ hello =
         ],
         outputs: ["out"],
     }
-
