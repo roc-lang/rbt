@@ -32,7 +32,7 @@ Input : [SourceInput InputPath]
 # Add the given file to the job's workspace (the working directory where the
 # command is called.)
 file : Str -> Input
-file = \inputPath -> SourceInput (path inputPath)
+file = \inputPath -> SourceInput (Path inputPath)
 
 Job : [Job { command : Command, inputs : List Input, outputs : List Str }]
 
