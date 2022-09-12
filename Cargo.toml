@@ -27,3 +27,6 @@ zerocopy = "0.6"
 [lib]
 name = "host"
 crate-type = ["staticlib"]
+
+[dev-dependencies]
+assert_cmd = { version = "2.0.4", features = ["color-auto"] }

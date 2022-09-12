@@ -6,8 +6,8 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  build-fmt-clippy-test:
-    name: fmt, clippy, test --release
+  platform-specific:
+    name: clippy, test --release
 
     runs-on: ${{ matrix.os }}
     strategy:
@@ -17,6 +17,40 @@ jobs:
     timeout-minutes: 90
     env:
       FORCE_COLOR: 1
+      RUST_BACKTRACE: full
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          clean: "true"
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: download Roc nightly build (Linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: ./ci/download_latest_nightly.sh linux_x86_64
+
+      - name: download Roc nightly build (macOS)
+        if: startsWith(matrix.os, 'macos')
+        run: ./ci/download_latest_nightly.sh macos_x86_64
+
+      - name: cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
+
+      - name: cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --release
+
+  platform-generic:
+    name: cargo fmt, typos
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
@@ -32,14 +66,5 @@ jobs:
           command: fmt
           args: --all -- --check
 
-      - name: cargo clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
-
-      - name: cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --release
+      - name: typos
+        uses: crate-ci/typos@v1.0.4
