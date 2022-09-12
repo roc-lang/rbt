@@ -85,8 +85,8 @@ impl Job {
 
         let mut input_files: HashSet<PathBuf> = HashSet::with_capacity(unwrapped.inputs.len());
         for input in unwrapped.inputs.iter().sorted() {
-            let path =
-                sanitize_file_path(input.as_SourceInput().as_Path()).context("got an unacceptable input file path")?;
+            let path = sanitize_file_path(input.as_SourceInput().as_Path())
+                .context("got an unacceptable input file path")?;
 
             path.hash(&mut hasher);
             input_files.insert(path);
@@ -207,11 +207,15 @@ mod test {
         // re-running all build steps.
         let glue_job = glue::Job::Job(glue::JobPayload {
             command: glue::Command::Command(glue::CommandPayload {
-                tool: glue::Tool::SystemTool(glue::SystemToolPayload{ name: RocStr::from("bash")}),
+                tool: glue::Tool::SystemTool(glue::SystemToolPayload {
+                    name: RocStr::from("bash"),
+                }),
                 args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
             }),
-            inputs: RocList::from_slice(&[glue::Input::SourceInput(glue::InputPath::Path("input_file".into()))]),
-            outputs: RocList::from_slice(&["ouput_file".into()]),
+            inputs: RocList::from_slice(&[glue::Input::SourceInput(glue::InputPath::Path(
+                "input_file".into(),
+            ))]),
+            outputs: RocList::from_slice(&["output_file".into()]),
         });
 
         let job = Job::from_glue(glue_job).unwrap();
