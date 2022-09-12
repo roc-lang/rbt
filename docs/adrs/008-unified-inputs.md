@@ -1,19 +1,29 @@
 # ADR 008: Unified Inputs
 
-We want to be able to specify inputs of various kinds to a `Job`.
-The API we've kicked around for this has looked like a lot of different fields on `Job`:
+To build, we need to get files from the filesystem and from inter-job dependencies.
+The API we have so far has just been a bunch of different fields on `Job`:
 
-- `inputs` for jobs that the `Job` depends on
-- `inputFiles` for files from the project
-- `inputPatterns` (speculatively) for discoverable files
-- `dynamicInputs` (speculatively) for [dynamic dependencies](./005-dynamic-dependencies.md)
+- `inputs : List Job` for jobs that the `Job` depends on
+- `inputFiles : List Str` for files from the project
+- `inputPatterns : ???` (speculative) for discoverable files
+- `dynamicInputs : ???` (speculative) for [dynamic dependencies](./005-dynamic-dependencies.md)
 
-That's a lot of fields for something that essentially works out to "I need these files. Can I please have them?"
-It also does not allow us to check that the files in build steps actually exist (same problem as splat imports: say you produce some file in an `inputs` job.
-Your build script depends on it, but then it goes away.
-We have no idea where that file was supposed to have come from, so we can't help!)
+But this design has a couple problems:
 
-Instead, this ADR proposes that we unify these fields into `inputs : List Input` (really `Set Input` as soon as possible.)
+- **It's too big.**
+  If these fields are optional, there's a feeling of hidden functionality in the API.
+  On the other hand, if they're *not* optional, it's a lot of empty lists to specify for a simple build.
+
+- **It allows bad assumptions about file existence.**
+  if a build depends on some file from a `Job`, it doesn't have to say so explicitly and so we can't check it and provide good guidance if the file is missing.
+
+- **It doesn't say where files come from.**
+  Since everything gets put into the filesystem, it's also not clear where a missing file was supposed to have come from.
+
+- **It allows collisions.**
+  If you need a file from the filesystem named the same thing as a file from a `Job`, there's no way to specify which takes precedence.
+
+This ADR proposes that we unify these fields into `inputs : List Input` (really `Set Input` as soon as possible.)
 
 `Input` is defined roughly like this:
 
@@ -81,9 +91,9 @@ greeting : Job # has at least `englishGreeting.txt` in its outputs
 ```
 
 This can be extended with filesystem matchers (our version of glob matches) and dynamic dependency discoverers later, without breaking the API.
-(As a matter of fact, matchers might take over `FromSource`'s job!)
+(As a matter of fact, matchers might take over `FromSource`'s job eventually!)
 
-# Benefits
+## Benefits
 
 This API:
 
@@ -92,5 +102,5 @@ This API:
 - Lets us see exactly where we're trying to source files from.
   This means we can see when a file would not exist and warn about that.
   (`allOutputsOf` defeats this a bit since it automatically depends on whatever files are available, but overall I think it's a win.)
-- Opens up new optimization opportunities for caching: if we know that we only depend on certain files from some build, we could calculate a sub-hash for those.
-  (Probably means redoing how the store stores things to be based on files instead of directories, though, in order to not have abysmal performance.)
+- Opens up new optimization opportunities for caching: if we know that we only depend on certain files from some build, we could calculate a hash for only those to determine if we need to rebuild.
+  (Probably means redoing how the store stores things to be based on files instead of directories, though, in order to not have terrible performance.)
