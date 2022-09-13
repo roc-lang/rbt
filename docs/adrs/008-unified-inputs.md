@@ -51,7 +51,7 @@ completedGreeting =
         ],
         inputs: [
             projectFile "subject.txt",
-            JobOutputs subject [{ sourcePath : "englishGreeting.txt", workspacePath : "greting.txt" }],
+            JobOutputs subject [{ sourcePath : "englishGreeting.txt", workspacePath : "greeting.txt" }],
         ],
         outputs: ["completedGreeting.txt"]
     }
