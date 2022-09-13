@@ -10,11 +10,14 @@ mod examples {
     fn test_hello_world() {
         let root = TempDir::new().unwrap();
 
-        let output = Command::new("roc")
-            .arg("run")
+        Command::new("roc")
+            .arg("build")
             .arg("--linker=legacy")
-            .arg("rbt.roc")
-            .arg("--")
+            .arg("examples/hello/rbt.roc")
+            .assert()
+            .success();
+
+        let output = Command::new("./build")
             .arg("--root-dir")
             .arg(root.path().display().to_string())
             .current_dir("examples/hello")
