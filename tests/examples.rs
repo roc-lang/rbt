@@ -1,7 +1,6 @@
 // example tests are disabled for Unix right now since there's a bug preventing
 // them from running. We can run on macOS runners, though, so we at least get
 // some value out of having these!
-#[cfg(not(target_os = "linux"))]
 mod examples {
     use assert_cmd::cmd::Command;
     use std::time::Duration;
