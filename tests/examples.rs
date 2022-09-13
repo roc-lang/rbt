@@ -12,6 +12,7 @@ mod examples {
 
         Command::new("roc")
             .arg("build")
+            .arg("--dev")
             .arg("--linker=legacy")
             .arg("examples/hello/rbt.roc")
             .assert()
