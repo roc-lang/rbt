@@ -49,12 +49,15 @@ jobs:
           args: --release
 
   platform-generic:
-    name: cargo fmt, typos
+    name: cargo fmt, roc format, typos
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
           clean: "true"
+
+      - name: download Roc nightly build (Linux)
+        run: ./ci/download_latest_nightly.sh linux_x86_64
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -68,3 +71,6 @@ jobs:
 
       - name: typos
         uses: crate-ci/typos@v1.0.4
+
+      - name: roc format
+        run: find . -name '*.roc' | roc format --check
