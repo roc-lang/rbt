@@ -25,47 +25,15 @@ But this design has a couple problems:
 
 This ADR proposes that we unify these fields into `inputs : List Input` (really `Set Input` as soon as possible.)
 
-`Input` is defined roughly like this:
+The API looks something like this:
 
-```coffeescript
-Input := [FromSource InputPath, FromJob { job : Job, files : List InputPath }]
+```elixir
+Input = [ProjectFiles (List FileMapping), JobOutputs { job : Job, files : List FileMapping }]
 
-# Add the given file to the job's workspace (the working directory where the
-# command is called.)
-file : Str -> Input
-file = \inputPath -> FromSource (path inputPath)
+FileMapping = { sourcePath : Str, workspacePath : Str }
 
-# Set up a file from the project source (first argument) in exactly the location
-# you need it within the workspace (second argument.)
-renamedFile : Str, Str -> Input
-renamedFile = \from, to -> FromSource (rename from to)
-
-# Put all of the outputs of the given job in the current job's workspace.
-#
-# This is the easiest way to source files from other jobs. That said, if you have
-# multiple jobs with the same file this can cause conflicts. In that case, use
-# `someOutputsOf` to tell me exactly what you want.
-allOutputsOf : Job -> Input
-allOutputsOf = \Job config -> FromJob { job: Job config, files: List.map path job.outputs }
-
-# Use this function to set up a the files from another job exactly the way you
-# want in your workspace. You can pick exatly the files you need like
-# `someOutputsOf someJob [file "the-one-I-want"]` or put them exactly in the
-# locations you need like `someOutputsOf someJob [rename
-# "path-that-doesnt-work-for-me" "a/better/path"]`.
-someOutputsOf : Job, List InputPath -> Input
-someOutputsOf = \job, files -> FromJob { job, files }
-
-InputPath := [Path Str, RenamePath { from : Str, to : Str }]
-
-# Use the path exactly as given, with no shenanigans.
-path : Str -> InputPath
-path = \str -> Path str
-
-# Make the specified input path (first argument) available at a different
-# location in the workspace (second argument.)
-rename : InputPath, Str -> InputPath
-rename = \from, to -> ...
+file : Str -> FileMapping
+file = \name -> { sourcePath : name, workspacePath : name }
 ```
 
 Usage might look like this:
@@ -79,13 +47,11 @@ completedGreeting =
             "printf '%s, %s!\n' "$(cat greeting.txt)" "$(cat subject.txt)" > completedGreeting.txt",
         ],
         inputs: [
-            allOutputsOf subject,
-            someOutputsOf greeting [rename (file "englishGreeting.txt") "greeting.txt"],
+            ProjectFiles [file "subject.txt"],
+            JobOutputs subject [{ sourcePath : "englishGreeting.txt", workspacePath : "greting.txt" }],
         ],
         outputs: ["completedGreeting.txt"]
     }
-
-subject : Job # has `subject.txt` in its outputs
 
 greeting : Job # has at least `englishGreeting.txt` in its outputs
 ```
