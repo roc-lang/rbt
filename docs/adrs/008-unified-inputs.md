@@ -34,6 +34,9 @@ FileMapping = { sourcePath : Str, workspacePath : Str }
 
 file : Str -> FileMapping
 file = \name -> { sourcePath : name, workspacePath : name }
+
+projectFile : Str -> Input
+projectFile = \name -> ProjectFiles [file name]
 ```
 
 Usage might look like this:
@@ -47,7 +50,7 @@ completedGreeting =
             "printf '%s, %s!\n' "$(cat greeting.txt)" "$(cat subject.txt)" > completedGreeting.txt",
         ],
         inputs: [
-            ProjectFiles [file "subject.txt"],
+            projectFile "subject.txt",
             JobOutputs subject [{ sourcePath : "englishGreeting.txt", workspacePath : "greting.txt" }],
         ],
         outputs: ["completedGreeting.txt"]
