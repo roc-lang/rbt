@@ -13,6 +13,7 @@ mod examples {
 
         let output = Command::new("roc")
             .arg("run")
+            .arg("--linker=legacy")
             .arg("rbt.roc")
             .arg("--")
             .arg("--root-dir")
