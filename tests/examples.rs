@@ -12,21 +12,18 @@ mod examples {
 
         Command::new("roc")
             .arg("build")
-            .arg("--dev")
             .arg("--linker=legacy")
             .arg("examples/hello/rbt.roc")
             .assert()
             .success();
 
-        let output = Command::new("./build")
+        Command::new("./build")
             .arg("--root-dir")
             .arg(root.path().display().to_string())
             .current_dir("examples/hello")
             .timeout(Duration::from_secs(10))
-            .output();
-
-        println!("{:#?}", output);
-        assert!(false);
+            .assert()
+            .success();
 
         let store_path = root
             .path()
