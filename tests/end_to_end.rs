@@ -7,9 +7,13 @@ fn test_file_inputs() {
     let root = TempDir::new().unwrap();
 
     Command::new("roc")
-        .arg("run")
-        .arg("rbt.roc")
-        .arg("--")
+        .arg("build")
+        .arg("--linker=legacy")
+        .arg("tests/end_to_end/file_inputs/rbt.roc")
+        .assert()
+        .success();
+
+    Command::new("./build")
         .arg("--root-dir")
         .arg(root.path().display().to_string())
         .current_dir("tests/end_to_end/file_inputs")
