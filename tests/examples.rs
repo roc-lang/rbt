@@ -11,7 +11,7 @@ mod examples {
     fn test_hello_world() {
         let root = TempDir::new().unwrap();
 
-        Command::new("roc")
+        let output = Command::new("roc")
             .arg("run")
             .arg("rbt.roc")
             .arg("--")
@@ -19,8 +19,10 @@ mod examples {
             .arg(root.path().display().to_string())
             .current_dir("examples/hello")
             .timeout(Duration::from_secs(10))
-            .assert()
-            .success();
+            .output();
+
+        println!("{:#?}", output);
+        assert!(false);
 
         let store_path = root
             .path()
