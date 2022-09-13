@@ -70,7 +70,6 @@ This API:
 - Lets us warn about conflicts between different files.
 - Lets us see exactly where we're trying to source files from.
   This means we can see when a file would not exist and warn about that.
-  (`allOutputsOf` defeats this a bit since it automatically depends on whatever files are available, but overall I think it's a win.)
 - Opens up new optimization opportunities for caching: if we know that we only depend on certain files from some build, we could calculate a hash for only those to determine if we need to rebuild.
   (Probably means redoing how the store stores things to be based on files instead of directories, though, in order to not have terrible performance.)
 - Can be extended with things like pattern inputs or functions to modify all the input files at once (e.g. `inWorkspaceDirectory : Input, Str -> Input`.)
