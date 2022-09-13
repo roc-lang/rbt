@@ -17,7 +17,6 @@ jobs:
     timeout-minutes: 90
     env:
       FORCE_COLOR: 1
-      RUST_BACKTRACE: full
 
     steps:
       - uses: actions/checkout@v2
@@ -31,10 +30,14 @@ jobs:
       - name: download Roc nightly build (Linux)
         if: startsWith(matrix.os, 'ubuntu')
         run: ./ci/download_latest_nightly.sh linux_x86_64
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
       - name: download Roc nightly build (macOS)
         if: startsWith(matrix.os, 'macos')
         run: ./ci/download_latest_nightly.sh macos_x86_64
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
       - name: cargo clippy
         uses: actions-rs/cargo@v1

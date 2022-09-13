@@ -8,7 +8,14 @@ if test -z "$OS_ARCH"; then
   exit 1
 fi
 
-RELEASE_JSON="$(curl -sS https://api.github.com/repos/roc-lang/roc/releases/tags/nightly)"
+GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+if test -z "$GITHUB_TOKEN"; then
+  echo "[warning] GITHUB_TOKEN was not set. You might run into rate-limiting issues!"
+  RELEASE_JSON="$(curl --fail-early -sS https://api.github.com/repos/roc-lang/roc/releases/tags/nightly)"
+else
+  RELEASE_JSON="$(curl --fail-early -sS https://api.github.com/repos/roc-lang/roc/releases/tags/nightly -H "Authorization: Bearer ${GITHUB_TOKEN:-}")"
+fi
+
 RELEASE_FILES="$(echo "$RELEASE_JSON" | jq --raw-output '.assets | map(.browser_download_url) | join("\n")')"
 
 for DAYS_AGO in 0 1 2; do
@@ -37,7 +44,7 @@ if test "$(wc -l <<< "$RELEASE_FILE")" -gt 1; then
 fi
 
 printf "downloading release from %s\n" "$RELEASE_FILE"
-curl -sSL "$RELEASE_FILE" > roc.tar.gz
+curl --fail-early -sSL "$RELEASE_FILE" > roc.tar.gz
 
 BIN_DIR="$(pwd)/bin";
 if ! test -d "$BIN_DIR"; then mkdir "$BIN_DIR"; fi
