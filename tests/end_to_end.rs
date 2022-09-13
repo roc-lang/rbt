@@ -25,11 +25,16 @@ fn test_file_inputs() {
         .path()
         .join("store")
         .read_dir()
-        .expect("`store` under the root should be a directory")
+        .expect("could not read dir")
+        .flatten()
+        .filter(|item| {
+            item.file_type()
+                .map(|ftype| ftype.is_dir())
+                .unwrap_or(false)
+        })
+        .map(|item| item.path())
         .next()
-        .expect("there should be only one store path")
-        .expect("could not read the dir entry")
-        .path();
+        .expect("expected at least one directory in the store path");
 
     let greeting = std::fs::read_to_string(store_path.join("out")).unwrap();
 
