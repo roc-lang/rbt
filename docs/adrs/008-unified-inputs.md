@@ -27,7 +27,7 @@ This ADR proposes that we unify these fields into `inputs : List Input` (really 
 
 The API looks something like this:
 
-```elixir
+```coffeescript
 Input = [ProjectFiles (List FileMapping), JobOutputs Job (List FileMapping)]
 
 FileMapping = { sourcePath : Str, workspacePath : Str }
