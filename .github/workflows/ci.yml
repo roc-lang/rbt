@@ -39,6 +39,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
+      - name: cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+
       - name: cargo clippy
         uses: actions-rs/cargo@v1
         with:
