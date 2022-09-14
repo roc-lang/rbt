@@ -18,6 +18,9 @@ Target : [Host, Generic]
 
 `Host` would be the default, and rbt would calculate it in Rust-land so that we did not have to deal with effects.
 
+Outputs can still live in the content-addressed store (since an ARM build will be different bits than an X86 build, for instance.)
+Job keys, however, will have to take the host (or non-host) into account.
+
 ## Cross-Compilation
 
 This proposal doesn't specify how to do cross-compilation, although that may be desirable.
