@@ -85,11 +85,13 @@ impl Job {
 
         let mut input_files: HashSet<PathBuf> = HashSet::with_capacity(unwrapped.inputs.len());
         for input in unwrapped.inputs.iter().sorted() {
-            let path = sanitize_file_path(input.as_SourceInput().as_Path())
-                .context("got an unacceptable input file path")?;
+            for file in input.as_ProjectFiles().iter().sorted() {
+                let path =
+                    sanitize_file_path(file).context("got an unacceptable input file path")?;
 
-            path.hash(&mut hasher);
-            input_files.insert(path);
+                path.hash(&mut hasher);
+                input_files.insert(path);
+            }
         }
 
         let mut outputs = HashSet::new();
@@ -212,9 +214,9 @@ mod test {
                 }),
                 args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
             }),
-            inputs: RocList::from_slice(&[glue::Input::SourceInput(glue::InputPath::Path(
+            inputs: RocList::from_slice(&[glue::Input::ProjectFiles(RocList::from([
                 "input_file".into(),
-            ))]),
+            ]))]),
             outputs: RocList::from_slice(&["output_file".into()]),
         });
 
