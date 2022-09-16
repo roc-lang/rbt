@@ -1,6 +1,6 @@
 app "build"
     packages { pf: "../../../Package-Config.roc" }
-    imports [pf.Rbt.{ Rbt, systemTool, Job, job, exec, file }]
+    imports [pf.Rbt.{ Rbt, systemTool, Job, job, exec, projectFile }]
     provides [init] to pf
 
 init : Rbt
@@ -15,8 +15,8 @@ hello =
             "printf '%s, %s!\n' \"$(cat greeting)\" \"$(cat subject)\" > out",
         ],
         inputs: [
-            file "greeting",
-            file "subject",
+            projectFile "greeting",
+            projectFile "subject",
         ],
         outputs: ["out"],
     }
