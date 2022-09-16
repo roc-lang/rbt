@@ -37,6 +37,10 @@ for DAYS_AGO in 0 1 2 3 4; do
 done
 set -e
 
+if test -z "$RELEASE_FILE"; then
+  echo "no release file found"
+  exit 1
+fi
 
 if test "$(wc -l <<< "$RELEASE_FILE")" -gt 1; then
   printf "I got more than one release for %s and %s:\n\n%s\n" "$TODAY" "$OS_ARCH" "$RELEASE_FILE"
