@@ -24,9 +24,9 @@
     target_arch = "x86_64"
 ))]
 #[repr(transparent)]
-#[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
+#[derive(Clone, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Input {
-    f0: InputPath,
+    f0: roc_std::RocList<roc_std::RocStr>,
 }
 
 #[cfg(any(
@@ -68,19 +68,6 @@ pub struct JobPayload {
     pub command: Command,
     pub inputs: roc_std::RocList<Input>,
     pub outputs: roc_std::RocList<roc_std::RocStr>,
-}
-
-#[cfg(any(
-    target_arch = "arm",
-    target_arch = "aarch64",
-    target_arch = "wasm32",
-    target_arch = "x86",
-    target_arch = "x86_64"
-))]
-#[repr(transparent)]
-#[derive(Clone, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
-pub struct InputPath {
-    f0: roc_std::RocStr,
 }
 
 #[cfg(any(
@@ -144,8 +131,8 @@ impl Input {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// A tag named SourceInput, with the given payload.
-    pub fn SourceInput(f0: InputPath) -> Self {
+    /// A tag named ProjectFiles, with the given payload.
+    pub fn ProjectFiles(f0: roc_std::RocList<roc_std::RocStr>) -> Self {
         Self { f0 }
     }
 
@@ -156,9 +143,9 @@ impl Input {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Since `SourceInput` only has one tag (namely, `SourceInput`),
-    /// convert it to `SourceInput`'s payload.
-    pub fn into_SourceInput(self) -> InputPath {
+    /// Since `ProjectFiles` only has one tag (namely, `ProjectFiles`),
+    /// convert it to `ProjectFiles`'s payload.
+    pub fn into_ProjectFiles(self) -> roc_std::RocList<roc_std::RocStr> {
         self.f0
     }
 
@@ -169,9 +156,9 @@ impl Input {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Since `SourceInput` only has one tag (namely, `SourceInput`),
-    /// convert it to `SourceInput`'s payload.
-    pub fn as_SourceInput(&self) -> &InputPath {
+    /// Since `ProjectFiles` only has one tag (namely, `ProjectFiles`),
+    /// convert it to `ProjectFiles`'s payload.
+    pub fn as_ProjectFiles(&self) -> &roc_std::RocList<roc_std::RocStr> {
         &self.f0
     }
 }
@@ -185,7 +172,9 @@ impl core::fmt::Debug for Input {
         target_arch = "x86_64"
     ))]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_tuple("Input::SourceInput").field(&self.f0).finish()
+        f.debug_tuple("Input::ProjectFiles")
+            .field(&self.f0)
+            .finish()
     }
 }
 
@@ -239,59 +228,6 @@ impl core::fmt::Debug for Job {
     ))]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("Job::Job").field(&self.f0).finish()
-    }
-}
-
-impl InputPath {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// A tag named Path, with the given payload.
-    pub fn Path(f0: roc_std::RocStr) -> Self {
-        Self { f0 }
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Since `Path` only has one tag (namely, `Path`),
-    /// convert it to `Path`'s payload.
-    pub fn into_Path(self) -> roc_std::RocStr {
-        self.f0
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Since `Path` only has one tag (namely, `Path`),
-    /// convert it to `Path`'s payload.
-    pub fn as_Path(&self) -> &roc_std::RocStr {
-        &self.f0
-    }
-}
-
-impl core::fmt::Debug for InputPath {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_tuple("InputPath::Path").field(&self.f0).finish()
     }
 }
 
