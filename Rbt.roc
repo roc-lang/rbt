@@ -1,5 +1,5 @@
 interface Rbt
-    exposes [Rbt, init, Job, job, Command, exec, Tool, tool, systemTool, file]
+    exposes [Rbt, init, Job, job, Command, exec, Tool, tool, systemTool, projectFile]
     imports []
 
 # TODO: these are all out of order due to https://github.com/rtfeldman/roc/issues/1642. Once that's fixed, they should rearrange into the order in `exposes`
@@ -25,14 +25,12 @@ exec : Tool, List Str -> Command
 exec = \execTool, args ->
     Command { tool: execTool, args }
 
-InputPath : [Path Str]
-
-Input : [SourceInput InputPath]
+Input : [ProjectFiles (List Str)]
 
 # Add the given file to the job's workspace (the working directory where the
 # command is called.)
-file : Str -> Input
-file = \inputPath -> SourceInput (Path inputPath)
+projectFile : Str -> Input
+projectFile = \inputPath -> ProjectFiles [inputPath]
 
 Job : [Job { command : Command, inputs : List Input, outputs : List Str }]
 
