@@ -47,11 +47,11 @@ completedGreeting =
     job {
         command: exec (systemTool "bash") [
             "-c",
-            "printf '%s, %s!\n' "$(cat greeting.txt)" "$(cat subject.txt)" > completedGreeting.txt",
+            """printf '%s, %s!\n' "$(cat greeting.txt)" "$(cat subject.txt)" > completedGreeting.txt""",
         ],
         inputs: [
             projectFile "subject.txt",
-            JobOutputs subject [{ sourcePath : "englishGreeting.txt", workspacePath : "greeting.txt" }],
+            JobOutputs greeting [{ sourcePath : "englishGreeting.txt", workspacePath : "greeting.txt" }],
         ],
         outputs: ["completedGreeting.txt"]
     }
