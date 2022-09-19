@@ -83,13 +83,15 @@ impl Job {
         // for this.
         unwrapped.command.hash(&mut hasher);
 
-        let mut input_files: HashSet<PathBuf> = HashSet::with_capacity(unwrapped.inputFiles.len());
-        for path_str in unwrapped.inputFiles.iter().sorted() {
-            let path =
-                sanitize_file_path(path_str).context("got an unacceptable input file path")?;
+        let mut input_files: HashSet<PathBuf> = HashSet::with_capacity(unwrapped.inputs.len());
+        for input in unwrapped.inputs.iter().sorted() {
+            for file in input.as_FromProjectSource().iter().sorted() {
+                let path =
+                    sanitize_file_path(file).context("got an unacceptable input file path")?;
 
-            path.hash(&mut hasher);
-            input_files.insert(path);
+                path.hash(&mut hasher);
+                input_files.insert(path);
+            }
         }
 
         let mut outputs = HashSet::new();
@@ -123,7 +125,7 @@ impl Job {
 
 impl From<&Job> for Command {
     fn from(job: &Job) -> Self {
-        let mut command = Command::new(&job.command.tool.as_SystemTool().to_string());
+        let mut command = Command::new(&job.command.tool.as_SystemTool().name.to_string());
 
         for arg in &job.command.args {
             command.arg(arg.as_str());
@@ -143,7 +145,7 @@ impl Display for Job {
 
         write!(f, "{} (", self.base_key)?;
 
-        let base = self.command.tool.as_SystemTool().to_string();
+        let base = self.command.tool.as_SystemTool().name.to_string();
         chars += base.len();
 
         write!(f, "{}", base)?;
@@ -207,10 +209,14 @@ mod test {
         // re-running all build steps.
         let glue_job = glue::Job::Job(glue::JobPayload {
             command: glue::Command::Command(glue::CommandPayload {
-                tool: glue::Tool::SystemTool(RocStr::from("bash")),
+                tool: glue::Tool::SystemTool(glue::SystemToolPayload {
+                    name: RocStr::from("bash"),
+                }),
                 args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
             }),
-            inputFiles: RocList::from_slice(&["input_file".into()]),
+            inputs: RocList::from_slice(&[glue::Input::FromProjectSource(RocList::from([
+                "input_file".into(),
+            ]))]),
             outputs: RocList::from_slice(&["output_file".into()]),
         });
 

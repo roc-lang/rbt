@@ -14,6 +14,6 @@ hello =
             "-c",
             "echo 'Hello, World!' > out",
         ],
-        inputFiles: [],
+        inputs: [],
         outputs: ["out"],
     }

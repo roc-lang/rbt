@@ -23,6 +23,19 @@
     target_arch = "x86",
     target_arch = "x86_64"
 ))]
+#[repr(transparent)]
+#[derive(Clone, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
+pub struct Input {
+    f0: roc_std::RocList<roc_std::RocStr>,
+}
+
+#[cfg(any(
+    target_arch = "arm",
+    target_arch = "aarch64",
+    target_arch = "wasm32",
+    target_arch = "x86",
+    target_arch = "x86_64"
+))]
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct Rbt {
@@ -36,7 +49,7 @@ pub struct Rbt {
     target_arch = "x86",
     target_arch = "x86_64"
 ))]
-#[repr(C)]
+#[repr(transparent)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Job {
     f0: JobPayload,
@@ -53,7 +66,7 @@ pub struct Job {
 #[repr(C)]
 pub struct JobPayload {
     pub command: Command,
-    pub inputFiles: roc_std::RocList<roc_std::RocStr>,
+    pub inputs: roc_std::RocList<Input>,
     pub outputs: roc_std::RocList<roc_std::RocStr>,
 }
 
@@ -64,7 +77,7 @@ pub struct JobPayload {
     target_arch = "x86",
     target_arch = "x86_64"
 ))]
-#[repr(C)]
+#[repr(transparent)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Command {
     f0: CommandPayload,
@@ -91,10 +104,78 @@ pub struct CommandPayload {
     target_arch = "x86",
     target_arch = "x86_64"
 ))]
-#[repr(C)]
+#[repr(transparent)]
 #[derive(Clone, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Tool {
-    f0: roc_std::RocStr,
+    f0: SystemToolPayload,
+}
+
+#[cfg(any(
+    target_arch = "arm",
+    target_arch = "aarch64",
+    target_arch = "wasm32",
+    target_arch = "x86",
+    target_arch = "x86_64"
+))]
+#[derive(Clone, Debug, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
+#[repr(transparent)]
+pub struct SystemToolPayload {
+    pub name: roc_std::RocStr,
+}
+
+impl Input {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    /// A tag named FromProjectSource, with the given payload.
+    pub fn FromProjectSource(f0: roc_std::RocList<roc_std::RocStr>) -> Self {
+        Self { f0 }
+    }
+
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    /// Since `FromProjectSource` only has one tag (namely, `FromProjectSource`),
+    /// convert it to `FromProjectSource`'s payload.
+    pub fn into_FromProjectSource(self) -> roc_std::RocList<roc_std::RocStr> {
+        self.f0
+    }
+
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    /// Since `FromProjectSource` only has one tag (namely, `FromProjectSource`),
+    /// convert it to `FromProjectSource`'s payload.
+    pub fn as_FromProjectSource(&self) -> &roc_std::RocList<roc_std::RocStr> {
+        &self.f0
+    }
+}
+
+impl core::fmt::Debug for Input {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("Input::FromProjectSource")
+            .field(&self.f0)
+            .finish()
+    }
 }
 
 impl Job {
@@ -212,7 +293,7 @@ impl Tool {
         target_arch = "x86_64"
     ))]
     /// A tag named SystemTool, with the given payload.
-    pub fn SystemTool(f0: roc_std::RocStr) -> Self {
+    pub fn SystemTool(f0: SystemToolPayload) -> Self {
         Self { f0 }
     }
 
@@ -225,7 +306,7 @@ impl Tool {
     ))]
     /// Since `SystemTool` only has one tag (namely, `SystemTool`),
     /// convert it to `SystemTool`'s payload.
-    pub fn into_SystemTool(self) -> roc_std::RocStr {
+    pub fn into_SystemTool(self) -> SystemToolPayload {
         self.f0
     }
 
@@ -238,7 +319,7 @@ impl Tool {
     ))]
     /// Since `SystemTool` only has one tag (namely, `SystemTool`),
     /// convert it to `SystemTool`'s payload.
-    pub fn as_SystemTool(&self) -> &roc_std::RocStr {
+    pub fn as_SystemTool(&self) -> &SystemToolPayload {
         &self.f0
     }
 }

@@ -18,7 +18,7 @@ fi
 
 RELEASE_FILES="$(echo "$RELEASE_JSON" | jq --raw-output '.assets | map(.browser_download_url) | join("\n")')"
 
-for DAYS_AGO in 0 1 2; do
+for DAYS_AGO in 0 1 2 3 4; do
   case "$(uname -s)" in
     Darwin) TARGET_DATE="$(date -v "-${DAYS_AGO}d" '+%Y-%m-%d')";;
     *) TARGET_DATE="$(date --date "${DAYS_AGO} days ago" '+%Y-%m-%d')";;
@@ -37,6 +37,10 @@ for DAYS_AGO in 0 1 2; do
 done
 set -e
 
+if test -z "$RELEASE_FILE"; then
+  echo "no release file found"
+  exit 1
+fi
 
 if test "$(wc -l <<< "$RELEASE_FILE")" -gt 1; then
   printf "I got more than one release for %s and %s:\n\n%s\n" "$TODAY" "$OS_ARCH" "$RELEASE_FILE"
