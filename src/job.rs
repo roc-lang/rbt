@@ -207,7 +207,7 @@ mod test {
         // callers. Similarly, it might be inappropriate new optional fields in the
         // Roc API to contribute to the ID, since doing so would mean completely
         // re-running all build steps.
-        let glue_job = glue::Job::Job(glue::JobPayload {
+        let glue_job = glue::Job::Job(glue::R1 {
             command: glue::Command::Command(glue::CommandPayload {
                 tool: glue::Tool::SystemTool(glue::SystemToolPayload {
                     name: RocStr::from("bash"),

@@ -20,7 +20,6 @@ Command : [Command CommandPayload]
 FileMapping : Str
 Input : [FromProjectSource (List FileMapping)]
 
-JobPayload : { command : Command, inputs : List Input, outputs : List Str }
-Job : [Job JobPayload]
+Job : [Job { command : Command, inputs : List Input, outputs : List Str }]
 
 Rbt : { default : Job }

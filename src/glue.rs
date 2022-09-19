@@ -52,7 +52,7 @@ pub struct Rbt {
 #[repr(transparent)]
 #[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Job {
-    f0: JobPayload,
+    f0: R1,
 }
 
 #[cfg(any(
@@ -64,7 +64,7 @@ pub struct Job {
 ))]
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[repr(C)]
-pub struct JobPayload {
+pub struct R1 {
     pub command: Command,
     pub inputs: roc_std::RocList<Input>,
     pub outputs: roc_std::RocList<roc_std::RocStr>,
@@ -187,7 +187,7 @@ impl Job {
         target_arch = "x86_64"
     ))]
     /// A tag named Job, with the given payload.
-    pub fn Job(f0: JobPayload) -> Self {
+    pub fn Job(f0: R1) -> Self {
         Self { f0 }
     }
 
@@ -200,7 +200,7 @@ impl Job {
     ))]
     /// Since `Job` only has one tag (namely, `Job`),
     /// convert it to `Job`'s payload.
-    pub fn into_Job(self) -> JobPayload {
+    pub fn into_Job(self) -> R1 {
         self.f0
     }
 
@@ -213,7 +213,7 @@ impl Job {
     ))]
     /// Since `Job` only has one tag (namely, `Job`),
     /// convert it to `Job`'s payload.
-    pub fn as_Job(&self) -> &JobPayload {
+    pub fn as_Job(&self) -> &R1 {
         &self.f0
     }
 }
