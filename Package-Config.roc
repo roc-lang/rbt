@@ -17,7 +17,8 @@ Tool : [SystemTool SystemToolPayload]
 CommandPayload : { tool : Tool, args : List Str }
 Command : [Command CommandPayload]
 
-Input : [ProjectFiles (List Str)]
+FileMapping : Str
+Input : [FromProjectSource (List FileMapping)]
 
 JobPayload : { command : Command, inputs : List Input, outputs : List Str }
 Job : [Job JobPayload]

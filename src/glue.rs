@@ -131,8 +131,8 @@ impl Input {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// A tag named ProjectFiles, with the given payload.
-    pub fn ProjectFiles(f0: roc_std::RocList<roc_std::RocStr>) -> Self {
+    /// A tag named FromProjectSource, with the given payload.
+    pub fn FromProjectSource(f0: roc_std::RocList<roc_std::RocStr>) -> Self {
         Self { f0 }
     }
 
@@ -143,9 +143,9 @@ impl Input {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Since `ProjectFiles` only has one tag (namely, `ProjectFiles`),
-    /// convert it to `ProjectFiles`'s payload.
-    pub fn into_ProjectFiles(self) -> roc_std::RocList<roc_std::RocStr> {
+    /// Since `FromProjectSource` only has one tag (namely, `FromProjectSource`),
+    /// convert it to `FromProjectSource`'s payload.
+    pub fn into_FromProjectSource(self) -> roc_std::RocList<roc_std::RocStr> {
         self.f0
     }
 
@@ -156,9 +156,9 @@ impl Input {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Since `ProjectFiles` only has one tag (namely, `ProjectFiles`),
-    /// convert it to `ProjectFiles`'s payload.
-    pub fn as_ProjectFiles(&self) -> &roc_std::RocList<roc_std::RocStr> {
+    /// Since `FromProjectSource` only has one tag (namely, `FromProjectSource`),
+    /// convert it to `FromProjectSource`'s payload.
+    pub fn as_FromProjectSource(&self) -> &roc_std::RocList<roc_std::RocStr> {
         &self.f0
     }
 }
@@ -172,7 +172,7 @@ impl core::fmt::Debug for Input {
         target_arch = "x86_64"
     ))]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_tuple("Input::ProjectFiles")
+        f.debug_tuple("Input::FromProjectSource")
             .field(&self.f0)
             .finish()
     }
