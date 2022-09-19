@@ -7,13 +7,10 @@ fn test_hello_world() {
     let root = TempDir::new().unwrap();
 
     Command::new("roc")
-        .arg("build")
+        .arg("run")
         .arg("--linker=legacy")
-        .arg("examples/hello/rbt.roc")
-        .assert()
-        .success();
-
-    Command::new("./build")
+        .arg("rbt.roc")
+        .arg("--")
         .arg("--root-dir")
         .arg(root.path().display().to_string())
         .current_dir("examples/hello")
