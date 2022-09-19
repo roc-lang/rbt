@@ -28,15 +28,17 @@ This ADR proposes that we unify these fields into `inputs : List Input` (really 
 The API looks something like this:
 
 ```coffeescript
-Input = [ProjectFiles (List FileMapping), JobOutputs Job (List FileMapping)]
+Input := # private, hidden
 
-FileMapping = { sourcePath : Str, workspacePath : Str }
+FileMapping := # private, hidden
 
-file : Str -> FileMapping
-file = \name -> { sourcePath : name, workspacePath : name }
+sourceFile : Str -> FileMapping
 
-projectFile : Str -> Input
-projectFile = \name -> ProjectFiles [file name]
+withFilename : FileMapping, Str -> FileMapping
+
+fromProject : List FileMapping -> Input
+
+fromJob : Job, List FileMapping -> Input
 ```
 
 Usage might look like this:
@@ -50,8 +52,8 @@ completedGreeting =
             """printf '%s, %s!\n' "$(cat greeting.txt)" "$(cat subject.txt)" > completedGreeting.txt""",
         ],
         inputs: [
-            projectFile "subject.txt",
-            JobOutputs greeting [{ sourcePath : "englishGreeting.txt", workspacePath : "greeting.txt" }],
+            fromProject [sourceFile "subject.txt"],
+            fromJob greeting [sourceFile "englishGreeting.txt" |> withFilename "greeting.txt"],
         ],
         outputs: ["completedGreeting.txt"]
     }
