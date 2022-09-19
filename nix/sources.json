@@ -17,10 +17,10 @@
         "homepage": "",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "a0b7e70db7a55088d3de0cc370a59f9fbcc906c3",
-        "sha256": "0jymga79hk68jbyxp9zkm172zgaxjs5vmqp19nap7fk2d23bqy4r",
+        "rev": "a13d59408da1108fc6c9ffe4750ab7a33c581d24",
+        "sha256": "1b2m1yypz5rd5ww46id6a0pbxxh0z0w7xm5h6nv9iqibj9fhkn4h",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/a0b7e70db7a55088d3de0cc370a59f9fbcc906c3.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/a13d59408da1108fc6c9ffe4750ab7a33c581d24.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "roc": {
@@ -29,10 +29,10 @@
         "homepage": "https://roc-lang.org",
         "owner": "roc-lang",
         "repo": "roc",
-        "rev": "ac68d75eecfaa544e6c38999c2342efa5a5b3e1c",
-        "sha256": "09nn8hjf09chnqacgg05fhda4bpf472cqnky6mcxj5d1dv9nlnnc",
+        "rev": "19e790f3b707f2fc73088008b290ba486ff66802",
+        "sha256": "1jfcgcxifjsxbnwrakp02kkjj6d2fjcfmss1hcwb8bq758b59i55",
         "type": "tarball",
-        "url": "https://github.com/roc-lang/roc/archive/ac68d75eecfaa544e6c38999c2342efa5a5b3e1c.tar.gz",
+        "url": "https://github.com/roc-lang/roc/archive/19e790f3b707f2fc73088008b290ba486ff66802.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
