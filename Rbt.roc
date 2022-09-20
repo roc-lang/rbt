@@ -14,11 +14,11 @@ interface Rbt
 #     Tool : [ SystemTool { name : Str }, FromJob { name : Str, job : Job } ]
 #
 SystemToolPayload : { name : Str }
-Tool : [SystemTool SystemToolPayload]
+Tool := [SystemTool SystemToolPayload]
 
 systemTool : Str -> Tool
 systemTool = \name ->
-    SystemTool { name }
+    @Tool (SystemTool { name })
 
 CommandPayload : { tool : Tool, args : List Str }
 Command : [Command CommandPayload]
@@ -54,4 +54,4 @@ init = \rbt -> rbt
 tool : Job, Str -> Tool
 tool = \_, _ ->
     # FromJob { name, job }
-    SystemTool { name: "TODO" }
+    @Tool (SystemTool { name: "TODO" })
