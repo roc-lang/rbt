@@ -3,6 +3,7 @@
 #![allow(unused_unsafe)]
 #![allow(dead_code)]
 #![allow(unused_mut)]
+#![allow(unused_variables)]
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
@@ -23,10 +24,28 @@
     target_arch = "x86",
     target_arch = "x86_64"
 ))]
-#[repr(transparent)]
-#[derive(Clone, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
-pub struct Input {
-    f0: roc_std::RocList<roc_std::RocStr>,
+#[derive(Clone, Copy, Eq, Ord, Hash, PartialEq, PartialOrd)]
+#[repr(u8)]
+pub enum discriminant_Input {
+    FromJob = 0,
+    FromProjectSource = 1,
+}
+
+impl core::fmt::Debug for discriminant_Input {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::FromJob => f.write_str("discriminant_Input::FromJob"),
+            Self::FromProjectSource => f.write_str("discriminant_Input::FromProjectSource"),
+        }
+    }
+}
+
+#[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
+#[repr(C)]
+pub union Input {
+    FromJob: core::mem::ManuallyDrop<Input_FromJob>,
+    FromProjectSource: core::mem::ManuallyDrop<roc_std::RocList<roc_std::RocStr>>,
+    _sizer: [u8; 20],
 }
 
 #[cfg(any(
@@ -50,9 +69,33 @@ pub struct Rbt {
     target_arch = "x86_64"
 ))]
 #[repr(transparent)]
-#[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct Job {
-    f0: R1,
+    pointer: *mut union_Job,
+}
+
+#[cfg(any(
+    target_arch = "arm",
+    target_arch = "aarch64",
+    target_arch = "wasm32",
+    target_arch = "x86",
+    target_arch = "x86_64"
+))]
+#[repr(C)]
+union union_Job {
+    Job: core::mem::ManuallyDrop<Job_Job>,
+}
+
+#[cfg(any(
+    target_arch = "arm",
+    target_arch = "aarch64",
+    target_arch = "wasm32",
+    target_arch = "x86",
+    target_arch = "x86_64"
+))]
+#[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
+#[repr(transparent)]
+struct Job_Job {
+    pub f0: R1,
 }
 
 #[cfg(any(
@@ -68,6 +111,20 @@ pub struct R1 {
     pub command: Command,
     pub inputs: roc_std::RocList<Input>,
     pub outputs: roc_std::RocList<roc_std::RocStr>,
+}
+
+#[cfg(any(
+    target_arch = "arm",
+    target_arch = "aarch64",
+    target_arch = "wasm32",
+    target_arch = "x86",
+    target_arch = "x86_64"
+))]
+#[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
+#[repr(C)]
+struct Input_FromJob {
+    pub f0: Job,
+    pub f1: roc_std::RocList<roc_std::RocStr>,
 }
 
 #[cfg(any(
@@ -110,17 +167,33 @@ pub struct SystemToolPayload {
     pub name: roc_std::RocStr,
 }
 
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[repr(C)]
+pub union Input {
+    FromJob: core::mem::ManuallyDrop<Input_FromJob>,
+    FromProjectSource: core::mem::ManuallyDrop<roc_std::RocList<roc_std::RocStr>>,
+    _sizer: [u8; 40],
+}
+
 impl Input {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// A tag named FromProjectSource, with the given payload.
-    pub fn FromProjectSource(f0: roc_std::RocList<roc_std::RocStr>) -> Self {
-        Self { f0 }
+    #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
+    /// Returns which variant this tag union holds. Note that this never includes a payload!
+    pub fn discriminant(&self) -> discriminant_Input {
+        unsafe {
+            let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
+
+            core::mem::transmute::<u8, discriminant_Input>(*bytes.as_ptr().add(16))
+        }
+    }
+
+    #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
+    /// Internal helper
+    fn set_discriminant(&mut self, discriminant: discriminant_Input) {
+        let discriminant_ptr: *mut discriminant_Input = (self as *mut Input).cast();
+
+        unsafe {
+            *(discriminant_ptr.add(16)) = discriminant;
+        }
     }
 
     #[cfg(any(
@@ -130,10 +203,15 @@ impl Input {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Since `FromProjectSource` only has one tag (namely, `FromProjectSource`),
-    /// convert it to `FromProjectSource`'s payload.
-    pub fn into_FromProjectSource(self) -> roc_std::RocList<roc_std::RocStr> {
-        self.f0
+    /// Construct a tag named `FromJob`, with the appropriate payload
+    pub fn FromJob(arg0: Job, arg1: roc_std::RocList<roc_std::RocStr>) -> Self {
+        let mut answer = Self {
+            FromJob: core::mem::ManuallyDrop::new(Input_FromJob { f0: arg0, f1: arg1 }),
+        };
+
+        answer.set_discriminant(discriminant_Input::FromJob);
+
+        answer
     }
 
     #[cfg(any(
@@ -143,10 +221,272 @@ impl Input {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Since `FromProjectSource` only has one tag (namely, `FromProjectSource`),
-    /// convert it to `FromProjectSource`'s payload.
-    pub fn as_FromProjectSource(&self) -> &roc_std::RocList<roc_std::RocStr> {
-        &self.f0
+    /// Unsafely assume the given `Input` has a `.discriminant()` of `FromJob` and convert it to `FromJob`'s payload.
+    /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
+    /// Panics in debug builds if the `.discriminant()` doesn't return `FromJob`.
+    pub unsafe fn into_FromJob(mut self) -> (Job, roc_std::RocList<roc_std::RocStr>) {
+        debug_assert_eq!(self.discriminant(), discriminant_Input::FromJob);
+        let payload = {
+            let mut uninitialized = core::mem::MaybeUninit::uninit();
+            let swapped = unsafe {
+                core::mem::replace(
+                    &mut self.FromJob,
+                    core::mem::ManuallyDrop::new(uninitialized.assume_init()),
+                )
+            };
+
+            core::mem::forget(self);
+
+            core::mem::ManuallyDrop::into_inner(swapped)
+        };
+
+        (payload.f0, payload.f1)
+    }
+
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    /// Unsafely assume the given `Input` has a `.discriminant()` of `FromJob` and return its payload.
+    /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
+    /// Panics in debug builds if the `.discriminant()` doesn't return `FromJob`.
+    pub unsafe fn as_FromJob(&self) -> (&Job, &roc_std::RocList<roc_std::RocStr>) {
+        debug_assert_eq!(self.discriminant(), discriminant_Input::FromJob);
+        let payload = &self.FromJob;
+
+        (&payload.f0, &payload.f1)
+    }
+
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    /// Construct a tag named `FromProjectSource`, with the appropriate payload
+    pub fn FromProjectSource(arg: roc_std::RocList<roc_std::RocStr>) -> Self {
+        let mut answer = Self {
+            FromProjectSource: core::mem::ManuallyDrop::new(arg),
+        };
+
+        answer.set_discriminant(discriminant_Input::FromProjectSource);
+
+        answer
+    }
+
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    /// Unsafely assume the given `Input` has a `.discriminant()` of `FromProjectSource` and convert it to `FromProjectSource`'s payload.
+    /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
+    /// Panics in debug builds if the `.discriminant()` doesn't return `FromProjectSource`.
+    pub unsafe fn into_FromProjectSource(mut self) -> roc_std::RocList<roc_std::RocStr> {
+        debug_assert_eq!(self.discriminant(), discriminant_Input::FromProjectSource);
+        let payload = {
+            let mut uninitialized = core::mem::MaybeUninit::uninit();
+            let swapped = unsafe {
+                core::mem::replace(
+                    &mut self.FromProjectSource,
+                    core::mem::ManuallyDrop::new(uninitialized.assume_init()),
+                )
+            };
+
+            core::mem::forget(self);
+
+            core::mem::ManuallyDrop::into_inner(swapped)
+        };
+
+        payload
+    }
+
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    /// Unsafely assume the given `Input` has a `.discriminant()` of `FromProjectSource` and return its payload.
+    /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
+    /// Panics in debug builds if the `.discriminant()` doesn't return `FromProjectSource`.
+    pub unsafe fn as_FromProjectSource(&self) -> &roc_std::RocList<roc_std::RocStr> {
+        debug_assert_eq!(self.discriminant(), discriminant_Input::FromProjectSource);
+        let payload = &self.FromProjectSource;
+
+        &payload
+    }
+
+    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    /// Returns which variant this tag union holds. Note that this never includes a payload!
+    pub fn discriminant(&self) -> discriminant_Input {
+        unsafe {
+            let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
+
+            core::mem::transmute::<u8, discriminant_Input>(*bytes.as_ptr().add(32))
+        }
+    }
+
+    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    /// Internal helper
+    fn set_discriminant(&mut self, discriminant: discriminant_Input) {
+        let discriminant_ptr: *mut discriminant_Input = (self as *mut Input).cast();
+
+        unsafe {
+            *(discriminant_ptr.add(32)) = discriminant;
+        }
+    }
+}
+
+impl Drop for Input {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn drop(&mut self) {
+        // Drop the payloads
+        match self.discriminant() {
+            discriminant_Input::FromJob => unsafe {
+                core::mem::ManuallyDrop::drop(&mut self.FromJob)
+            },
+            discriminant_Input::FromProjectSource => unsafe {
+                core::mem::ManuallyDrop::drop(&mut self.FromProjectSource)
+            },
+        }
+    }
+}
+
+impl Eq for Input {}
+
+impl PartialEq for Input {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn eq(&self, other: &Self) -> bool {
+        if self.discriminant() != other.discriminant() {
+            return false;
+        }
+
+        unsafe {
+            match self.discriminant() {
+                discriminant_Input::FromJob => self.FromJob == other.FromJob,
+                discriminant_Input::FromProjectSource => {
+                    self.FromProjectSource == other.FromProjectSource
+                }
+            }
+        }
+    }
+}
+
+impl PartialOrd for Input {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        match self.discriminant().partial_cmp(&other.discriminant()) {
+            Some(core::cmp::Ordering::Equal) => {}
+            not_eq => return not_eq,
+        }
+
+        unsafe {
+            match self.discriminant() {
+                discriminant_Input::FromJob => self.FromJob.partial_cmp(&other.FromJob),
+                discriminant_Input::FromProjectSource => {
+                    self.FromProjectSource.partial_cmp(&other.FromProjectSource)
+                }
+            }
+        }
+    }
+}
+
+impl Ord for Input {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        match self.discriminant().cmp(&other.discriminant()) {
+            core::cmp::Ordering::Equal => {}
+            not_eq => return not_eq,
+        }
+
+        unsafe {
+            match self.discriminant() {
+                discriminant_Input::FromJob => self.FromJob.cmp(&other.FromJob),
+                discriminant_Input::FromProjectSource => {
+                    self.FromProjectSource.cmp(&other.FromProjectSource)
+                }
+            }
+        }
+    }
+}
+
+impl Clone for Input {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn clone(&self) -> Self {
+        let mut answer = unsafe {
+            match self.discriminant() {
+                discriminant_Input::FromJob => Self {
+                    FromJob: self.FromJob.clone(),
+                },
+                discriminant_Input::FromProjectSource => Self {
+                    FromProjectSource: self.FromProjectSource.clone(),
+                },
+            }
+        };
+
+        answer.set_discriminant(self.discriminant());
+
+        answer
+    }
+}
+
+impl core::hash::Hash for Input {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        match self.discriminant() {
+            discriminant_Input::FromJob => unsafe {
+                discriminant_Input::FromJob.hash(state);
+                self.FromJob.hash(state);
+            },
+            discriminant_Input::FromProjectSource => unsafe {
+                discriminant_Input::FromProjectSource.hash(state);
+                self.FromProjectSource.hash(state);
+            },
+        }
     }
 }
 
@@ -159,9 +499,21 @@ impl core::fmt::Debug for Input {
         target_arch = "x86_64"
     ))]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_tuple("Input::FromProjectSource")
-            .field(&self.f0)
-            .finish()
+        f.write_str("Input::")?;
+
+        unsafe {
+            match self.discriminant() {
+                discriminant_Input::FromJob => f
+                    .debug_tuple("FromJob")
+                    .field(&(&*self.FromJob).f0)
+                    .field(&(&*self.FromJob).f1)
+                    .finish(),
+                discriminant_Input::FromProjectSource => f
+                    .debug_tuple("FromProjectSource")
+                    .field(&*self.FromProjectSource)
+                    .finish(),
+            }
+        }
     }
 }
 
@@ -173,9 +525,10 @@ impl Job {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// A tag named Job, with the given payload.
-    pub fn Job(f0: R1) -> Self {
-        Self { f0 }
+    fn storage(&self) -> Option<&core::cell::Cell<roc_std::Storage>> {
+        let untagged = self.pointer as *const core::cell::Cell<roc_std::Storage>;
+
+        unsafe { Some(&*untagged.sub(1)) }
     }
 
     #[cfg(any(
@@ -185,23 +538,221 @@ impl Job {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
+    /// This is a single-tag union, so it has no alternatives
+    /// to discriminate between. This method is only included for completeness.
+    pub fn discriminant(&self) -> () {
+        ()
+    }
+
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    /// Construct a tag named `Job`, with the appropriate payload
+    pub fn Job(arg0: R1) -> Self {
+        let size = core::mem::size_of::<union_Job>();
+        let align = core::mem::align_of::<union_Job>() as u32;
+
+        unsafe {
+            let ptr = roc_std::roc_alloc_refcounted::<union_Job>();
+
+            *ptr = union_Job {
+                Job: core::mem::ManuallyDrop::new(Job_Job { f0: arg0 }),
+            };
+
+            Self { pointer: ptr }
+        }
+    }
+
+    #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
     /// Since `Job` only has one tag (namely, `Job`),
     /// convert it to `Job`'s payload.
-    pub fn into_Job(self) -> R1 {
-        self.f0
+    pub fn into_Job(mut self) -> R1 {
+        let payload = {
+            let ptr = (self.pointer as usize & !0b11) as *mut union_Job;
+            let mut uninitialized = core::mem::MaybeUninit::uninit();
+            let swapped = unsafe {
+                core::mem::replace(
+                    &mut (*ptr).Job,
+                    core::mem::ManuallyDrop::new(uninitialized.assume_init()),
+                )
+            };
+
+            core::mem::forget(self);
+
+            core::mem::ManuallyDrop::into_inner(swapped)
+        };
+
+        payload.f0
     }
 
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
+    #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
     /// Since `Job` only has one tag (namely, `Job`),
     /// convert it to `Job`'s payload.
     pub fn as_Job(&self) -> &R1 {
-        &self.f0
+        let payload = {
+            let ptr = (self.pointer as usize & !0b11) as *mut union_Job;
+
+            unsafe { &(*ptr).Job }
+        };
+
+        &payload.f0
+    }
+
+    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    /// Since `Job` only has one tag (namely, `Job`),
+    /// convert it to `Job`'s payload.
+    pub fn into_Job(mut self) -> R1 {
+        let payload = {
+            let ptr = (self.pointer as usize & !0b111) as *mut union_Job;
+            let mut uninitialized = core::mem::MaybeUninit::uninit();
+            let swapped = unsafe {
+                core::mem::replace(
+                    &mut (*ptr).Job,
+                    core::mem::ManuallyDrop::new(uninitialized.assume_init()),
+                )
+            };
+
+            core::mem::forget(self);
+
+            core::mem::ManuallyDrop::into_inner(swapped)
+        };
+
+        payload.f0
+    }
+
+    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    /// Since `Job` only has one tag (namely, `Job`),
+    /// convert it to `Job`'s payload.
+    pub fn as_Job(&self) -> &R1 {
+        let payload = {
+            let ptr = (self.pointer as usize & !0b111) as *mut union_Job;
+
+            unsafe { &(*ptr).Job }
+        };
+
+        &payload.f0
+    }
+}
+
+impl Drop for Job {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn drop(&mut self) {
+        // We only need to do any work if there's actually a heap-allocated payload.
+        if let Some(storage) = self.storage() {
+            let mut new_storage = storage.get();
+
+            // Decrement the refcount
+            let needs_dealloc = !new_storage.is_readonly() && new_storage.decrease();
+
+            if needs_dealloc {
+                // Drop the payload first.
+                unsafe {
+                    core::mem::ManuallyDrop::drop(&mut core::ptr::read(self.pointer).Job);
+                }
+
+                // Dealloc the pointer
+                let alignment =
+                    core::mem::align_of::<Self>().max(core::mem::align_of::<roc_std::Storage>());
+
+                unsafe {
+                    crate::roc_dealloc(storage.as_ptr().cast(), alignment as u32);
+                }
+            } else {
+                // Write the storage back.
+                storage.set(new_storage);
+            }
+        }
+    }
+}
+
+impl Eq for Job {}
+
+impl PartialEq for Job {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn eq(&self, other: &Self) -> bool {
+        if self.discriminant() != other.discriminant() {
+            return false;
+        }
+
+        unsafe { (*self.pointer).Job == (*other.pointer).Job }
+    }
+}
+
+impl PartialOrd for Job {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        unsafe { (&*self.pointer).Job.partial_cmp(&(*other.pointer).Job) }
+    }
+}
+
+impl Ord for Job {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        unsafe { (&*self.pointer).Job.cmp(&(*other.pointer).Job) }
+    }
+}
+
+impl Clone for Job {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn clone(&self) -> Self {
+        if let Some(storage) = self.storage() {
+            let mut new_storage = storage.get();
+            if !new_storage.is_readonly() {
+                new_storage.increment_reference_count();
+                storage.set(new_storage);
+            }
+        }
+
+        Self {
+            pointer: self.pointer,
+        }
+    }
+}
+
+impl core::hash::Hash for Job {
+    #[cfg(any(
+        target_arch = "arm",
+        target_arch = "aarch64",
+        target_arch = "wasm32",
+        target_arch = "x86",
+        target_arch = "x86_64"
+    ))]
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        unsafe { (*self.pointer).Job.hash(state) }
     }
 }
 
@@ -214,7 +765,9 @@ impl core::fmt::Debug for Job {
         target_arch = "x86_64"
     ))]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_tuple("Job::Job").field(&self.f0).finish()
+        f.write_str("Job::")?;
+
+        unsafe { f.debug_tuple("Job").field(&(*self.pointer).Job).finish() }
     }
 }
 

@@ -70,8 +70,13 @@ impl Builder {
         let mut input_files: HashSet<PathBuf> = HashSet::new();
         for glue_job in &self.targets {
             for input in &glue_job.as_Job().inputs {
-                for file in input.as_FromProjectSource() {
-                    input_files.insert(job::sanitize_file_path(file)?);
+                match input.discriminant() {
+                    glue::discriminant_Input::FromJob => todo!(),
+                    glue::discriminant_Input::FromProjectSource => {
+                        for file in unsafe { input.as_FromProjectSource() } {
+                            input_files.insert(job::sanitize_file_path(file)?);
+                        }
+                    }
                 }
             }
         }

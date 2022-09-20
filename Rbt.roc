@@ -31,7 +31,7 @@ FileMapping := Str
 sourceFile : Str -> FileMapping
 sourceFile = \name -> @FileMapping name
 
-Input := [FromProjectSource (List FileMapping)]
+Input := [FromProjectSource (List FileMapping), FromJob Job (List FileMapping)]
 
 # Add the given file to the job's workspace (the working directory where the
 # command is called.)
@@ -42,7 +42,8 @@ Job := [Job { command : Command, inputs : List Input, outputs : List Str }]
 
 # TODO: these fields are all required until https://github.com/rtfeldman/roc/issues/1844 is fixed
 # TODO: destructuring is broken, see https://github.com/rtfeldman/roc/issues/2512
-job : { command : Command, inputs : List Input, outputs : List Str } -> Job
+# TODO: this annotation is removed until https://github.com/roc-lang/roc/issues/4077 is fixed
+# job : { command : Command, inputs : List Input, outputs : List Str } -> Job
 job = \config -> @Job (Job config)
 
 Rbt := { default : Job }

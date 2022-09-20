@@ -85,12 +85,17 @@ impl Job {
 
         let mut input_files: HashSet<PathBuf> = HashSet::with_capacity(unwrapped.inputs.len());
         for input in unwrapped.inputs.iter().sorted() {
-            for file in input.as_FromProjectSource().iter().sorted() {
-                let path =
-                    sanitize_file_path(file).context("got an unacceptable input file path")?;
+            match input.discriminant() {
+                glue::discriminant_Input::FromJob => todo!(),
+                glue::discriminant_Input::FromProjectSource => {
+                    for file in unsafe { input.as_FromProjectSource() }.iter().sorted() {
+                        let path = sanitize_file_path(file)
+                            .context("got an unacceptable input file path")?;
 
-                path.hash(&mut hasher);
-                input_files.insert(path);
+                        path.hash(&mut hasher);
+                        input_files.insert(path);
+                    }
+                }
             }
         }
 
