@@ -77,22 +77,9 @@ pub struct R1 {
     target_arch = "x86",
     target_arch = "x86_64"
 ))]
-#[repr(transparent)]
-#[derive(Clone, Eq, Ord, Hash, PartialEq, PartialOrd)]
-pub struct Command {
-    f0: CommandPayload,
-}
-
-#[cfg(any(
-    target_arch = "arm",
-    target_arch = "aarch64",
-    target_arch = "wasm32",
-    target_arch = "x86",
-    target_arch = "x86_64"
-))]
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[repr(C)]
-pub struct CommandPayload {
+pub struct Command {
     pub args: roc_std::RocList<roc_std::RocStr>,
     pub tool: Tool,
 }
@@ -228,59 +215,6 @@ impl core::fmt::Debug for Job {
     ))]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("Job::Job").field(&self.f0).finish()
-    }
-}
-
-impl Command {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// A tag named Command, with the given payload.
-    pub fn Command(f0: CommandPayload) -> Self {
-        Self { f0 }
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Since `Command` only has one tag (namely, `Command`),
-    /// convert it to `Command`'s payload.
-    pub fn into_Command(self) -> CommandPayload {
-        self.f0
-    }
-
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    /// Since `Command` only has one tag (namely, `Command`),
-    /// convert it to `Command`'s payload.
-    pub fn as_Command(&self) -> &CommandPayload {
-        &self.f0
-    }
-}
-
-impl core::fmt::Debug for Command {
-    #[cfg(any(
-        target_arch = "arm",
-        target_arch = "aarch64",
-        target_arch = "wasm32",
-        target_arch = "x86",
-        target_arch = "x86_64"
-    ))]
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_tuple("Command::Command").field(&self.f0).finish()
     }
 }
 

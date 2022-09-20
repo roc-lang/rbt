@@ -20,12 +20,11 @@ systemTool : Str -> Tool
 systemTool = \name ->
     @Tool (SystemTool { name })
 
-CommandPayload : { tool : Tool, args : List Str }
-Command : [Command CommandPayload]
+Command := { tool : Tool, args : List Str }
 
 exec : Tool, List Str -> Command
 exec = \execTool, args ->
-    Command { tool: execTool, args }
+    @Command { tool: execTool, args }
 
 FileMapping : Str
 
