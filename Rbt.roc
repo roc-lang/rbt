@@ -26,10 +26,10 @@ exec : Tool, List Str -> Command
 exec = \execTool, args ->
     @Command { tool: execTool, args }
 
-FileMapping : Str
+FileMapping := Str
 
 sourceFile : Str -> FileMapping
-sourceFile = \name -> name
+sourceFile = \name -> @FileMapping name
 
 Input := [FromProjectSource (List FileMapping)]
 
