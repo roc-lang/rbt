@@ -45,10 +45,10 @@ Job := [Job { command : Command, inputs : List Input, outputs : List Str }]
 job : { command : Command, inputs : List Input, outputs : List Str } -> Job
 job = \config -> @Job (Job config)
 
-Rbt : { default : Job }
+Rbt := { default : Job }
 
 init : { default : Job } -> Rbt
-init = \rbt -> rbt
+init = \rbt -> @Rbt rbt
 
 tool : Job, Str -> Tool
 tool = \_, _ ->
