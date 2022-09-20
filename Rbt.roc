@@ -31,12 +31,12 @@ FileMapping : Str
 sourceFile : Str -> FileMapping
 sourceFile = \name -> name
 
-Input : [FromProjectSource (List FileMapping)]
+Input := [FromProjectSource (List FileMapping)]
 
 # Add the given file to the job's workspace (the working directory where the
 # command is called.)
 projectFiles : List FileMapping -> Input
-projectFiles = \mappings -> FromProjectSource mappings
+projectFiles = \mappings -> @Input (FromProjectSource mappings)
 
 Job : [Job { command : Command, inputs : List Input, outputs : List Str }]
 
