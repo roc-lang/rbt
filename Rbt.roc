@@ -38,12 +38,12 @@ Input := [FromProjectSource (List FileMapping)]
 projectFiles : List FileMapping -> Input
 projectFiles = \mappings -> @Input (FromProjectSource mappings)
 
-Job : [Job { command : Command, inputs : List Input, outputs : List Str }]
+Job := [Job { command : Command, inputs : List Input, outputs : List Str }]
 
 # TODO: these fields are all required until https://github.com/rtfeldman/roc/issues/1844 is fixed
 # TODO: destructuring is broken, see https://github.com/rtfeldman/roc/issues/2512
 job : { command : Command, inputs : List Input, outputs : List Str } -> Job
-job = \config -> Job config
+job = \config -> @Job (Job config)
 
 Rbt : { default : Job }
 
