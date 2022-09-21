@@ -111,6 +111,11 @@ impl Job {
             outputs.insert(output);
         }
 
+        for (key, value) in unwrapped.env.iter().sorted() {
+            key.hash(&mut hasher);
+            value.hash(&mut hasher);
+        }
+
         Ok(Job {
             base_key: Key {
                 key: hasher.finish(),
