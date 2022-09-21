@@ -149,6 +149,19 @@ mod tests {
     }
 
     #[test]
+    fn test_rejects_missing_file() {
+        let temp = TempDir::new().unwrap();
+
+        let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
+        let job = job_with_files(&["does-not-exist"]);
+
+        assert_eq!(
+            String::from("`does-not-exist` does not exist"),
+            workspace.set_up_files(&job).unwrap_err().to_string(),
+        )
+    }
+
+    #[test]
     fn test_rejects_directory() {
         let temp = TempDir::new().unwrap();
         let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
