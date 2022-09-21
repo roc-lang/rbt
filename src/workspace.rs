@@ -34,6 +34,18 @@ impl Workspace {
                 }
             }
 
+            // validate that the path exists and is a file
+            let meta = file
+                .metadata()
+                .with_context(|| format!("`{}` does not exist", file.display()))?;
+
+            if meta.is_dir() {
+                anyhow::bail!(
+                    "`{}` was a directory, but file inputs can only be files",
+                    file.display()
+                )
+            }
+
             let source = file.absolutize().with_context(|| {
                 format!("could not convert `{}` to an absolute path", file.display())
             })?;
@@ -120,7 +132,6 @@ mod tests {
     #[test]
     fn test_sets_up_file() {
         let temp = TempDir::new().unwrap();
-
         let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
 
         let job = job_with_files(&[file!()]);
@@ -134,6 +145,27 @@ mod tests {
         assert_eq!(
             PathBuf::from(file!()).absolutize().unwrap(),
             path.read_link().unwrap()
+        );
+    }
+
+    #[test]
+    fn test_rejects_directory() {
+        let temp = TempDir::new().unwrap();
+        let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
+
+        // currently, `file!()` gives us `src/workspace.rs`. This works for us at
+        // the moment, but all we really need is a path containing a directory.
+        let here = PathBuf::from(file!());
+        let parent = here.parent().unwrap();
+
+        let job = job_with_files(&[parent.to_str().unwrap()]);
+
+        assert_eq!(
+            format!(
+                "`{}` was a directory, but file inputs can only be files",
+                parent.display()
+            ),
+            workspace.set_up_files(&job).unwrap_err().to_string()
         );
     }
 }
