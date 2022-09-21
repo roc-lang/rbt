@@ -16,4 +16,5 @@ hello =
         ],
         inputs: [],
         outputs: ["out"],
+        env: Dict.empty,
     }

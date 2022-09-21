@@ -18,4 +18,5 @@ hello =
             projectFiles [sourceFile "greeting", sourceFile "subject"],
         ],
         outputs: ["out"],
+        env: Dict.empty,
     }
