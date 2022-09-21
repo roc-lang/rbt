@@ -6,6 +6,7 @@ use core::{
 };
 
 #[derive(Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
 pub struct RocDict<K, V>(RocList<RocDictItem<K, V>>);
 
 impl<K, V> RocDict<K, V> {
@@ -117,6 +118,7 @@ struct ValueFirst<K, V> {
 }
 
 #[derive(Eq)]
+#[repr(C)]
 union RocDictItem<K, V> {
     key_first: ManuallyDrop<KeyFirst<K, V>>,
     value_first: ManuallyDrop<ValueFirst<K, V>>,
