@@ -42,8 +42,8 @@ Job := [Job { command : Command, inputs : List Input, outputs : List Str, env : 
 
 # TODO: these fields are all required until https://github.com/rtfeldman/roc/issues/1844 is fixed
 # TODO: destructuring is broken, see https://github.com/rtfeldman/roc/issues/2512
-job : { command : Command, inputs : List Input, outputs : List Str, env ?Dict Str Str } -> Job
-job = \{ command, inputs, outputs, env ? Dict.empty } -> @Job (Job { command, inputs, outputs, env })
+job : { command : Command, inputs : List Input, outputs : List Str, env : Dict Str Str } -> Job
+job = \{ command, inputs, outputs, env } -> @Job (Job { command, inputs, outputs, env })
 
 Rbt := { default : Job }
 
