@@ -1,7 +1,7 @@
 use crate::glue;
 use anyhow::{Context, Result};
 use itertools::Itertools;
-use roc_std::RocStr;
+use roc_std::{RocDict, RocStr};
 use std::collections::HashSet;
 use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
@@ -214,6 +214,7 @@ mod test {
                 }),
                 args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
             },
+            env: RocDict::with_capacity(0),
             inputs: RocList::from_slice(&[glue::Input::FromProjectSource(RocList::from([
                 "input_file".into(),
             ]))]),
