@@ -70,3 +70,27 @@ impl AsRef<Path> for Workspace {
         &self.0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn key() -> job::Key<job::Final> {
+        job::KeyBuilder::mock().finalize()
+    }
+
+    #[test]
+    fn sets_up_and_tears_down() {
+        let temp = TempDir::new().unwrap();
+
+        let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
+        let path = workspace.as_ref().to_path_buf();
+
+        assert!(path.is_dir());
+
+        drop(workspace);
+
+        assert!(!path.exists());
+    }
+}
