@@ -90,9 +90,7 @@ pub unsafe extern "C" fn roc_getppid() -> i32 {
 
 #[no_mangle]
 pub fn rust_main() -> isize {
-    println!("test got to rust_main");
     let cli = cli::Cli::parse();
-    println!("parsed");
 
     simple_logger::SimpleLogger::new()
         .init()
