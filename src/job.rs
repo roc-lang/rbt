@@ -68,6 +68,7 @@ impl<Finality> Display for Key<Finality> {
 pub struct Job {
     pub base_key: Key<Base>,
     pub command: glue::Command,
+    pub env: RocDict<RocStr, RocStr>,
     pub input_files: HashSet<PathBuf>,
     pub outputs: HashSet<PathBuf>,
 }
@@ -121,6 +122,7 @@ impl Job {
                 key: hasher.finish(),
                 phantom: PhantomData,
             },
+            env: unwrapped.env,
             command: unwrapped.command,
             input_files,
             outputs,
@@ -134,6 +136,10 @@ impl From<&Job> for Command {
 
         for arg in &job.command.args {
             command.arg(arg.as_str());
+        }
+
+        for (key, value) in &job.env {
+            command.env(key.as_str(), value.as_str());
         }
 
         command
