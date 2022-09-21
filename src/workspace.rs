@@ -74,10 +74,33 @@ impl AsRef<Path> for Workspace {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::glue;
+    use roc_std::{RocList, RocStr};
+    use std::path::PathBuf;
     use tempfile::TempDir;
 
     fn key() -> job::Key<job::Final> {
         job::KeyBuilder::mock().finalize()
+    }
+
+    fn job_with_files(files: &[&str]) -> job::Job {
+        let glue_job = glue::Job::Job(glue::R1 {
+            command: glue::Command {
+                tool: glue::Tool::SystemTool(glue::SystemToolPayload {
+                    name: RocStr::from("bash"),
+                }),
+                args: RocList::empty(),
+            },
+            inputs: RocList::from_slice(&[glue::Input::FromProjectSource(
+                files
+                    .iter()
+                    .map(|name| (*name).into())
+                    .collect::<RocList<RocStr>>(),
+            )]),
+            outputs: RocList::empty(),
+        });
+
+        job::Job::from_glue(glue_job).unwrap()
     }
 
     #[test]
@@ -92,5 +115,25 @@ mod tests {
         drop(workspace);
 
         assert!(!path.exists());
+    }
+
+    #[test]
+    fn test_sets_up_file() {
+        let temp = TempDir::new().unwrap();
+
+        let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
+
+        let job = job_with_files(&[file!()]);
+        workspace
+            .set_up_files(&job)
+            .expect("failed to set up files");
+
+        let path = workspace.join(file!());
+
+        assert!(path.is_symlink());
+        assert_eq!(
+            PathBuf::from(file!()).absolutize().unwrap(),
+            path.read_link().unwrap()
+        );
     }
 }
