@@ -3,7 +3,6 @@
 
 mod cli;
 mod coordinator;
-mod fake_runner;
 mod glue;
 mod job;
 mod runner;

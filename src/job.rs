@@ -18,6 +18,11 @@ impl KeyBuilder {
         Self(Xxh3::new())
     }
 
+    #[cfg(test)]
+    pub fn mock() -> Self {
+        Self::new()
+    }
+
     pub fn based_on(id: &Key<Base>) -> Self {
         let mut builder = Self::new();
         id.hash(&mut builder.0);

@@ -9,11 +9,6 @@ use std::path::PathBuf;
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
 pub struct Cli {
-    /// Use a runner that does not actually run any tasks. Only useful for
-    /// rbt developers!
-    #[clap(long)]
-    use_fake_runner: bool,
-
     #[clap(long, default_value = ".rbt")]
     root_dir: PathBuf,
 }
@@ -31,12 +26,7 @@ impl Cli {
             .build()
             .context("could not initialize coordinator")?;
 
-        let runner: Box<dyn crate::coordinator::Runner> = if self.use_fake_runner {
-            log::info!("using fake runner");
-            Box::new(crate::fake_runner::FakeRunner::default())
-        } else {
-            Box::new(crate::runner::Runner)
-        };
+        let runner = crate::runner::Runner;
 
         while coordinator.has_outstanding_work() {
             coordinator.run_next(&runner).context("failed to run job")?;
