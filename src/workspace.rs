@@ -87,7 +87,7 @@ impl AsRef<Path> for Workspace {
 mod tests {
     use super::*;
     use crate::glue;
-    use roc_std::{RocList, RocStr};
+    use roc_std::{RocList, RocStr, RocDict};
     use std::path::PathBuf;
     use tempfile::TempDir;
 
@@ -110,6 +110,7 @@ mod tests {
                     .collect::<RocList<RocStr>>(),
             )]),
             outputs: RocList::empty(),
+            env: RocDict::with_capacity(0),
         });
 
         job::Job::from_glue(glue_job).unwrap()
