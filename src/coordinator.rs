@@ -235,6 +235,10 @@ impl Coordinator {
             let workspace = Workspace::create(&self.workspace_root, &key)
                 .with_context(|| format!("could not create workspace for {}", job))?;
 
+            workspace
+                .set_up_files(job)
+                .with_context(|| format!("could not set up workspaces files for {}", job))?;
+
             runner.run(job, &workspace).context("could not run job")?;
 
             self.store
