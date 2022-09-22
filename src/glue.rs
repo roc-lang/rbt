@@ -66,6 +66,7 @@ pub struct Job {
 #[repr(C)]
 pub struct R1 {
     pub command: Command,
+    pub env: roc_std::RocDict<roc_std::RocStr, roc_std::RocStr>,
     pub inputs: roc_std::RocList<Input>,
     pub outputs: roc_std::RocList<roc_std::RocStr>,
 }

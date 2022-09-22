@@ -1,5 +1,5 @@
 app "build"
-    packages { pf: "../../Package-Config.roc" }
+    packages { pf: "../../../Package-Config.roc" }
     imports [pf.Rbt.{ Rbt, systemTool, Job, job, exec }]
     provides [init] to pf
 
@@ -12,9 +12,11 @@ hello =
     job {
         command: exec (systemTool "bash") [
             "-c",
-            "echo 'Hello, World!' > out",
+            "echo \"$HELLO, $WORLD!\" > out",
         ],
         inputs: [],
         outputs: ["out"],
-        env: Dict.empty,
+        env: Dict.empty
+        |> Dict.insert "HELLO" "Hello"
+        |> Dict.insert "WORLD" "World",
     }

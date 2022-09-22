@@ -1,7 +1,7 @@
 use crate::glue;
 use anyhow::{Context, Result};
 use itertools::Itertools;
-use roc_std::RocStr;
+use roc_std::{RocDict, RocStr};
 use std::collections::HashSet;
 use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
@@ -73,6 +73,7 @@ impl<Finality> Display for Key<Finality> {
 pub struct Job {
     pub base_key: Key<Base>,
     pub command: glue::Command,
+    pub env: RocDict<RocStr, RocStr>,
     pub input_files: HashSet<PathBuf>,
     pub outputs: HashSet<PathBuf>,
 }
@@ -116,11 +117,17 @@ impl Job {
             outputs.insert(output);
         }
 
+        for (key, value) in unwrapped.env.iter().sorted() {
+            key.hash(&mut hasher);
+            value.hash(&mut hasher);
+        }
+
         Ok(Job {
             base_key: Key {
                 key: hasher.finish(),
                 phantom: PhantomData,
             },
+            env: unwrapped.env,
             command: unwrapped.command,
             input_files,
             outputs,
@@ -134,6 +141,10 @@ impl From<&Job> for Command {
 
         for arg in &job.command.args {
             command.arg(arg.as_str());
+        }
+
+        for (key, value) in &job.env {
+            command.env(key.as_str(), value.as_str());
         }
 
         command
@@ -219,6 +230,7 @@ mod test {
                 }),
                 args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
             },
+            env: RocDict::with_capacity(0),
             inputs: RocList::from_slice(&[glue::Input::FromProjectSource(RocList::from([
                 "input_file".into(),
             ]))]),
