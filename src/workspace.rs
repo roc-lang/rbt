@@ -87,7 +87,7 @@ impl AsRef<Path> for Workspace {
 mod tests {
     use super::*;
     use crate::glue;
-    use roc_std::{RocList, RocStr, RocDict};
+    use roc_std::{RocDict, RocList, RocStr};
     use std::path::PathBuf;
     use tempfile::TempDir;
 
