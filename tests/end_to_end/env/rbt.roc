@@ -18,5 +18,5 @@ hello =
         outputs: ["out"],
         env: Dict.empty
         |> Dict.insert "HELLO" "Hello"
-        |> Dict.insert "WORLD" "world",
+        |> Dict.insert "WORLD" "World",
     }
