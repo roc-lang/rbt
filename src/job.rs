@@ -67,7 +67,7 @@ impl<Finality> Display for Key<Finality> {
 #[derive(Debug)]
 pub struct Job {
     pub base_key: Key<Base>,
-    pub command: glue::CommandPayload,
+    pub command: glue::Command,
     pub input_files: HashSet<PathBuf>,
     pub outputs: HashSet<PathBuf>,
 }
@@ -116,7 +116,7 @@ impl Job {
                 key: hasher.finish(),
                 phantom: PhantomData,
             },
-            command: unwrapped.command.into_Command(),
+            command: unwrapped.command,
             input_files,
             outputs,
         })
@@ -207,13 +207,13 @@ mod test {
         // callers. Similarly, it might be inappropriate new optional fields in the
         // Roc API to contribute to the ID, since doing so would mean completely
         // re-running all build steps.
-        let glue_job = glue::Job::Job(glue::JobPayload {
-            command: glue::Command::Command(glue::CommandPayload {
+        let glue_job = glue::Job::Job(glue::R1 {
+            command: glue::Command {
                 tool: glue::Tool::SystemTool(glue::SystemToolPayload {
                     name: RocStr::from("bash"),
                 }),
                 args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
-            }),
+            },
             inputs: RocList::from_slice(&[glue::Input::FromProjectSource(RocList::from([
                 "input_file".into(),
             ]))]),

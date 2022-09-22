@@ -14,44 +14,43 @@ interface Rbt
 #     Tool : [ SystemTool { name : Str }, FromJob { name : Str, job : Job } ]
 #
 SystemToolPayload : { name : Str }
-Tool : [SystemTool SystemToolPayload]
+Tool := [SystemTool SystemToolPayload]
 
 systemTool : Str -> Tool
 systemTool = \name ->
-    SystemTool { name }
+    @Tool (SystemTool { name })
 
-CommandPayload : { tool : Tool, args : List Str }
-Command : [Command CommandPayload]
+Command := { tool : Tool, args : List Str }
 
 exec : Tool, List Str -> Command
 exec = \execTool, args ->
-    Command { tool: execTool, args }
+    @Command { tool: execTool, args }
 
-FileMapping : Str
+FileMapping := Str
 
 sourceFile : Str -> FileMapping
-sourceFile = \name -> name
+sourceFile = \name -> @FileMapping name
 
-Input : [FromProjectSource (List FileMapping)]
+Input := [FromProjectSource (List FileMapping)]
 
 # Add the given file to the job's workspace (the working directory where the
 # command is called.)
 projectFiles : List FileMapping -> Input
-projectFiles = \mappings -> FromProjectSource mappings
+projectFiles = \mappings -> @Input (FromProjectSource mappings)
 
-Job : [Job { command : Command, inputs : List Input, outputs : List Str }]
+Job := [Job { command : Command, inputs : List Input, outputs : List Str }]
 
 # TODO: these fields are all required until https://github.com/rtfeldman/roc/issues/1844 is fixed
 # TODO: destructuring is broken, see https://github.com/rtfeldman/roc/issues/2512
 job : { command : Command, inputs : List Input, outputs : List Str } -> Job
-job = \config -> Job config
+job = \config -> @Job (Job config)
 
-Rbt : { default : Job }
+Rbt := { default : Job }
 
 init : { default : Job } -> Rbt
-init = \rbt -> rbt
+init = \rbt -> @Rbt rbt
 
 tool : Job, Str -> Tool
 tool = \_, _ ->
     # FromJob { name, job }
-    SystemTool { name: "TODO" }
+    @Tool (SystemTool { name: "TODO" })
