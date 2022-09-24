@@ -1,5 +1,5 @@
 interface Rbt
-    exposes [Rbt, init, Job, job, Command, exec, Tool, tool, systemTool, projectFiles, sourceFile]
+    exposes [Rbt, init, Job, job, Command, exec, Tool, tool, systemTool, projectFiles, fromJob, Input, sourceFile]
     imports []
 
 # TODO: these are all out of order due to https://github.com/rtfeldman/roc/issues/1642. Once that's fixed, they should rearrange into the order in `exposes`
@@ -40,6 +40,10 @@ Input := [
 # command is called.)
 projectFiles : List FileMapping -> Input
 projectFiles = \mappings -> @Input (FromProjectSource mappings)
+
+# Add files from the given job to the current job's workspace.
+fromJob : Job, List FileMapping -> Input
+fromJob = \otherJob, mappings -> @Input (FromJob otherJob mappings)
 
 Job := [
     Job
