@@ -103,7 +103,7 @@ mod tests {
                 }),
                 args: RocList::empty(),
             },
-            inputs: RocList::from_slice(&[glue::Input::FromProjectSource(
+            inputs: RocList::from_slice(&[glue::U1::FromProjectSource(
                 files
                     .iter()
                     .map(|name| (*name).into())
