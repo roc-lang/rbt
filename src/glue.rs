@@ -6,6 +6,8 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
+#![allow(unused_variables)]
+#![allow(clippy::unit_cmp)]
 #![allow(clippy::undocumented_unsafe_blocks)]
 #![allow(clippy::redundant_static_lifetimes)]
 #![allow(clippy::unused_unit)]
