@@ -251,6 +251,8 @@ pub struct Coordinator<'roc> {
 
     // caches
     path_to_hash: HashMap<PathBuf, String>,
+
+    // TODO: have more of a think about whether this mapping (from Base instead of Final) is safe
     job_to_content_hash: HashMap<job::Key<job::Base>, String>,
 
     // which jobs should run when?
