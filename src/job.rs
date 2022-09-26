@@ -91,17 +91,18 @@ impl Job {
 
         let mut input_files: HashSet<PathBuf> = HashSet::with_capacity(unwrapped.inputs.len());
         for input in unwrapped.inputs.iter().sorted() {
-            match input.discriminant() {
-                glue::discriminant_U1::FromJob => todo!(),
-                glue::discriminant_U1::FromProjectSource => {
-                    for file in unsafe { input.as_FromProjectSource() }.iter().sorted() {
-                        let path = sanitize_file_path(file)
-                            .context("got an unacceptable input file path")?;
+            // TODO: we don't need job inputs yet, but we will need their
+            // destination paths when `FileMapping` is implemented (see ADR 008)
+            if input.discriminant() != glue::discriminant_U1::FromProjectSource {
+                continue;
+            }
 
-                        path.hash(&mut hasher);
-                        input_files.insert(path);
-                    }
-                }
+            for file in unsafe { input.as_FromProjectSource() }.iter().sorted() {
+                let path =
+                    sanitize_file_path(file).context("got an unacceptable input file path")?;
+
+                path.hash(&mut hasher);
+                input_files.insert(path);
             }
         }
 
