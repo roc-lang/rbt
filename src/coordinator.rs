@@ -310,7 +310,18 @@ impl<'roc> Coordinator<'roc> {
                     .with_context(|| format!("could not create workspace for {}", job))?;
 
                 workspace
-                    .set_up_files(job)
+                    .set_up_files(
+                        job,
+                        &self
+                            .job_to_content_hash
+                            .iter()
+                            // TODO: this is a massive, boundary-breaking hack
+                            // to just get something on the screen while I'm
+                            // developing. If you're looking at this in PR and
+                            // it's still here, make some noise!
+                            .map(|(k, hash)| (*k, self.workspace_root.join("store").join(hash)))
+                            .collect(),
+                    )
                     .with_context(|| format!("could not set up workspace files for {}", job))?;
 
                 runner.run(job, &workspace).context("could not run job")?;

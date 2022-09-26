@@ -1,6 +1,7 @@
 use crate::job;
 use anyhow::{Context, Result};
 use path_absolutize::Absolutize;
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -22,44 +23,61 @@ impl Workspace {
         Ok(workspace)
     }
 
-    pub fn set_up_files(&self, job: &job::Job) -> Result<()> {
+    pub fn set_up_files(
+        &self,
+        job: &job::Job,
+        job_to_store_path: &HashMap<job::Key<job::Base>, PathBuf>,
+    ) -> Result<()> {
         for file in &job.input_files {
-            if let Some(parent_base) = file.parent() {
-                let parent = self.join(parent_base);
-
-                if !parent.exists() {
-                    fs::create_dir_all(parent).with_context(|| {
-                        format!("could not create parent for `{}`", file.display())
-                    })?;
-                }
-            }
-
-            // validate that the path exists and is a file
-            let meta = file
-                .metadata()
-                .with_context(|| format!("`{}` does not exist", file.display()))?;
-
-            if meta.is_dir() {
-                anyhow::bail!(
-                    "`{}` was a directory, but file inputs can only be files",
-                    file.display()
-                )
-            }
-
-            let source = file.absolutize().with_context(|| {
-                format!("could not convert `{}` to an absolute path", file.display())
-            })?;
-
-            #[cfg(target_family = "unix")]
-            symlink(source, self.join(file)).with_context(|| {
-                format!("could not symlink `{}` into workspace", file.display())
-            })?;
-
-            #[cfg(target_family = "windows")]
-            symlink_file(source, workspace.join(file)).with_context(|| {
-                format!("could not symlink `{}` into workspace", file.display())
-            })?;
+            self.set_up_path(file, file)?
         }
+
+        for (key, files) in &job.input_jobs {
+            let store_path = job_to_store_path
+                .get(key)
+                .with_context(|| format!("could not find a store path for job {}", key))?;
+
+            for file in files {
+                self.set_up_path(&store_path.join(file), file)?
+            }
+        }
+
+        Ok(())
+    }
+
+    fn set_up_path(&self, src: &Path, dest: &Path) -> Result<()> {
+        // validate that the path exists and is a file
+        let meta = src
+            .metadata()
+            .with_context(|| format!("`{}` does not exist", dest.display()))?;
+
+        if meta.is_dir() {
+            anyhow::bail!(
+                "`{}` was a directory, but workspace source paths can only be files",
+                src.display()
+            )
+        }
+
+        if let Some(parent_base) = dest.parent() {
+            let parent = self.join(parent_base);
+
+            if !parent.exists() {
+                fs::create_dir_all(parent)
+                    .with_context(|| format!("could not create parent for `{}`", dest.display()))?;
+            }
+        }
+
+        let absolute_src = src.absolutize().with_context(|| {
+            format!("could not convert `{}` to an absolute path", src.display())
+        })?;
+
+        #[cfg(target_family = "unix")]
+        symlink(absolute_src, self.join(dest))
+            .with_context(|| format!("could not symlink `{}` into workspace", dest.display()))?;
+
+        #[cfg(target_family = "windows")]
+        symlink_file(absolute_src, workspace.join(dest))
+            .with_context(|| format!("could not symlink `{}` into workspace", file.display()))?;
 
         Ok(())
     }
