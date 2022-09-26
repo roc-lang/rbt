@@ -193,8 +193,7 @@ impl<'roc> Builder<'roc> {
         let mut glue_to_job_key: HashMap<&glue::Job, job::Key<job::Base>, Xxh3Builder> =
             HashMap::with_capacity_and_hasher(self.roots.len(), Xxh3Builder::new());
 
-        // TODO: use Xxh3Builder in the HashSet here
-        let mut job_deps: HashMap<&glue::Job, HashSet<&glue::Job>, Xxh3Builder> =
+        let mut job_deps: HashMap<&glue::Job, HashSet<&glue::Job, Xxh3Builder>, Xxh3Builder> =
             HashMap::with_hasher(Xxh3Builder::new());
 
         while let Some(next_glue_job) = to_descend_into.pop() {
@@ -207,7 +206,9 @@ impl<'roc> Builder<'roc> {
                     let job = unsafe { item.as_FromJob() }.0;
 
                     let entry = job_deps.entry(next_glue_job);
-                    entry.or_default().insert(&job);
+                    entry
+                        .or_insert_with(|| HashSet::with_capacity_and_hasher(1, Xxh3Builder::new()))
+                        .insert(&job);
 
                     to_descend_into.push(job);
                 });
