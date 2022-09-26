@@ -309,7 +309,7 @@ impl<'roc> Coordinator<'roc> {
 
                 workspace
                     .set_up_files(job)
-                    .with_context(|| format!("could not set up workspaces files for {}", job))?;
+                    .with_context(|| format!("could not set up workspace files for {}", job))?;
 
                 runner.run(job, &workspace).context("could not run job")?;
 
