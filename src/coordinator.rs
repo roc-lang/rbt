@@ -10,7 +10,7 @@ use std::hash::{Hash, Hasher};
 use std::io::BufReader;
 use std::path::PathBuf;
 use std::time::SystemTime;
-use xxhash_rust::xxh3::Xxh3;
+use xxhash_rust::xxh3::{Xxh3, Xxh3Builder};
 
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::MetadataExt;
@@ -18,7 +18,7 @@ use std::os::unix::fs::MetadataExt;
 pub struct Builder<'roc> {
     workspace_root: PathBuf,
     store: Store,
-    targets: Vec<&'roc glue::Job>,
+    roots: Vec<&'roc glue::Job>,
 }
 
 impl<'roc> Builder<'roc> {
@@ -28,12 +28,12 @@ impl<'roc> Builder<'roc> {
             store,
 
             // it's very likely we'll have at least one target
-            targets: Vec::with_capacity(1),
+            roots: Vec::with_capacity(1),
         }
     }
 
     pub fn add_target(&mut self, job: &'roc glue::Job) {
-        self.targets.push(job);
+        self.roots.push(job);
     }
 
     pub fn build(self) -> Result<Coordinator<'roc>> {
@@ -68,7 +68,7 @@ impl<'roc> Builder<'roc> {
         // it makes sense to deduplicate them to avoid duplicating filesystem
         // operations.
         let mut input_files: HashSet<PathBuf> = HashSet::new();
-        for glue_job in &self.targets {
+        for glue_job in &self.roots {
             for input in &glue_job.as_Job().inputs {
                 if input.discriminant() == glue::discriminant_U1::FromProjectSource {
                     for file in unsafe { input.as_FromProjectSource() } {
@@ -86,9 +86,9 @@ impl<'roc> Builder<'roc> {
 
             // On capacities: we'll have at least as many jobs as we have targets,
             // each of which will have at least one leaf node.
-            jobs: HashMap::with_capacity(self.targets.len()),
+            jobs: HashMap::with_capacity(self.roots.len()),
             blocked: HashMap::default(),
-            ready: Vec::with_capacity(self.targets.len()),
+            ready: Vec::with_capacity(self.roots.len()),
         };
 
         /////////////////////////////////////////////
@@ -170,19 +170,70 @@ impl<'roc> Builder<'roc> {
         ///////////////////////////////////////////////////////////////////////////
         // Phase 3: get the hahes to determine what jobs we actually need to run //
         ///////////////////////////////////////////////////////////////////////////
-        for glue_job in self.targets {
-            // Note: this data structure is going to grow the ability to
-            // refer to other jobs as soon as it's possibly feasible. When
-            // that happens, a depth-first search through the tree rooted at
-            // `glue_job` will probably suffice.
-            let job =
-                Job::from_glue(glue_job).context("could not convert glue job to actual job")?;
 
-            // TODO: pushing to `ready` immediately is only reasonable when
-            // we don't have job inputs as dependencies, but we don't have that
-            // yet. This'll need to change when we do or we'll have some very
-            // broken runs!
-            coordinator.ready.push(job.base_key);
+        // to build a graph, we need the base keys for all jobs. This can't be
+        // a depth-first search, however, because that would mean processing
+        // dependent jobs before their dependencies. We can't do that because
+        // then we would have unresolved base keys and we'd have to defer until
+        // we got them or temporarily suffer incomplete information in the
+        // graph.
+        //
+        // Ideally, we'd look at the leaf nodes first, then the things that
+        // depend on them, etc. In other words, a depth-first search starting
+        // at the leaves instead of the roots. Lucky for us, that's easy to do:
+        // just write down the jobs we see as we do a depth first search, then
+        // walk that list in the opposite direction.
+        //
+        // `to_descend_into` tracks the depth-first search part of this scheme,
+        // and `to_convert` is where we write down the dependencies in root-to-
+        // leaf order.
+        let mut to_descend_into = self.roots.clone();
+        let mut to_convert = Vec::with_capacity(self.roots.len());
+
+        let mut glue_to_job_key: HashMap<&glue::Job, job::Key<job::Base>, Xxh3Builder> =
+            HashMap::with_capacity_and_hasher(self.roots.len(), Xxh3Builder::new());
+
+        // TODO: use Xxh3Builder in the HashSet here
+        let mut job_deps: HashMap<&glue::Job, HashSet<&glue::Job>, Xxh3Builder> =
+            HashMap::with_hasher(Xxh3Builder::new());
+
+        while let Some(next_glue_job) = to_descend_into.pop() {
+            next_glue_job
+                .as_Job()
+                .inputs
+                .iter()
+                .filter(|item| item.discriminant() == glue::discriminant_U1::FromJob)
+                .for_each(|item| {
+                    let job = unsafe { item.as_FromJob() }.0;
+
+                    let entry = job_deps.entry(next_glue_job);
+                    entry.or_default().insert(&job);
+
+                    to_descend_into.push(job);
+                });
+
+            to_convert.push(next_glue_job);
+        }
+
+        while let Some(glue_job) = to_convert.pop() {
+            let job = job::Job::from_glue(glue_job)
+                .context("could not convert glue job into actual job")?;
+
+            if let Some(deps) = job_deps.get(glue_job) {
+                let blockers = coordinator.blocked.entry(job.base_key).or_default();
+
+                for dep in deps {
+                    blockers.insert(
+                        *glue_to_job_key
+                            .get(dep)
+                            .context("could not get job key for a glue job. This is probably an internal ordering bug and should be reported!")?
+                    );
+                }
+            } else {
+                coordinator.ready.push(job.base_key);
+            }
+
+            glue_to_job_key.insert(glue_job, job.base_key);
             coordinator.jobs.insert(job.base_key, job);
         }
 
