@@ -70,17 +70,17 @@ impl<Finality> Display for Key<Finality> {
 }
 
 #[derive(Debug)]
-pub struct Job {
+pub struct Job<'roc> {
     pub base_key: Key<Base>,
-    pub command: glue::Command,
-    pub env: RocDict<RocStr, RocStr>,
+    pub command: &'roc glue::Command,
+    pub env: &'roc RocDict<RocStr, RocStr>,
     pub input_files: HashSet<PathBuf>,
     pub outputs: HashSet<PathBuf>,
 }
 
-impl Job {
-    pub fn from_glue(job: glue::Job) -> Result<Self> {
-        let unwrapped = job.into_Job();
+impl<'roc> Job<'roc> {
+    pub fn from_glue(job: &'roc glue::Job) -> Result<Self> {
+        let unwrapped = job.as_Job();
 
         let mut hasher = Xxh3::new();
 
@@ -133,15 +133,15 @@ impl Job {
                 key: hasher.finish(),
                 phantom: PhantomData,
             },
-            env: unwrapped.env,
-            command: unwrapped.command,
+            env: &unwrapped.env,
+            command: &unwrapped.command,
             input_files,
             outputs,
         })
     }
 }
 
-impl From<&Job> for Command {
+impl<'roc> From<&Job<'roc>> for Command {
     fn from(job: &Job) -> Self {
         let mut command = Command::new(&job.command.tool.as_SystemTool().name.to_string());
 
@@ -149,7 +149,7 @@ impl From<&Job> for Command {
             command.arg(arg.as_str());
         }
 
-        for (key, value) in &job.env {
+        for (key, value) in job.env {
             command.env(key.as_str(), value.as_str());
         }
 
@@ -157,7 +157,7 @@ impl From<&Job> for Command {
     }
 }
 
-impl Display for Job {
+impl<'roc> Display for Job<'roc> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // intention: make a best-effort version of part of how the command
         // would look if it were invoked from a shell. It's OK for right now
@@ -243,7 +243,7 @@ mod test {
             outputs: RocList::from_slice(&["output_file".into()]),
         });
 
-        let job = Job::from_glue(glue_job).unwrap();
+        let job = Job::from_glue(&glue_job).unwrap();
 
         assert_eq!(
             Key {

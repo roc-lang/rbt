@@ -15,13 +15,13 @@ use xxhash_rust::xxh3::Xxh3;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::MetadataExt;
 
-pub struct Builder {
+pub struct Builder<'roc> {
     workspace_root: PathBuf,
     store: Store,
-    targets: Vec<glue::Job>,
+    targets: Vec<&'roc glue::Job>,
 }
 
-impl Builder {
+impl<'roc> Builder<'roc> {
     pub fn new(workspace_root: PathBuf, store: Store) -> Self {
         Builder {
             workspace_root,
@@ -32,11 +32,11 @@ impl Builder {
         }
     }
 
-    pub fn add_target(&mut self, job: glue::Job) {
+    pub fn add_target(&mut self, job: &'roc glue::Job) {
         self.targets.push(job);
     }
 
-    pub fn build(mut self) -> Result<Coordinator> {
+    pub fn build(mut self) -> Result<Coordinator<'roc>> {
         // Here's the overview of what we're about to do: for each file in
         // each target job, we're going to look at metadata for that file and
         // use that metadata to look up the file's hash (if we don't have it
@@ -176,7 +176,7 @@ impl Builder {
             // that happens, a depth-first search through the tree rooted at
             // `glue_job` will probably suffice.
             let job =
-                Job::from_glue(glue_job).context("could not convert glue job to actual job")?;
+                Job::from_glue(&glue_job).context("could not convert glue job to actual job")?;
 
             // TODO: pushing to `ready` immediately is only reasonable when
             // we don't have job inputs as dependencies, but we don't have that
@@ -191,7 +191,7 @@ impl Builder {
 }
 
 #[derive(Debug)]
-pub struct Coordinator {
+pub struct Coordinator<'roc> {
     workspace_root: PathBuf,
     store: Store,
 
@@ -199,12 +199,12 @@ pub struct Coordinator {
     path_to_hash: HashMap<PathBuf, String>,
 
     // which jobs should run when?
-    jobs: HashMap<job::Key<job::Base>, Job>,
+    jobs: HashMap<job::Key<job::Base>, Job<'roc>>,
     blocked: HashMap<job::Key<job::Base>, HashSet<job::Key<job::Base>>>,
     ready: Vec<job::Key<job::Base>>,
 }
 
-impl Coordinator {
+impl<'roc> Coordinator<'roc> {
     pub fn has_outstanding_work(&self) -> bool {
         !self.blocked.is_empty() || !self.ready.is_empty()
     }

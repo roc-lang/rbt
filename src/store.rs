@@ -107,7 +107,7 @@ impl Store {
 #[derive(Debug)]
 struct ContentAddressedItem<'job> {
     workspace: Workspace,
-    job: &'job Job,
+    job: &'job Job<'job>,
     hash: blake3::Hash,
 }
 

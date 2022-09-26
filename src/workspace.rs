@@ -95,8 +95,8 @@ mod tests {
         job::KeyBuilder::mock().finalize()
     }
 
-    fn job_with_files(files: &[&str]) -> job::Job {
-        let glue_job = glue::Job::Job(glue::R1 {
+    fn glue_job_with_files<'roc>(files: &[&str]) -> glue::Job {
+        glue::Job::Job(glue::R1 {
             command: glue::Command {
                 tool: glue::Tool::SystemTool(glue::SystemToolPayload {
                     name: RocStr::from("bash"),
@@ -111,9 +111,7 @@ mod tests {
             )]),
             outputs: RocList::empty(),
             env: RocDict::with_capacity(0),
-        });
-
-        job::Job::from_glue(glue_job).unwrap()
+        })
     }
 
     #[test]
@@ -135,7 +133,8 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
 
-        let job = job_with_files(&[file!()]);
+        let glue_job = glue_job_with_files(&[file!()]);
+        let job = job::Job::from_glue(&glue_job).unwrap();
         workspace
             .set_up_files(&job)
             .expect("failed to set up files");
@@ -154,7 +153,8 @@ mod tests {
         let temp = TempDir::new().unwrap();
 
         let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
-        let job = job_with_files(&["does-not-exist"]);
+        let glue_job = glue_job_with_files(&["does-not-exist"]);
+        let job = job::Job::from_glue(&glue_job).unwrap();
 
         assert_eq!(
             String::from("`does-not-exist` does not exist"),
@@ -172,7 +172,8 @@ mod tests {
         let here = PathBuf::from(file!());
         let parent = here.parent().unwrap();
 
-        let job = job_with_files(&[parent.to_str().unwrap()]);
+        let glue_job = glue_job_with_files(&[parent.to_str().unwrap()]);
+        let job = job::Job::from_glue(&glue_job).unwrap();
 
         assert_eq!(
             format!(
