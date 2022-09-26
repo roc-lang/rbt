@@ -88,7 +88,7 @@ mod tests {
     use super::*;
     use crate::glue;
     use roc_std::{RocDict, RocList, RocStr};
-    use std::path::PathBuf;
+    use std::{collections::HashMap, path::PathBuf};
     use tempfile::TempDir;
 
     fn key() -> job::Key<job::Final> {
@@ -134,7 +134,7 @@ mod tests {
         let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
 
         let glue_job = glue_job_with_files(&[file!()]);
-        let job = job::Job::from_glue(&glue_job).unwrap();
+        let job = job::Job::from_glue(&glue_job, &HashMap::new()).unwrap();
         workspace
             .set_up_files(&job)
             .expect("failed to set up files");
@@ -154,7 +154,7 @@ mod tests {
 
         let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
         let glue_job = glue_job_with_files(&["does-not-exist"]);
-        let job = job::Job::from_glue(&glue_job).unwrap();
+        let job = job::Job::from_glue(&glue_job, &HashMap::new()).unwrap();
 
         assert_eq!(
             String::from("`does-not-exist` does not exist"),
@@ -173,7 +173,7 @@ mod tests {
         let parent = here.parent().unwrap();
 
         let glue_job = glue_job_with_files(&[parent.to_str().unwrap()]);
-        let job = job::Job::from_glue(&glue_job).unwrap();
+        let job = job::Job::from_glue(&glue_job, &HashMap::new()).unwrap();
 
         assert_eq!(
             format!(

@@ -2,9 +2,9 @@ use crate::glue;
 use anyhow::{Context, Result};
 use itertools::Itertools;
 use roc_std::{RocDict, RocStr};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Display};
-use std::hash::{Hash, Hasher};
+use std::hash::{BuildHasher, Hash, Hasher};
 use std::marker::PhantomData;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
@@ -75,11 +75,18 @@ pub struct Job<'roc> {
     pub command: &'roc glue::Command,
     pub env: &'roc RocDict<RocStr, RocStr>,
     pub input_files: HashSet<PathBuf>,
+    pub input_jobs: HashMap<Key<Base>, HashSet<PathBuf>>,
     pub outputs: HashSet<PathBuf>,
 }
 
 impl<'roc> Job<'roc> {
-    pub fn from_glue(job: &'roc glue::Job) -> Result<Self> {
+    pub fn from_glue<S>(
+        job: &'roc glue::Job,
+        glue_job_to_key: &HashMap<&glue::Job, Key<Base>, S>,
+    ) -> Result<Self>
+    where
+        S: BuildHasher,
+    {
         let unwrapped = job.as_Job();
 
         let mut hasher = Xxh3::new();
@@ -89,20 +96,42 @@ impl<'roc> Job<'roc> {
         // for this.
         unwrapped.command.hash(&mut hasher);
 
-        let mut input_files: HashSet<PathBuf> = HashSet::with_capacity(unwrapped.inputs.len());
+        let mut input_files: HashSet<PathBuf> = HashSet::new();
+        let mut input_jobs: HashMap<Key<Base>, HashSet<PathBuf>> = HashMap::new();
+
         for input in unwrapped.inputs.iter().sorted() {
-            // TODO: we don't need job inputs yet, but we will need their
-            // destination paths when `FileMapping` is implemented (see ADR 008)
-            if input.discriminant() != glue::discriminant_U1::FromProjectSource {
-                continue;
-            }
+            match input.discriminant() {
+                glue::discriminant_U1::FromJob => {
+                    let (glue_job, files) = unsafe { input.as_FromJob() };
 
-            for file in unsafe { input.as_FromProjectSource() }.iter().sorted() {
-                let path =
-                    sanitize_file_path(file).context("got an unacceptable input file path")?;
+                    // note that we're not hashing this key. We'll hash the
+                    // content hash from the dependency job later, so we're
+                    // getting this information anyway, and hashing it here
+                    // would cause a rebuild on any source change in the
+                    // dependent job, even (for example) a comment moving
+                    // around.
+                    let key = glue_job_to_key.get(glue_job).context("could not get job key to determine build order. This indicates an internal bug in the coordinator module and should be reported.")?;
+                    let mut job_files = HashSet::new();
 
-                path.hash(&mut hasher);
-                input_files.insert(path);
+                    for file in files {
+                        let path = sanitize_file_path(file)
+                            .context("got an unnacceptable input file path")?;
+
+                        path.hash(&mut hasher);
+                        job_files.insert(path);
+                    }
+
+                    input_jobs.insert(*key, job_files);
+                }
+                glue::discriminant_U1::FromProjectSource => {
+                    for file in unsafe { input.as_FromProjectSource() }.iter().sorted() {
+                        let path = sanitize_file_path(file)
+                            .context("got an unacceptable input file path")?;
+
+                        path.hash(&mut hasher);
+                        input_files.insert(path);
+                    }
+                }
             }
         }
 
@@ -136,6 +165,7 @@ impl<'roc> Job<'roc> {
             env: &unwrapped.env,
             command: &unwrapped.command,
             input_files,
+            input_jobs,
             outputs,
         })
     }
@@ -243,7 +273,7 @@ mod test {
             outputs: RocList::from_slice(&["output_file".into()]),
         });
 
-        let job = Job::from_glue(&glue_job).unwrap();
+        let job = Job::from_glue(&glue_job, &HashMap::new()).unwrap();
 
         assert_eq!(
             Key {
