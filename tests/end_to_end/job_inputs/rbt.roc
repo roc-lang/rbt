@@ -11,8 +11,14 @@ helloWorld : Job
 helloWorld =
     job {
         command: exec (systemTool "bash") [
+            "-euo",
+            "pipefail",
             "-c",
-            "printf '%s, %s!\n' \"$(cat greeting)\" \"$(cat subject)\" > out",
+            """
+            GREETING="$(cat greeting)"
+            SUBJECT="$(cat subject)"
+            printf '%s, %s!\n' "$GREETING" "$SUBJECT" > out
+            """
         ],
         inputs: [
             fromJob greeting [sourceFile "greeting"],
