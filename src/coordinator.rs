@@ -278,6 +278,11 @@ impl<'roc> Coordinator<'roc> {
         log::debug!("preparing to run job {}", job);
 
         // figure out the final key based on the job's dependencies
+        //
+        // TODO: it feels like much of the code between here and `finalize`
+        //  would be better off living in KeyBuilder itself. It probably doesn't
+        //  need to have a builder pattern at all, in fact, just a regular
+        //  constructor.
         let mut key_builder = job::KeyBuilder::based_on(&job.base_key);
         for path in &job.input_files {
             match self.path_to_hash.get(path) {
