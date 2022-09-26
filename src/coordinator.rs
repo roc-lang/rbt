@@ -36,7 +36,7 @@ impl<'roc> Builder<'roc> {
         self.targets.push(job);
     }
 
-    pub fn build(mut self) -> Result<Coordinator<'roc>> {
+    pub fn build(self) -> Result<Coordinator<'roc>> {
         // Here's the overview of what we're about to do: for each file in
         // each target job, we're going to look at metadata for that file and
         // use that metadata to look up the file's hash (if we don't have it
@@ -170,13 +170,13 @@ impl<'roc> Builder<'roc> {
         ///////////////////////////////////////////////////////////////////////////
         // Phase 3: get the hahes to determine what jobs we actually need to run //
         ///////////////////////////////////////////////////////////////////////////
-        for glue_job in self.targets.drain(..) {
+        for glue_job in self.targets {
             // Note: this data structure is going to grow the ability to
             // refer to other jobs as soon as it's possibly feasible. When
             // that happens, a depth-first search through the tree rooted at
             // `glue_job` will probably suffice.
             let job =
-                Job::from_glue(&glue_job).context("could not convert glue job to actual job")?;
+                Job::from_glue(glue_job).context("could not convert glue job to actual job")?;
 
             // TODO: pushing to `ready` immediately is only reasonable when
             // we don't have job inputs as dependencies, but we don't have that
