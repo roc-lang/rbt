@@ -4,6 +4,7 @@ use crate::store::Store;
 use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use core::convert::{TryFrom, TryInto};
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::fs::{File, Metadata};
 use std::hash::{Hash, Hasher};
@@ -83,6 +84,7 @@ impl<'roc> Builder<'roc> {
             store: self.store,
 
             path_to_hash: HashMap::with_capacity(input_files.len()),
+            job_to_content_hash: HashMap::with_capacity(self.roots.len()),
 
             // On capacities: we'll have at least as many jobs as we have targets,
             // each of which will have at least one leaf node.
@@ -249,6 +251,7 @@ pub struct Coordinator<'roc> {
 
     // caches
     path_to_hash: HashMap<PathBuf, String>,
+    job_to_content_hash: HashMap<job::Key<job::Base>, String>,
 
     // which jobs should run when?
     jobs: HashMap<job::Key<job::Base>, Job<'roc>>,
@@ -282,24 +285,36 @@ impl<'roc> Coordinator<'roc> {
                 None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.display()),
             }
         }
+        for key in job.input_jobs.keys().sorted() {
+            key_builder.add_dependency(self.job_to_content_hash.get(key).context("could not look up output hash for dependency. This is a bug in rbt's coordinator. Please file it!")?);
+        }
         let key = key_builder.finalize();
 
         // build (or don't) based on the final key!
-        if self.store.for_job(&key).is_none() {
-            let workspace = Workspace::create(&self.workspace_root, &key)
-                .with_context(|| format!("could not create workspace for {}", job))?;
+        match self.store.hash_for_job(&key) {
+            Some(hash) => {
+                log::debug!("already had output of job {}; skipping", job);
+                // TODO: this clone smells like there's some responsibility in
+                // the wrong place. Can we get rid of it?
+                self.job_to_content_hash.insert(job.base_key, hash.clone());
+            }
+            None => {
+                let workspace = Workspace::create(&self.workspace_root, &key)
+                    .with_context(|| format!("could not create workspace for {}", job))?;
 
-            workspace
-                .set_up_files(job)
-                .with_context(|| format!("could not set up workspaces files for {}", job))?;
+                workspace
+                    .set_up_files(job)
+                    .with_context(|| format!("could not set up workspaces files for {}", job))?;
 
-            runner.run(job, &workspace).context("could not run job")?;
+                runner.run(job, &workspace).context("could not run job")?;
 
-            self.store
-                .store_from_workspace(key, job, workspace)
-                .context("could not store job output")?;
-        } else {
-            log::debug!("already had output of job {}; skipping", job);
+                self.job_to_content_hash.insert(
+                    job.base_key,
+                    self.store
+                        .store_from_workspace(key, job, workspace)
+                        .context("could not store job output")?,
+                );
+            }
         }
 
         // Now that we're done running the job, we update our bookkeeping to

@@ -35,6 +35,10 @@ impl KeyBuilder {
         content_hash.hash(&mut self.0);
     }
 
+    pub fn add_dependency(&mut self, dep: &str) {
+        dep.hash(&mut self.0);
+    }
+
     pub fn finalize(self) -> Key<Final> {
         Key {
             key: self.0.finish(),
@@ -44,11 +48,11 @@ impl KeyBuilder {
 }
 
 /// See docs on `Key`
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize)]
 pub struct Base;
 
 /// See docs on `Key`
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize)]
 pub struct Final;
 
 /// A cache key for a job. This has a phantom type parameter because we calculate
@@ -56,7 +60,9 @@ pub struct Final;
 /// the information passed in from a `glue::Job`. The second includes information
 /// we'd have to do I/O for (like file hashes.) For more on the architecture,
 /// see `docs/internals/how-we-determine-when-to-run-jobs.md`.
-#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Eq, Hash, PartialEq, Clone, PartialOrd, Ord, Copy, serde::Serialize, serde::Deserialize,
+)]
 #[serde(transparent)]
 pub struct Key<Finality> {
     key: u64,

@@ -43,12 +43,14 @@ impl Store {
         })
     }
 
+    pub fn hash_for_job(&self, key: &job::Key<job::Final>) -> Option<&String> {
+        self.inputs_to_content.get(key)
+    }
+
     /// If an output exists for a job, what is it? If we don't have a stored
     /// output for the job, return `None`.
-    pub fn for_job(&self, key: &job::Key<job::Final>) -> Option<PathBuf> {
-        self.inputs_to_content
-            .get(key)
-            .map(|path| self.root.join(path))
+    pub fn path_for_job(&self, key: &job::Key<job::Final>) -> Option<PathBuf> {
+        self.hash_for_job(key).map(|path| self.root.join(path))
     }
 
     /// Figure out if we need to make a new content-addressable item from the
@@ -70,7 +72,7 @@ impl Store {
         key: job::Key<job::Final>,
         job: &Job,
         workspace: Workspace,
-    ) -> Result<()> {
+    ) -> Result<String> {
         let item = ContentAddressedItem::load(job, workspace)
             .context("could get content addressable item from job")?;
 
@@ -91,14 +93,16 @@ impl Store {
         }
     }
 
-    fn associate_job_with_hash(&mut self, key: job::Key<job::Final>, hash: &str) -> Result<()> {
+    fn associate_job_with_hash(&mut self, key: job::Key<job::Final>, hash: &str) -> Result<String> {
         self.inputs_to_content.insert(key, hash.to_owned());
 
         let file = std::fs::File::create(self.root.join("inputs_to_content.json"))
             .context("failed to open job-to-content-hash mapping")?;
         // TODO: BufWriter?
         serde_json::to_writer(file, &self.inputs_to_content)
-            .context("failed to write job-to-content-hash mapping")
+            .context("failed to write job-to-content-hash mapping")?;
+
+        Ok(hash.to_string())
     }
 }
 
