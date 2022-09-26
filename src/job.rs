@@ -117,6 +117,9 @@ impl<'roc> Job<'roc> {
                         let path = sanitize_file_path(file)
                             .context("got an unnacceptable input file path")?;
 
+                        // TODO: when we have mapped filenames, both components
+                        // of the mapped file name should be added to the hash
+                        // here. (See ADR 008)
                         path.hash(&mut hasher);
                         job_files.insert(path);
                     }
