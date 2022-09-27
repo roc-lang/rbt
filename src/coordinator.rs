@@ -1,6 +1,6 @@
 use crate::glue;
 use crate::job::{self, Job};
-use crate::store::Store;
+use crate::store::{self, Store};
 use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use core::convert::{TryFrom, TryInto};
@@ -253,7 +253,7 @@ pub struct Coordinator<'roc> {
     path_to_hash: HashMap<PathBuf, String>,
 
     // TODO: have more of a think about whether this mapping (from Base instead of Final) is safe
-    job_to_content_hash: HashMap<job::Key<job::Base>, String>,
+    job_to_content_hash: HashMap<job::Key<job::Base>, store::Item>,
 
     // which jobs should run when?
     jobs: HashMap<job::Key<job::Base>, Job<'roc>>,
@@ -293,35 +293,28 @@ impl<'roc> Coordinator<'roc> {
             }
         }
         for key in job.input_jobs.keys().sorted() {
-            key_builder.add_dependency(self.job_to_content_hash.get(key).context("could not look up output hash for dependency. This is a bug in rbt's coordinator. Please file it!")?);
+            key_builder.add_dependency(&self.job_to_content_hash.get(key).context("could not look up output hash for dependency. This is a bug in rbt's coordinator. Please file it!")?.hash());
         }
         let key = key_builder.finalize();
 
         // build (or don't) based on the final key!
-        match self.store.hash_for_job(&key) {
-            Some(hash) => {
+        match self
+            .store
+            .item_for_job(&key)
+            .context("could not get a store path for the current job")?
+        {
+            Some(item) => {
                 log::debug!("already had output of job {}; skipping", job);
                 // TODO: this clone smells like there's some responsibility in
                 // the wrong place. Can we get rid of it?
-                self.job_to_content_hash.insert(job.base_key, hash.clone());
+                self.job_to_content_hash.insert(job.base_key, item);
             }
             None => {
                 let workspace = Workspace::create(&self.workspace_root, &key)
                     .with_context(|| format!("could not create workspace for {}", job))?;
 
                 workspace
-                    .set_up_files(
-                        job,
-                        &self
-                            .job_to_content_hash
-                            .iter()
-                            // TODO: this is a massive, boundary-breaking hack
-                            // to just get something on the screen while I'm
-                            // developing. If you're looking at this in PR and
-                            // it's still here, make some noise!
-                            .map(|(k, hash)| (*k, self.workspace_root.join("store").join(hash)))
-                            .collect(),
-                    )
+                    .set_up_files(job, &self.job_to_content_hash)
                     .with_context(|| format!("could not set up workspace files for {}", job))?;
 
                 runner.run(job, &workspace).context("could not run job")?;

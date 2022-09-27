@@ -1,4 +1,4 @@
-use crate::job;
+use crate::{job, store};
 use anyhow::{Context, Result};
 use path_absolutize::Absolutize;
 use std::collections::HashMap;
@@ -26,19 +26,19 @@ impl Workspace {
     pub fn set_up_files(
         &self,
         job: &job::Job,
-        job_to_store_path: &HashMap<job::Key<job::Base>, PathBuf>,
+        job_to_store_path: &HashMap<job::Key<job::Base>, store::Item>,
     ) -> Result<()> {
         for file in &job.input_files {
             self.set_up_path(file, file)?
         }
 
         for (key, files) in &job.input_jobs {
-            let store_path = job_to_store_path
+            let store_item = job_to_store_path
                 .get(key)
                 .with_context(|| format!("could not find a store path for job {}", key))?;
 
             for file in files {
-                self.set_up_path(&store_path.join(file), file)?
+                self.set_up_path(&store_item.join(file), file)?
             }
         }
 

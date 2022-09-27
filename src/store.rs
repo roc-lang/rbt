@@ -43,14 +43,11 @@ impl Store {
         })
     }
 
-    pub fn hash_for_job(&self, key: &job::Key<job::Final>) -> Option<&String> {
-        self.inputs_to_content.get(key)
-    }
-
-    /// If an output exists for a job, what is it? If we don't have a stored
-    /// output for the job, return `None`.
-    pub fn path_for_job(&self, key: &job::Key<job::Final>) -> Option<PathBuf> {
-        self.hash_for_job(key).map(|path| self.root.join(path))
+    pub fn item_for_job(&self, key: &job::Key<job::Final>) -> Result<Option<Item>> {
+        match self.inputs_to_content.get(key) {
+            None => Ok(None),
+            Some(hash) => Item::from_hex(&self.root, hash).map(Some),
+        }
     }
 
     /// Figure out if we need to make a new content-addressable item from the
@@ -72,25 +69,18 @@ impl Store {
         key: job::Key<job::Final>,
         job: &Job,
         workspace: Workspace,
-    ) -> Result<String> {
-        let item = ItemBuilder::load(job, workspace)
+    ) -> Result<Item> {
+        let item_builder = ItemBuilder::load(&self.root, job, workspace)
             .context("could get content addressed path from job")?;
 
-        if item.exists_in(&self.root) {
-            log::debug!("we have already stored {}, so I'm skipping the move!", item,);
+        let item = item_builder
+            .move_into_checked(&self.root)
+            .context("could not move item into the store")?;
 
-            self.associate_job_with_hash(key, &item.hash().to_string())
-                .context("could not associate job with hash")
-        } else {
-            log::debug!("moving {} into store", item);
+        self.associate_job_with_hash(key, &item.to_string())
+            .context("could not associate job with hash")?;
 
-            let hash = item
-                .move_into(&self.root)
-                .context("could not move item into the store")?;
-
-            self.associate_job_with_hash(key, &hash.to_string())
-                .context("could not associate job with hash")
-        }
+        Ok(item)
     }
 
     fn associate_job_with_hash(&mut self, key: job::Key<job::Final>, hash: &str) -> Result<String> {
@@ -112,13 +102,13 @@ impl Store {
 struct ItemBuilder<'job> {
     workspace: Workspace,
     job: &'job Job<'job>,
-    hash: blake3::Hash,
+    item: Item,
 }
 
 impl<'job> ItemBuilder<'job> {
     /// Load all the outputs from a job and workspace combo, creating a hash
     /// as we go.
-    fn load(job: &'job Job, workspace: Workspace) -> Result<Self> {
+    fn load(root: &Path, job: &'job Job, workspace: Workspace) -> Result<Self> {
         let mut hasher = blake3::Hasher::new();
 
         for path in job.outputs.iter().sorted() {
@@ -146,29 +136,30 @@ impl<'job> ItemBuilder<'job> {
         Ok(Self {
             workspace,
             job,
-            hash: hasher.finalize(),
+            item: Item::from_hash(root, hasher.finalize()),
         })
     }
 
-    fn hash(&self) -> &blake3::Hash {
-        &self.hash
-    }
+    // like `move_into`, but checks that the store path exists first
+    fn move_into_checked(self, root: &Path) -> Result<Item> {
+        if self.item.exists() {
+            log::debug!("we have already stored {}, so I'm skipping the move!", self,);
 
-    fn final_path(&self, root: &Path) -> PathBuf {
-        root.join(self.to_string())
-    }
+            Ok(self.item)
+        } else {
+            log::debug!("moving {} into store", self);
 
-    /// Does this item exist as a path within the specified root?
-    fn exists_in(&self, root: &Path) -> bool {
-        self.final_path(root).exists()
+            self.move_into(root)
+                .context("could not move item into the store")
+        }
     }
 
     /// Move this item into the store. This consumes the item, since it won't be
     /// safe to do this twice (we move files from the owned `Workspace` / passed
     /// in with `load`) Returns the only safe thing to use after calling this:
     /// the hash.
-    fn move_into(self, root: &Path) -> Result<blake3::Hash> {
-        let final_path = self.final_path(root);
+    fn move_into(self, root: &Path) -> Result<Item> {
+        let final_path = self.item.path();
 
         let temp = tempfile::Builder::new()
             .prefix(&format!("tmp-{}", self))
@@ -261,7 +252,7 @@ impl<'job> ItemBuilder<'job> {
             .context("could not move temporary collection directory into the store")?;
         Self::make_readonly(&final_path).context("could not make store path readonly")?;
 
-        Ok(self.hash)
+        Ok(self.item)
     }
 
     fn make_readonly(path: &Path) -> Result<()> {
@@ -277,6 +268,50 @@ impl<'job> ItemBuilder<'job> {
 
 impl<'job> Display for ItemBuilder<'job> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.item.fmt(f)
+    }
+}
+
+#[derive(Debug)]
+pub struct Item {
+    hash: blake3::Hash,
+    path: PathBuf,
+}
+
+impl Item {
+    fn from_hash(root: &Path, hash: blake3::Hash) -> Self {
+        Item {
+            hash,
+            path: root.join(hash.to_hex().to_string()),
+        }
+    }
+
+    fn from_hex(root: &Path, hex: &str) -> Result<Self> {
+        let hash = blake3::Hash::from_hex(hex)
+            .with_context(|| format!("could not load a blake3 hash from hex value `{}`", hex))?;
+
+        Ok(Self::from_hash(root, hash))
+    }
+
+    pub fn hash(&self) -> blake3::Hash {
+        self.hash
+    }
+
+    pub fn path(&self) -> &PathBuf {
+        &self.path
+    }
+}
+
+impl Display for Item {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.hash.fmt(f)
+    }
+}
+
+impl std::ops::Deref for Item {
+    type Target = PathBuf;
+
+    fn deref(&self) -> &Self::Target {
+        &self.path
     }
 }

@@ -35,7 +35,7 @@ impl KeyBuilder {
         content_hash.hash(&mut self.0);
     }
 
-    pub fn add_dependency(&mut self, dep: &str) {
+    pub fn add_dependency(&mut self, dep: &blake3::Hash) {
         dep.hash(&mut self.0);
     }
 
