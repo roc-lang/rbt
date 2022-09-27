@@ -154,7 +154,7 @@ mod tests {
         let glue_job = glue_job_with_files(&[file!()]);
         let job = job::Job::from_glue(&glue_job, &HashMap::new()).unwrap();
         workspace
-            .set_up_files(&job)
+            .set_up_files(&job, &HashMap::new())
             .expect("failed to set up files");
 
         let path = workspace.join(file!());
@@ -176,7 +176,10 @@ mod tests {
 
         assert_eq!(
             String::from("`does-not-exist` does not exist"),
-            workspace.set_up_files(&job).unwrap_err().to_string(),
+            workspace
+                .set_up_files(&job, &HashMap::new())
+                .unwrap_err()
+                .to_string(),
         )
     }
 
@@ -195,10 +198,13 @@ mod tests {
 
         assert_eq!(
             format!(
-                "`{}` was a directory, but file inputs can only be files",
+                "`{}` was a directory, but workspace source paths can only be files",
                 parent.display()
             ),
-            workspace.set_up_files(&job).unwrap_err().to_string()
+            workspace
+                .set_up_files(&job, &HashMap::new())
+                .unwrap_err()
+                .to_string()
         );
     }
 }
