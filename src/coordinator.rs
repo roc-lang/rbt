@@ -307,8 +307,6 @@ impl<'roc> Coordinator<'roc> {
         {
             Some(item) => {
                 log::debug!("already had output of job {}; skipping", job);
-                // TODO: this clone smells like there's some responsibility in
-                // the wrong place. Can we get rid of it?
                 self.job_to_content_hash.insert(job.base_key, item);
             }
             None => {
