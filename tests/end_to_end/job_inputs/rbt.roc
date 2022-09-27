@@ -18,7 +18,7 @@ helloWorld =
             GREETING="$(cat greeting)"
             SUBJECT="$(cat subject)"
             printf '%s, %s!\n' "$GREETING" "$SUBJECT" > out
-            """
+            """,
         ],
         inputs: [
             fromJob greeting [sourceFile "greeting"],
