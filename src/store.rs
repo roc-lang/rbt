@@ -73,8 +73,8 @@ impl Store {
         job: &Job,
         workspace: Workspace,
     ) -> Result<String> {
-        let item = ContentAddressedItem::load(job, workspace)
-            .context("could get content addressable item from job")?;
+        let item = ItemBuilder::load(job, workspace)
+            .context("could get content addressed path from job")?;
 
         if item.exists_in(&self.root) {
             log::debug!("we have already stored {}, so I'm skipping the move!", item,);
@@ -109,13 +109,13 @@ impl Store {
 /// ContentAddressedItem is responsible for hashing the outputs of a job inside
 /// a workspace and (maybe) moving those outputs into the store.
 #[derive(Debug)]
-struct ContentAddressedItem<'job> {
+struct ItemBuilder<'job> {
     workspace: Workspace,
     job: &'job Job<'job>,
     hash: blake3::Hash,
 }
 
-impl<'job> ContentAddressedItem<'job> {
+impl<'job> ItemBuilder<'job> {
     /// Load all the outputs from a job and workspace combo, creating a hash
     /// as we go.
     fn load(job: &'job Job, workspace: Workspace) -> Result<Self> {
@@ -275,7 +275,7 @@ impl<'job> ContentAddressedItem<'job> {
     }
 }
 
-impl<'job> Display for ContentAddressedItem<'job> {
+impl<'job> Display for ItemBuilder<'job> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.hash.fmt(f)
     }
