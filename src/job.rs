@@ -10,41 +10,6 @@ use std::path::{Component, PathBuf};
 use std::process::Command;
 use xxhash_rust::xxh3::Xxh3;
 
-/// Conversion from a base key to a final one.
-pub struct KeyBuilder(Xxh3);
-
-impl KeyBuilder {
-    pub fn final_key_based_on(
-        job: &Job,
-        path_to_hash: &HashMap<PathBuf, String>,
-        job_to_content_hash: &HashMap<Key<Base>, store::Item>,
-    ) -> Result<Key<Final>> {
-        let mut hasher = Xxh3::new();
-
-        job.base_key.hash(&mut hasher);
-
-        for path in &job.input_files {
-            match path_to_hash.get(path) {
-                Some(hash) => {
-                    path.hash(&mut hasher);
-                    hash.hash(&mut hasher);
-                },
-                None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.display()),
-            }
-        }
-
-        for key in job.input_jobs.keys().sorted() {
-            let dep = job_to_content_hash.get(key).context("could not look up output hash for dependency. This is a bug in rbt's coordinator. Please file it!")?.hash();
-            dep.hash(&mut hasher);
-        }
-
-        Ok(Key {
-            key: hasher.finish(),
-            phantom: PhantomData,
-        })
-    }
-}
-
 /// See docs on `Key`
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize)]
 pub struct Base;
@@ -184,6 +149,36 @@ impl<'roc> Job<'roc> {
             input_files,
             input_jobs,
             outputs,
+        })
+    }
+
+    pub fn final_key(
+        &self,
+        path_to_hash: &HashMap<PathBuf, String>,
+        job_to_content_hash: &HashMap<Key<Base>, store::Item>,
+    ) -> Result<Key<Final>> {
+        let mut hasher = Xxh3::new();
+
+        self.base_key.hash(&mut hasher);
+
+        for path in &self.input_files {
+            match path_to_hash.get(path) {
+                Some(hash) => {
+                    path.hash(&mut hasher);
+                    hash.hash(&mut hasher);
+                },
+                None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.display()),
+            }
+        }
+
+        for key in self.input_jobs.keys().sorted() {
+            let dep = job_to_content_hash.get(key).context("could not look up output hash for dependency. This is a bug in rbt's coordinator. Please file it!")?.hash();
+            dep.hash(&mut hasher);
+        }
+
+        Ok(Key {
+            key: hasher.finish(),
+            phantom: PhantomData,
         })
     }
 }

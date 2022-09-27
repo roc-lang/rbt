@@ -280,12 +280,9 @@ impl<'roc> Coordinator<'roc> {
 
         log::debug!("preparing to run job {}", job);
 
-        let final_key = job::KeyBuilder::final_key_based_on(
-            &job,
-            &self.path_to_hash,
-            &self.job_to_content_hash,
-        )
-        .context("could not calculate final cache key")?;
+        let final_key = job
+            .final_key(&self.path_to_hash, &self.job_to_content_hash)
+            .context("could not calculate final cache key")?;
 
         // build (or don't) based on the final key!
         match self
