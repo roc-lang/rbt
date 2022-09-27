@@ -81,6 +81,7 @@ impl<'roc> Builder<'roc> {
         let mut coordinator = Coordinator {
             workspace_root: self.workspace_root,
             store: self.store,
+            roots: Vec::with_capacity(self.roots.len()),
 
             path_to_hash: HashMap::with_capacity(input_files.len()),
             job_to_content_hash: HashMap::with_capacity(self.roots.len()),
@@ -239,6 +240,14 @@ impl<'roc> Builder<'roc> {
             coordinator.jobs.insert(job.base_key, job);
         }
 
+        for root in self.roots {
+            coordinator.roots.push(
+                *glue_to_job_key
+                    .get(root)
+                    .context("could not key for root job")?,
+            )
+        }
+
         Ok(coordinator)
     }
 }
@@ -247,6 +256,8 @@ impl<'roc> Builder<'roc> {
 pub struct Coordinator<'roc> {
     workspace_root: PathBuf,
     store: Store,
+
+    roots: Vec<job::Key<job::Base>>,
 
     // caches
     path_to_hash: HashMap<PathBuf, String>,
@@ -336,6 +347,14 @@ impl<'roc> Coordinator<'roc> {
         self.ready.extend(newly_unblocked);
 
         Ok(())
+    }
+
+    pub fn roots(&self) -> &[job::Key<job::Base>] {
+        self.roots.as_ref()
+    }
+
+    pub fn store_path(&self, key: &job::Key<job::Base>) -> Option<&store::Item> {
+        self.job_to_content_hash.get(key)
     }
 }
 

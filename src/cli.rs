@@ -11,6 +11,10 @@ use std::path::PathBuf;
 pub struct Cli {
     #[clap(long, default_value = ".rbt")]
     root_dir: PathBuf,
+
+    /// Only useful for testing at the moment
+    #[clap(long)]
+    print_root_output_paths: bool,
 }
 
 impl Cli {
@@ -30,6 +34,17 @@ impl Cli {
 
         while coordinator.has_outstanding_work() {
             coordinator.run_next(&runner).context("failed to run job")?;
+        }
+
+        if self.print_root_output_paths {
+            for root in coordinator.roots() {
+                println!(
+                    "{}",
+                    coordinator
+                        .store_path(&root)
+                        .context("could not get store path for root")?
+                )
+            }
         }
 
         Ok(())
