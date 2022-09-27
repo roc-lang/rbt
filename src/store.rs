@@ -250,7 +250,7 @@ impl<'job> ItemBuilder<'job> {
         // around in case of errors.
         std::fs::rename(temp.into_path(), &final_path)
             .context("could not move temporary collection directory into the store")?;
-        Self::make_readonly(&final_path).context("could not make store path readonly")?;
+        Self::make_readonly(final_path).context("could not make store path readonly")?;
 
         Ok(self.item)
     }

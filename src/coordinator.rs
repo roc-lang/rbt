@@ -210,7 +210,7 @@ impl<'roc> Builder<'roc> {
                     let entry = job_deps.entry(next_glue_job);
                     entry
                         .or_insert_with(|| HashSet::with_capacity_and_hasher(1, Xxh3Builder::new()))
-                        .insert(&job);
+                        .insert(job);
 
                     to_descend_into.push(job);
                 });
