@@ -1,4 +1,4 @@
-use crate::glue;
+use crate::{glue, store};
 use anyhow::{Context, Result};
 use itertools::Itertools;
 use roc_std::{RocDict, RocStr};
@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Display};
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::marker::PhantomData;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, PathBuf};
 use std::process::Command;
 use xxhash_rust::xxh3::Xxh3;
 
@@ -14,36 +14,34 @@ use xxhash_rust::xxh3::Xxh3;
 pub struct KeyBuilder(Xxh3);
 
 impl KeyBuilder {
-    fn new() -> Self {
-        Self(Xxh3::new())
-    }
+    pub fn final_key_based_on(
+        job: &Job,
+        path_to_hash: &HashMap<PathBuf, String>,
+        job_to_content_hash: &HashMap<Key<Base>, store::Item>,
+    ) -> Result<Key<Final>> {
+        let mut hasher = Xxh3::new();
 
-    #[cfg(test)]
-    pub fn mock() -> Self {
-        Self::new()
-    }
+        job.base_key.hash(&mut hasher);
 
-    pub fn based_on(id: &Key<Base>) -> Self {
-        let mut builder = Self::new();
-        id.hash(&mut builder.0);
-
-        builder
-    }
-
-    pub fn add_file(&mut self, path: &Path, content_hash: &str) {
-        path.hash(&mut self.0);
-        content_hash.hash(&mut self.0);
-    }
-
-    pub fn add_dependency(&mut self, dep: &blake3::Hash) {
-        dep.hash(&mut self.0);
-    }
-
-    pub fn finalize(self) -> Key<Final> {
-        Key {
-            key: self.0.finish(),
-            phantom: PhantomData,
+        for path in &job.input_files {
+            match path_to_hash.get(path) {
+                Some(hash) => {
+                    path.hash(&mut hasher);
+                    hash.hash(&mut hasher);
+                },
+                None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.display()),
+            }
         }
+
+        for key in job.input_jobs.keys().sorted() {
+            let dep = job_to_content_hash.get(key).context("could not look up output hash for dependency. This is a bug in rbt's coordinator. Please file it!")?.hash();
+            dep.hash(&mut hasher);
+        }
+
+        Ok(Key {
+            key: hasher.finish(),
+            phantom: PhantomData,
+        })
     }
 }
 
@@ -72,6 +70,16 @@ pub struct Key<Finality> {
 impl<Finality> Display for Key<Finality> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:x}", self.key)
+    }
+}
+
+#[cfg(test)]
+impl Default for Key<Final> {
+    fn default() -> Self {
+        Self {
+            key: 0,
+            phantom: PhantomData,
+        }
     }
 }
 

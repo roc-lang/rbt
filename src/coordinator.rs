@@ -4,7 +4,6 @@ use crate::store::{self, Store};
 use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use core::convert::{TryFrom, TryInto};
-use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::fs::{File, Metadata};
 use std::hash::{Hash, Hasher};
@@ -210,7 +209,7 @@ impl<'roc> Builder<'roc> {
                     let entry = job_deps.entry(next_glue_job);
                     entry
                         .or_insert_with(|| HashSet::with_capacity_and_hasher(1, Xxh3Builder::new()))
-                        .insert(job);
+                        .insert(&job);
 
                     to_descend_into.push(job);
                 });
@@ -281,28 +280,17 @@ impl<'roc> Coordinator<'roc> {
 
         log::debug!("preparing to run job {}", job);
 
-        // figure out the final key based on the job's dependencies
-        //
-        // TODO: it feels like much of the code between here and `finalize`
-        //  would be better off living in KeyBuilder itself. It probably doesn't
-        //  need to have a builder pattern at all, in fact, just a regular
-        //  constructor.
-        let mut key_builder = job::KeyBuilder::based_on(&job.base_key);
-        for path in &job.input_files {
-            match self.path_to_hash.get(path) {
-                Some(hash) => key_builder.add_file(path, hash),
-                None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.display()),
-            }
-        }
-        for key in job.input_jobs.keys().sorted() {
-            key_builder.add_dependency(&self.job_to_content_hash.get(key).context("could not look up output hash for dependency. This is a bug in rbt's coordinator. Please file it!")?.hash());
-        }
-        let key = key_builder.finalize();
+        let final_key = job::KeyBuilder::final_key_based_on(
+            &job,
+            &self.path_to_hash,
+            &self.job_to_content_hash,
+        )
+        .context("could not calculate final cache key")?;
 
         // build (or don't) based on the final key!
         match self
             .store
-            .item_for_job(&key)
+            .item_for_job(&final_key)
             .context("could not get a store path for the current job")?
         {
             Some(item) => {
@@ -310,7 +298,7 @@ impl<'roc> Coordinator<'roc> {
                 self.job_to_content_hash.insert(job.base_key, item);
             }
             None => {
-                let workspace = Workspace::create(&self.workspace_root, &key)
+                let workspace = Workspace::create(&self.workspace_root, &final_key)
                     .with_context(|| format!("could not create workspace for {}", job))?;
 
                 workspace
@@ -322,7 +310,7 @@ impl<'roc> Coordinator<'roc> {
                 self.job_to_content_hash.insert(
                     job.base_key,
                     self.store
-                        .store_from_workspace(key, job, workspace)
+                        .store_from_workspace(final_key, job, workspace)
                         .context("could not store job output")?,
                 );
             }

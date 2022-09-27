@@ -110,7 +110,7 @@ mod tests {
     use tempfile::TempDir;
 
     fn key() -> job::Key<job::Final> {
-        job::KeyBuilder::mock().finalize()
+        job::Key::default()
     }
 
     fn glue_job_with_files<'roc>(files: &[&str]) -> glue::Job {
