@@ -41,7 +41,7 @@ impl Cli {
                 println!(
                     "{}",
                     coordinator
-                        .store_path(&root)
+                        .store_path(root)
                         .context("could not get store path for root")?
                         .path()
                         .display()
