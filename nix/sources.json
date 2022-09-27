@@ -24,15 +24,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "roc": {
-        "branch": "main",
+        "branch": "i4077",
         "description": "Roc is a language for making delightful software.",
         "homepage": "https://roc-lang.org",
         "owner": "roc-lang",
         "repo": "roc",
-        "rev": "19e790f3b707f2fc73088008b290ba486ff66802",
-        "sha256": "1jfcgcxifjsxbnwrakp02kkjj6d2fjcfmss1hcwb8bq758b59i55",
+        "rev": "efdcce3086c8fc359e86c7e0d771ea985d45912f",
+        "sha256": "0rzb2plprk42f0kx7gm75hsja8pcd4dbg2nxdzg0jxg2gzvnyzz1",
         "type": "tarball",
-        "url": "https://github.com/roc-lang/roc/archive/19e790f3b707f2fc73088008b290ba486ff66802.tar.gz",
+        "url": "https://github.com/roc-lang/roc/archive/efdcce3086c8fc359e86c7e0d771ea985d45912f.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
