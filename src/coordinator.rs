@@ -27,12 +27,12 @@ impl<'roc> Builder<'roc> {
             workspace_root,
             store,
 
-            // it's very likely we'll have at least one target
+            // it's very likely we'll have at least one root
             roots: Vec::with_capacity(1),
         }
     }
 
-    pub fn add_target(&mut self, job: &'roc glue::Job) {
+    pub fn add_root(&mut self, job: &'roc glue::Job) {
         self.roots.push(job);
     }
 
