@@ -164,7 +164,7 @@ impl<'roc> Job<'roc> {
         for path in &self.input_files {
             match path_to_hash.get(path) {
                 Some(hash) => {
-                    path.hash(&mut hasher);
+                    // we don't need to hash the path, as we already have it in the base key
                     hash.hash(&mut hasher);
                 },
                 None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.display()),
