@@ -239,6 +239,10 @@ impl<'roc> Builder<'roc> {
             coordinator.jobs.insert(job.base_key, job);
         }
 
+        // we couldn't track which roots were needed before because we didn't
+        // have the keys for those jobs. Now that we do, take a minute to
+        // populate the roots vec (which up until now has had the right capacity
+        // but no items.)
         for root in self.roots {
             coordinator.roots.push(
                 *glue_to_job_key
