@@ -187,8 +187,7 @@ impl<'roc> Builder<'roc> {
         // walk that list in the opposite direction.
         //
         // `to_descend_into` tracks the depth-first search part of this scheme,
-        // and `to_convert` is where we write down the dependencies in root-to-
-        // leaf order.
+        // and `to_convert` tracks the dependencies in root-to-leaf order.
         let mut to_descend_into = self.roots.clone();
         let mut to_convert = Vec::with_capacity(self.roots.len());
 
