@@ -361,6 +361,10 @@ impl<'roc> Coordinator<'roc> {
     }
 }
 
+/// Runner  abstracts over different kinds of builds. If they're local, we
+/// create a local workspace. If they're remote (hypothetically, in the future),
+/// we can tell the remote coordinator that we want to build the job with these
+/// particular hashes and ask if it can give us back the built files, please.
 pub trait Runner {
     fn run(
         &self,
