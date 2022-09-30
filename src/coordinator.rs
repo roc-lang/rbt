@@ -79,7 +79,6 @@ impl<'roc> Builder<'roc> {
         }
 
         let mut coordinator = Coordinator {
-            workspace_root: self.workspace_root,
             store: self.store,
             roots: Vec::with_capacity(self.roots.len()),
 
@@ -264,7 +263,6 @@ impl<'roc> Builder<'roc> {
 
 #[derive(Debug)]
 pub struct Coordinator<'roc> {
-    workspace_root: PathBuf,
     store: Store,
 
     roots: Vec<job::Key<job::Base>>,
@@ -316,14 +314,9 @@ impl<'roc> Coordinator<'roc> {
                 self.job_to_content_hash.insert(job.base_key, item);
             }
             None => {
-                let workspace = Workspace::create(&self.workspace_root, &final_key)
-                    .with_context(|| format!("could not create workspace for {}", job))?;
-
-                workspace
-                    .set_up_files(job, &self.job_to_content_hash)
-                    .with_context(|| format!("could not set up workspace files for {}", job))?;
-
-                runner.run(job, &workspace).context("could not run job")?;
+                let workspace = runner
+                    .run(job, &self.job_to_content_hash)
+                    .context("could not run job")?;
 
                 self.job_to_content_hash.insert(
                     job.base_key,
@@ -369,12 +362,20 @@ impl<'roc> Coordinator<'roc> {
 }
 
 pub trait Runner {
-    fn run(&self, job: &Job, workspace: &Workspace) -> Result<()>;
+    fn run(
+        &self,
+        job: &Job,
+        job_to_content_hash: &HashMap<job::Key<job::Base>, store::Item>,
+    ) -> Result<Workspace>;
 }
 
 impl Runner for Box<dyn Runner> {
-    fn run(&self, job: &Job, workspace: &Workspace) -> Result<()> {
-        self.as_ref().run(job, workspace)
+    fn run(
+        &self,
+        job: &Job,
+        job_to_content_hash: &HashMap<job::Key<job::Base>, store::Item>,
+    ) -> Result<Workspace> {
+        self.as_ref().run(job, job_to_content_hash)
     }
 }
 
