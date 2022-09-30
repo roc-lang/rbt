@@ -218,6 +218,13 @@ impl<'roc> Builder<'roc> {
         }
 
         while let Some(glue_job) = to_convert.pop() {
+            // multiple jobs can depend on the same job, but we only need to
+            // convert each job once.
+            if let Some(key) = glue_to_job_key.get(glue_job) {
+                log::trace!("already converted job {}", key);
+                continue;
+            }
+
             let job = job::Job::from_glue(glue_job, &glue_to_job_key)
                 .context("could not convert glue job into actual job")?;
 
