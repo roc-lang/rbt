@@ -36,7 +36,7 @@ greeting =
             "pipefail",
             "-c",
             """
-            H=$(cat h)
+            H=$(cat H)
             E=$(cat e)
             L=$(cat l)
             O=$(cat o)
@@ -45,7 +45,7 @@ greeting =
             """,
         ],
         inputs: [
-            fromJob h [sourceFile "h"],
+            fromJob h [sourceFile "H"],
             fromJob e [sourceFile "e"],
             fromJob l [sourceFile "l"],
             fromJob o [sourceFile "o"],
@@ -62,7 +62,7 @@ subject =
             "pipefail",
             "-c",
             """
-            W=$(cat w)
+            W=$(cat W)
             O=$(cat o)
             R=$(cat r)
             L=$(cat l)
@@ -72,7 +72,7 @@ subject =
             """,
         ],
         inputs: [
-            fromJob w [sourceFile "w"],
+            fromJob w [sourceFile "W"],
             fromJob o [sourceFile "o"],
             fromJob r [sourceFile "r"],
             fromJob l [sourceFile "l"],
@@ -96,8 +96,8 @@ letter = \whichLetter ->
 
 d = letter "d"
 e = letter "e"
-h = letter "h"
+h = letter "H"
 l = letter "l"
 o = letter "o"
 r = letter "r"
-w = letter "w"
+w = letter "W"
