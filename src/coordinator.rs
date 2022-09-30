@@ -344,7 +344,7 @@ impl<'roc> Coordinator<'roc> {
         self.blocked.retain(|blocked, blockers| {
             let removed = blockers.remove(&id);
             if !removed {
-                return false;
+                return true;
             }
 
             let no_blockers_remaining = blockers.is_empty();
