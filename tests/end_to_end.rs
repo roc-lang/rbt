@@ -72,3 +72,18 @@ fn test_job_inputs() {
 
     assert_eq!(String::from("Hello, World!\n"), greeting)
 }
+
+#[test]
+fn test_job_inputs_branching() {
+    let root = TempDir::new().unwrap();
+
+    let store_path = output_of_default_job(
+        &root,
+        &PathBuf::from("tests/end_to_end/job_inputs_branching/rbt.roc"),
+    )
+    .unwrap();
+
+    let greeting = std::fs::read_to_string(store_path.join("out")).unwrap();
+
+    assert_eq!(String::from("Hello, World!\n"), greeting)
+}
