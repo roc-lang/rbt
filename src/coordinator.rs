@@ -1,6 +1,6 @@
 use crate::glue;
 use crate::job::{self, Job};
-use crate::store::Store;
+use crate::store::{self, Store};
 use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use core::convert::{TryFrom, TryInto};
@@ -10,33 +10,33 @@ use std::hash::{Hash, Hasher};
 use std::io::BufReader;
 use std::path::PathBuf;
 use std::time::SystemTime;
-use xxhash_rust::xxh3::Xxh3;
+use xxhash_rust::xxh3::{Xxh3, Xxh3Builder};
 
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::MetadataExt;
 
-pub struct Builder {
+pub struct Builder<'roc> {
     workspace_root: PathBuf,
     store: Store,
-    targets: Vec<glue::Job>,
+    roots: Vec<&'roc glue::Job>,
 }
 
-impl Builder {
+impl<'roc> Builder<'roc> {
     pub fn new(workspace_root: PathBuf, store: Store) -> Self {
         Builder {
             workspace_root,
             store,
 
-            // it's very likely we'll have at least one target
-            targets: Vec::with_capacity(1),
+            // it's very likely we'll have at least one root
+            roots: Vec::with_capacity(1),
         }
     }
 
-    pub fn add_target(&mut self, job: glue::Job) {
-        self.targets.push(job);
+    pub fn add_root(&mut self, job: &'roc glue::Job) {
+        self.roots.push(job);
     }
 
-    pub fn build(mut self) -> Result<Coordinator> {
+    pub fn build(self) -> Result<Coordinator<'roc>> {
         // Here's the overview of what we're about to do: for each file in
         // each target job, we're going to look at metadata for that file and
         // use that metadata to look up the file's hash (if we don't have it
@@ -68,10 +68,12 @@ impl Builder {
         // it makes sense to deduplicate them to avoid duplicating filesystem
         // operations.
         let mut input_files: HashSet<PathBuf> = HashSet::new();
-        for glue_job in &self.targets {
+        for glue_job in &self.roots {
             for input in &glue_job.as_Job().inputs {
-                for file in input.as_FromProjectSource() {
-                    input_files.insert(job::sanitize_file_path(file)?);
+                if input.discriminant() == glue::discriminant_U1::FromProjectSource {
+                    for file in unsafe { input.as_FromProjectSource() } {
+                        input_files.insert(job::sanitize_file_path(file)?);
+                    }
                 }
             }
         }
@@ -79,14 +81,16 @@ impl Builder {
         let mut coordinator = Coordinator {
             workspace_root: self.workspace_root,
             store: self.store,
+            roots: Vec::with_capacity(self.roots.len()),
 
             path_to_hash: HashMap::with_capacity(input_files.len()),
+            job_to_content_hash: HashMap::with_capacity(self.roots.len()),
 
             // On capacities: we'll have at least as many jobs as we have targets,
             // each of which will have at least one leaf node.
-            jobs: HashMap::with_capacity(self.targets.len()),
+            jobs: HashMap::with_capacity(self.roots.len()),
             blocked: HashMap::default(),
-            ready: Vec::with_capacity(self.targets.len()),
+            ready: Vec::with_capacity(self.roots.len()),
         };
 
         /////////////////////////////////////////////
@@ -168,20 +172,90 @@ impl Builder {
         ///////////////////////////////////////////////////////////////////////////
         // Phase 3: get the hahes to determine what jobs we actually need to run //
         ///////////////////////////////////////////////////////////////////////////
-        for glue_job in self.targets.drain(..) {
-            // Note: this data structure is going to grow the ability to
-            // refer to other jobs as soon as it's possibly feasible. When
-            // that happens, a depth-first search through the tree rooted at
-            // `glue_job` will probably suffice.
-            let job =
-                Job::from_glue(glue_job).context("could not convert glue job to actual job")?;
 
-            // TODO: pushing to `ready` immediately is only reasonable when
-            // we don't have job inputs as dependencies, but we don't have that
-            // yet. This'll need to change when we do or we'll have some very
-            // broken runs!
-            coordinator.ready.push(job.base_key);
+        // to build a graph, we need the base keys for all jobs. This can't be
+        // a depth-first search, however, because that would mean processing
+        // dependent jobs before their dependencies. We can't do that because
+        // then we would have unresolved base keys and we'd have to defer until
+        // we got them or temporarily suffer incomplete information in the
+        // graph.
+        //
+        // Ideally, we'd look at the leaf nodes first, then the things that
+        // depend on them, etc. In other words, a depth-first search starting
+        // at the leaves instead of the roots. Lucky for us, that's easy to do:
+        // just write down the jobs we see as we do a depth first search, then
+        // walk that list in the opposite direction.
+        //
+        // `to_descend_into` tracks the depth-first search part of this scheme,
+        // and `to_convert` tracks the dependencies in root-to-leaf order.
+        let mut to_descend_into = self.roots.clone();
+        let mut to_convert = Vec::with_capacity(self.roots.len());
+
+        let mut glue_to_job_key: HashMap<&glue::Job, job::Key<job::Base>, Xxh3Builder> =
+            HashMap::with_capacity_and_hasher(self.roots.len(), Xxh3Builder::new());
+
+        let mut job_deps: HashMap<&glue::Job, HashSet<&glue::Job, Xxh3Builder>, Xxh3Builder> =
+            HashMap::with_hasher(Xxh3Builder::new());
+
+        while let Some(next_glue_job) = to_descend_into.pop() {
+            next_glue_job
+                .as_Job()
+                .inputs
+                .iter()
+                .filter(|item| item.discriminant() == glue::discriminant_U1::FromJob)
+                .for_each(|item| {
+                    let job = unsafe { item.as_FromJob() }.0;
+
+                    let entry = job_deps.entry(next_glue_job);
+                    entry
+                        .or_insert_with(|| HashSet::with_capacity_and_hasher(1, Xxh3Builder::new()))
+                        .insert(job);
+
+                    to_descend_into.push(job);
+                });
+
+            to_convert.push(next_glue_job);
+        }
+
+        while let Some(glue_job) = to_convert.pop() {
+            // multiple jobs can depend on the same job, but we only need to
+            // convert each job once.
+            if let Some(key) = glue_to_job_key.get(glue_job) {
+                log::trace!("already converted job {}", key);
+                continue;
+            }
+
+            let job = job::Job::from_glue(glue_job, &glue_to_job_key)
+                .context("could not convert glue job into actual job")?;
+
+            if let Some(deps) = job_deps.get(glue_job) {
+                let blockers = coordinator.blocked.entry(job.base_key).or_default();
+
+                for dep in deps {
+                    blockers.insert(
+                        *glue_to_job_key
+                            .get(dep)
+                            .context("could not get job key for a glue job. This is probably an internal ordering bug and should be reported!")?
+                    );
+                }
+            } else {
+                coordinator.ready.push(job.base_key);
+            }
+
+            glue_to_job_key.insert(glue_job, job.base_key);
             coordinator.jobs.insert(job.base_key, job);
+        }
+
+        // we couldn't track which roots were needed before because we didn't
+        // have the keys for those jobs. Now that we do, take a minute to
+        // populate the roots vec (which up until now has had the right capacity
+        // but no items.)
+        for root in self.roots {
+            coordinator.roots.push(
+                *glue_to_job_key
+                    .get(root)
+                    .context("could not key for root job")?,
+            )
         }
 
         Ok(coordinator)
@@ -189,20 +263,27 @@ impl Builder {
 }
 
 #[derive(Debug)]
-pub struct Coordinator {
+pub struct Coordinator<'roc> {
     workspace_root: PathBuf,
     store: Store,
+
+    roots: Vec<job::Key<job::Base>>,
 
     // caches
     path_to_hash: HashMap<PathBuf, String>,
 
+    // note:  this mapping is only safe to use in the context of a single
+    // execution since a job's final key may change without the base key
+    // changing. Practically speaking, this just means you shouldn't store it!
+    job_to_content_hash: HashMap<job::Key<job::Base>, store::Item>,
+
     // which jobs should run when?
-    jobs: HashMap<job::Key<job::Base>, Job>,
+    jobs: HashMap<job::Key<job::Base>, Job<'roc>>,
     blocked: HashMap<job::Key<job::Base>, HashSet<job::Key<job::Base>>>,
     ready: Vec<job::Key<job::Base>>,
 }
 
-impl Coordinator {
+impl<'roc> Coordinator<'roc> {
     pub fn has_outstanding_work(&self) -> bool {
         !self.blocked.is_empty() || !self.ready.is_empty()
     }
@@ -220,32 +301,37 @@ impl Coordinator {
 
         log::debug!("preparing to run job {}", job);
 
-        // figure out the final key based on the job's dependencies
-        let mut key_builder = job::KeyBuilder::based_on(&job.base_key);
-        for path in &job.input_files {
-            match self.path_to_hash.get(path) {
-                Some(hash) => key_builder.add_file(path, hash),
-                None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.display()),
-            }
-        }
-        let key = key_builder.finalize();
+        let final_key = job
+            .final_key(&self.path_to_hash, &self.job_to_content_hash)
+            .context("could not calculate final cache key")?;
 
         // build (or don't) based on the final key!
-        if self.store.for_job(&key).is_none() {
-            let workspace = Workspace::create(&self.workspace_root, &key)
-                .with_context(|| format!("could not create workspace for {}", job))?;
+        match self
+            .store
+            .item_for_job(&final_key)
+            .context("could not get a store path for the current job")?
+        {
+            Some(item) => {
+                log::debug!("already had output of job {}; skipping", job);
+                self.job_to_content_hash.insert(job.base_key, item);
+            }
+            None => {
+                let workspace = Workspace::create(&self.workspace_root, &final_key)
+                    .with_context(|| format!("could not create workspace for {}", job))?;
 
-            workspace
-                .set_up_files(job)
-                .with_context(|| format!("could not set up workspaces files for {}", job))?;
+                workspace
+                    .set_up_files(job, &self.job_to_content_hash)
+                    .with_context(|| format!("could not set up workspace files for {}", job))?;
 
-            runner.run(job, &workspace).context("could not run job")?;
+                runner.run(job, &workspace).context("could not run job")?;
 
-            self.store
-                .store_from_workspace(key, job, workspace)
-                .context("could not store job output")?;
-        } else {
-            log::debug!("already had output of job {}; skipping", job);
+                self.job_to_content_hash.insert(
+                    job.base_key,
+                    self.store
+                        .store_from_workspace(final_key, job, workspace)
+                        .context("could not store job output")?,
+                );
+            }
         }
 
         // Now that we're done running the job, we update our bookkeeping to
@@ -258,7 +344,7 @@ impl Coordinator {
         self.blocked.retain(|blocked, blockers| {
             let removed = blockers.remove(&id);
             if !removed {
-                return false;
+                return true;
             }
 
             let no_blockers_remaining = blockers.is_empty();
@@ -271,6 +357,14 @@ impl Coordinator {
         self.ready.extend(newly_unblocked);
 
         Ok(())
+    }
+
+    pub fn roots(&self) -> &[job::Key<job::Base>] {
+        self.roots.as_ref()
+    }
+
+    pub fn store_path(&self, key: &job::Key<job::Base>) -> Option<&store::Item> {
+        self.job_to_content_hash.get(key)
     }
 }
 

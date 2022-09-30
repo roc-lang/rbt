@@ -1,5 +1,5 @@
 interface Rbt
-    exposes [Rbt, init, Job, job, Command, exec, Tool, tool, systemTool, projectFiles, sourceFile]
+    exposes [Rbt, init, Job, job, Command, exec, Tool, tool, systemTool, projectFiles, fromJob, Input, sourceFile]
     imports []
 
 # TODO: these are all out of order due to https://github.com/rtfeldman/roc/issues/1642. Once that's fixed, they should rearrange into the order in `exposes`
@@ -31,19 +31,42 @@ FileMapping := Str
 sourceFile : Str -> FileMapping
 sourceFile = \name -> @FileMapping name
 
-Input := [FromProjectSource (List FileMapping)]
+Input := [
+    FromProjectSource (List FileMapping),
+    FromJob Job (List FileMapping),
+]
 
 # Add the given file to the job's workspace (the working directory where the
 # command is called.)
 projectFiles : List FileMapping -> Input
 projectFiles = \mappings -> @Input (FromProjectSource mappings)
 
-Job := [Job { command : Command, inputs : List Input, outputs : List Str, env : Dict Str Str }]
+# Add files from the given job to the current job's workspace.
+fromJob : Job, List FileMapping -> Input
+fromJob = \otherJob, mappings -> @Input (FromJob otherJob mappings)
+
+Job := [
+    Job
+        {
+            command : Command,
+            # eventually we want this to be `List Input` but there's a bug.
+            # see https://github.com/roc-lang/roc/issues/4077
+            inputs : List [
+                FromProjectSource (List FileMapping),
+                FromJob Job (List FileMapping),
+            ],
+            outputs : List Str,
+            env : Dict Str Str,
+        },
+]
 
 # TODO: these fields are all required until https://github.com/rtfeldman/roc/issues/1844 is fixed
 # TODO: destructuring is broken, see https://github.com/rtfeldman/roc/issues/2512
 job : { command : Command, inputs : List Input, outputs : List Str, env : Dict Str Str } -> Job
-job = \{ command, inputs, outputs, env } -> @Job (Job { command, inputs, outputs, env })
+job = \{ command, inputs, outputs, env } ->
+    unwrappedInputs = List.map inputs (\@Input input -> input)
+
+    @Job (Job { command, inputs: unwrappedInputs, outputs, env })
 
 Rbt := { default : Job }
 

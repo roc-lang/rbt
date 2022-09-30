@@ -1,54 +1,21 @@
-use crate::glue;
+use crate::{glue, store};
 use anyhow::{Context, Result};
 use itertools::Itertools;
 use roc_std::{RocDict, RocStr};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Display};
-use std::hash::{Hash, Hasher};
+use std::hash::{BuildHasher, Hash, Hasher};
 use std::marker::PhantomData;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, PathBuf};
 use std::process::Command;
 use xxhash_rust::xxh3::Xxh3;
 
-/// Conversion from a base key to a final one.
-pub struct KeyBuilder(Xxh3);
-
-impl KeyBuilder {
-    fn new() -> Self {
-        Self(Xxh3::new())
-    }
-
-    #[cfg(test)]
-    pub fn mock() -> Self {
-        Self::new()
-    }
-
-    pub fn based_on(id: &Key<Base>) -> Self {
-        let mut builder = Self::new();
-        id.hash(&mut builder.0);
-
-        builder
-    }
-
-    pub fn add_file(&mut self, path: &Path, content_hash: &str) {
-        path.hash(&mut self.0);
-        content_hash.hash(&mut self.0);
-    }
-
-    pub fn finalize(self) -> Key<Final> {
-        Key {
-            key: self.0.finish(),
-            phantom: PhantomData,
-        }
-    }
-}
-
 /// See docs on `Key`
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize)]
 pub struct Base;
 
 /// See docs on `Key`
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize)]
 pub struct Final;
 
 /// A cache key for a job. This has a phantom type parameter because we calculate
@@ -56,7 +23,9 @@ pub struct Final;
 /// the information passed in from a `glue::Job`. The second includes information
 /// we'd have to do I/O for (like file hashes.) For more on the architecture,
 /// see `docs/internals/how-we-determine-when-to-run-jobs.md`.
-#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Eq, Hash, PartialEq, Clone, PartialOrd, Ord, Copy, serde::Serialize, serde::Deserialize,
+)]
 #[serde(transparent)]
 pub struct Key<Finality> {
     key: u64,
@@ -69,18 +38,35 @@ impl<Finality> Display for Key<Finality> {
     }
 }
 
+#[cfg(test)]
+impl Default for Key<Final> {
+    fn default() -> Self {
+        Self {
+            key: 0,
+            phantom: PhantomData,
+        }
+    }
+}
+
 #[derive(Debug)]
-pub struct Job {
+pub struct Job<'roc> {
     pub base_key: Key<Base>,
-    pub command: glue::Command,
-    pub env: RocDict<RocStr, RocStr>,
+    pub command: &'roc glue::Command,
+    pub env: &'roc RocDict<RocStr, RocStr>,
     pub input_files: HashSet<PathBuf>,
+    pub input_jobs: HashMap<Key<Base>, HashSet<PathBuf>>,
     pub outputs: HashSet<PathBuf>,
 }
 
-impl Job {
-    pub fn from_glue(job: glue::Job) -> Result<Self> {
-        let unwrapped = job.into_Job();
+impl<'roc> Job<'roc> {
+    pub fn from_glue<S>(
+        job: &'roc glue::Job,
+        glue_job_to_key: &HashMap<&glue::Job, Key<Base>, S>,
+    ) -> Result<Self>
+    where
+        S: BuildHasher,
+    {
+        let unwrapped = job.as_Job();
 
         let mut hasher = Xxh3::new();
 
@@ -89,14 +75,45 @@ impl Job {
         // for this.
         unwrapped.command.hash(&mut hasher);
 
-        let mut input_files: HashSet<PathBuf> = HashSet::with_capacity(unwrapped.inputs.len());
-        for input in unwrapped.inputs.iter().sorted() {
-            for file in input.as_FromProjectSource().iter().sorted() {
-                let path =
-                    sanitize_file_path(file).context("got an unacceptable input file path")?;
+        let mut input_files: HashSet<PathBuf> = HashSet::new();
+        let mut input_jobs: HashMap<Key<Base>, HashSet<PathBuf>> = HashMap::new();
 
-                path.hash(&mut hasher);
-                input_files.insert(path);
+        for input in unwrapped.inputs.iter().sorted() {
+            match input.discriminant() {
+                glue::discriminant_U1::FromJob => {
+                    let (glue_job, files) = unsafe { input.as_FromJob() };
+
+                    // note that we're not hashing this key. We'll hash the
+                    // content hash from the dependency job later, so we're
+                    // getting this information anyway, and hashing it here
+                    // would cause a rebuild on any source change in the
+                    // dependent job, even (for example) a comment moving
+                    // around.
+                    let key = glue_job_to_key.get(glue_job).context("could not get job key to determine build order. This indicates an internal bug in the coordinator module and should be reported.")?;
+                    let mut job_files = HashSet::new();
+
+                    for file in files {
+                        let path = sanitize_file_path(file)
+                            .context("got an unnacceptable input file path")?;
+
+                        // TODO: when we have mapped filenames, both components
+                        // of the mapped file name should be added to the hash
+                        // here. (See ADR 008)
+                        path.hash(&mut hasher);
+                        job_files.insert(path);
+                    }
+
+                    input_jobs.insert(*key, job_files);
+                }
+                glue::discriminant_U1::FromProjectSource => {
+                    for file in unsafe { input.as_FromProjectSource() }.iter().sorted() {
+                        let path = sanitize_file_path(file)
+                            .context("got an unacceptable input file path")?;
+
+                        path.hash(&mut hasher);
+                        input_files.insert(path);
+                    }
+                }
             }
         }
 
@@ -127,15 +144,46 @@ impl Job {
                 key: hasher.finish(),
                 phantom: PhantomData,
             },
-            env: unwrapped.env,
-            command: unwrapped.command,
+            env: &unwrapped.env,
+            command: &unwrapped.command,
             input_files,
+            input_jobs,
             outputs,
+        })
+    }
+
+    pub fn final_key(
+        &self,
+        path_to_hash: &HashMap<PathBuf, String>,
+        job_to_content_hash: &HashMap<Key<Base>, store::Item>,
+    ) -> Result<Key<Final>> {
+        let mut hasher = Xxh3::new();
+
+        self.base_key.hash(&mut hasher);
+
+        for path in &self.input_files {
+            match path_to_hash.get(path) {
+                Some(hash) => {
+                    // we don't need to hash the path, as we already have it in the base key
+                    hash.hash(&mut hasher);
+                },
+                None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.display()),
+            }
+        }
+
+        for key in self.input_jobs.keys().sorted() {
+            let dep = job_to_content_hash.get(key).context("could not look up output hash for dependency. This is a bug in rbt's coordinator. Please file it!")?.hash();
+            dep.hash(&mut hasher);
+        }
+
+        Ok(Key {
+            key: hasher.finish(),
+            phantom: PhantomData,
         })
     }
 }
 
-impl From<&Job> for Command {
+impl<'roc> From<&Job<'roc>> for Command {
     fn from(job: &Job) -> Self {
         let mut command = Command::new(&job.command.tool.as_SystemTool().name.to_string());
 
@@ -143,7 +191,7 @@ impl From<&Job> for Command {
             command.arg(arg.as_str());
         }
 
-        for (key, value) in &job.env {
+        for (key, value) in job.env {
             command.env(key.as_str(), value.as_str());
         }
 
@@ -151,7 +199,7 @@ impl From<&Job> for Command {
     }
 }
 
-impl Display for Job {
+impl<'roc> Display for Job<'roc> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // intention: make a best-effort version of part of how the command
         // would look if it were invoked from a shell. It's OK for right now
@@ -231,13 +279,13 @@ mod test {
                 args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
             },
             env: RocDict::with_capacity(0),
-            inputs: RocList::from_slice(&[glue::Input::FromProjectSource(RocList::from([
+            inputs: RocList::from_slice(&[glue::U1::FromProjectSource(RocList::from([
                 "input_file".into(),
             ]))]),
             outputs: RocList::from_slice(&["output_file".into()]),
         });
 
-        let job = Job::from_glue(glue_job).unwrap();
+        let job = Job::from_glue(&glue_job, &HashMap::new()).unwrap();
 
         assert_eq!(
             Key {
