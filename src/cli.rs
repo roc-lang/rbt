@@ -23,7 +23,12 @@ impl Cli {
 
         let db = self.open_db().context("could not open rbt's database")?;
 
-        let store = Store::new(self.root_dir.join("store")).context("could not open store")?;
+        let store = Store::new(
+            db.open_tree("store")
+                .context("could not open the store database")?,
+            self.root_dir.join("store"),
+        )
+        .context("could not open store")?;
 
         let mut builder = coordinator::Builder::new(self.root_dir.to_path_buf(), store);
         builder.add_root(&rbt.default);

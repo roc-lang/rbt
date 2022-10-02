@@ -2,10 +2,9 @@ use crate::job::{self, Job};
 use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fmt::{self, Display};
 use std::fs::File;
-use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 /// Store is responsible for managing a content-addressed store below some path
@@ -13,40 +12,27 @@ use std::path::{Path, PathBuf};
 #[derive(Debug)]
 pub struct Store {
     root: PathBuf,
-
-    // This is stored as JSON for now to avoid taking another dependency,
-    // but it'd be good for it to be a real database (or database table)
-    // eventually. SQLite or Sled or something
-    inputs_to_content: HashMap<job::Key<job::Final>, String>,
+    db: sled::Tree,
 }
 
 impl Store {
-    pub fn new(root: PathBuf) -> Result<Self> {
-        let inputs_to_content = match File::open(&root.join("inputs_to_content.json")) {
-            Ok(file) => {
-                let reader = BufReader::new(file);
-                serde_json::from_reader(reader)
-                    .context("could not deserialize mapping from inputs to content")?
-            }
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => HashMap::default(),
-            Err(err) => return Err(err).context("could not open mapping from inputs to content"),
-        };
-
+    pub fn new(db: sled::Tree, root: PathBuf) -> Result<Self> {
         if !root.exists() {
             log::info!("creating store root at {}", &root.display());
             std::fs::create_dir_all(&root).context("could not create specified root")?;
         }
 
-        Ok(Store {
-            root,
-            inputs_to_content,
-        })
+        Ok(Store { root, db })
     }
 
     pub fn item_for_job(&self, key: &job::Key<job::Final>) -> Result<Option<Item>> {
-        match self.inputs_to_content.get(key) {
+        match self
+            .db
+            .get(key.to_string())
+            .context("could not read from store DB")?
+        {
             None => Ok(None),
-            Some(hash) => Item::from_hex(&self.root, hash).map(Some),
+            Some(hash) => Item::from_hex(&self.root, hash.as_ref()).map(Some),
         }
     }
 
@@ -84,13 +70,9 @@ impl Store {
     }
 
     fn associate_job_with_hash(&mut self, key: job::Key<job::Final>, hash: &str) -> Result<String> {
-        self.inputs_to_content.insert(key, hash.to_owned());
-
-        let file = std::fs::File::create(self.root.join("inputs_to_content.json"))
-            .context("failed to open job-to-content-hash mapping")?;
-        // TODO: BufWriter?
-        serde_json::to_writer(file, &self.inputs_to_content)
-            .context("failed to write job-to-content-hash mapping")?;
+        self.db
+            .insert(key.to_string(), hash)
+            .context("failed to write job and content-hash pair")?;
 
         Ok(hash.to_string())
     }
@@ -286,9 +268,9 @@ impl Item {
         }
     }
 
-    fn from_hex(root: &Path, hex: &str) -> Result<Self> {
-        let hash = blake3::Hash::from_hex(hex)
-            .with_context(|| format!("could not load a blake3 hash from hex value `{}`", hex))?;
+    fn from_hex(root: &Path, hex: impl AsRef<[u8]>) -> Result<Self> {
+        let hash =
+            blake3::Hash::from_hex(hex).context("could not load a blak3 hash from hex value")?;
 
         Ok(Self::from_hash(root, hash))
     }
