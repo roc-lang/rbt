@@ -28,7 +28,7 @@ impl Store {
     pub fn item_for_job(&self, key: &job::Key<job::Final>) -> Result<Option<Item>> {
         match self
             .db
-            .get(key.to_string())
+            .get(key.to_db_key())
             .context("could not read from store DB")?
         {
             None => Ok(None),
@@ -71,7 +71,7 @@ impl Store {
 
     fn associate_job_with_hash(&mut self, key: job::Key<job::Final>, hash: &str) -> Result<String> {
         self.db
-            .insert(key.to_string(), hash)
+            .insert(key.to_db_key(), hash)
             .context("failed to write job and content-hash pair")?;
 
         Ok(hash.to_string())
