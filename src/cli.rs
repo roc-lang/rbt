@@ -30,7 +30,11 @@ impl Cli {
         )
         .context("could not open store")?;
 
-        let mut builder = coordinator::Builder::new(self.root_dir.to_path_buf(), store);
+        let mut builder = coordinator::Builder::new(
+            store,
+            db.open_tree("file_hashes")
+                .context("could not open file hashes database")?,
+        );
         builder.add_root(&rbt.default);
 
         let mut coordinator = builder

@@ -7,7 +7,6 @@ use core::convert::{TryFrom, TryInto};
 use std::collections::{HashMap, HashSet};
 use std::fs::{File, Metadata};
 use std::hash::{Hash, Hasher};
-use std::io::BufReader;
 use std::path::PathBuf;
 use std::time::SystemTime;
 use xxhash_rust::xxh3::{Xxh3, Xxh3Builder};
@@ -16,16 +15,16 @@ use xxhash_rust::xxh3::{Xxh3, Xxh3Builder};
 use std::os::unix::fs::MetadataExt;
 
 pub struct Builder<'roc> {
-    workspace_root: PathBuf,
     store: Store,
     roots: Vec<&'roc glue::Job>,
+    meta_to_hash: sled::Tree,
 }
 
 impl<'roc> Builder<'roc> {
-    pub fn new(workspace_root: PathBuf, store: Store) -> Self {
+    pub fn new(store: Store, meta_to_hash: sled::Tree) -> Self {
         Builder {
-            workspace_root,
             store,
+            meta_to_hash,
 
             // it's very likely we'll have at least one root
             roots: Vec::with_capacity(1),
@@ -48,20 +47,7 @@ impl<'roc> Builder<'roc> {
         // For more higher-level explanation of what we're going for, refer
         // to docs/internals/how-we-determine-when-to-run-jobs.md.
 
-        // We're currently storing the mapping from PathMetaKey to content hash as
-        // a JSON object, so we need to load it before we can do anything else. In
-        // the longer term, we'll probably move to using some sort of KV store,
-        // at which point this deserialization will just be opening the database.
-        let file_hashes_path = self.workspace_root.join("file_hashes.json");
-        let mut meta_to_hash: HashMap<u64, String> = match File::open(&file_hashes_path) {
-            Ok(file) => {
-                let reader = BufReader::new(file);
-                serde_json::from_reader(reader)
-                    .context("could not deserialize mapping from inputs to content")?
-            }
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => HashMap::default(),
-            Err(err) => return Err(err).context("could not open file hash cache"),
-        };
+        // let mut meta_to_hash: HashMap<u64, String> ;
 
         // We assume that there will be at least some overlap in inputs (i.e. at
         // least two targets needing the same file.) That assumption means that
@@ -124,17 +110,23 @@ impl<'roc> Builder<'roc> {
             path_to_meta.insert(input_file, cache_key);
         }
 
-        ///////////////////////////////////////////////////////////////////
-        // Phase 2a: get hashes for metadata keys we haven't seen before //
-        ///////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////
+        // Phase 2: get hashes for metadata keys we haven't seen before //
+        //////////////////////////////////////////////////////////////////
         let mut hasher = blake3::Hasher::new();
 
         for (path, cache_key) in path_to_meta.iter() {
-            let key = u64::from(cache_key);
-            if let Some(hash) = meta_to_hash.get(&key) {
-                coordinator
-                    .path_to_hash
-                    .insert(path.to_path_buf(), hash.to_owned());
+            let key = cache_key.to_db_key();
+            if let Some(hash) = self
+                .meta_to_hash
+                .get(&key)
+                .context("could not read file hash from database")?
+            {
+                coordinator.path_to_hash.insert(
+                    path.to_path_buf(),
+                    std::str::from_utf8(hash.as_ref())?.into(),
+                );
+
                 continue;
             }
 
@@ -152,21 +144,14 @@ impl<'roc> Builder<'roc> {
             let hash = hasher.finalize();
 
             log::debug!("hash of `{}` was {}", path.display(), hash);
-            meta_to_hash.insert(key, hash.to_string());
+            self.meta_to_hash
+                .insert(key, hash.as_bytes())
+                .context("could not write file hash to database")?;
 
             coordinator
                 .path_to_hash
                 .insert(path.to_path_buf(), hash.to_string());
         }
-
-        ////////////////////////////////////////////////////////////////
-        // Phase 2b: keep track of the hashes to avoid work next time //
-        ////////////////////////////////////////////////////////////////
-        let file_hashes = File::create(file_hashes_path)
-            .context("could not open file hash cache to store new hashes")?;
-        // TODO: BufWriter?
-        serde_json::to_writer(file_hashes, &meta_to_hash)
-            .context("failed to write hash cache to disk")?;
 
         ///////////////////////////////////////////////////////////////////////////
         // Phase 3: get the hahes to determine what jobs we actually need to run //
@@ -401,11 +386,12 @@ struct PathMetaKey {
     // TODO: extra info for Windows
 }
 
-impl From<&PathMetaKey> for u64 {
-    fn from(key: &PathMetaKey) -> Self {
+impl PathMetaKey {
+    pub fn to_db_key(&self) -> [u8; 8] {
         let mut hasher = Xxh3::new();
-        key.hash(&mut hasher);
-        hasher.finish()
+        self.hash(&mut hasher);
+
+        hasher.finish().to_le_bytes()
     }
 }
 
