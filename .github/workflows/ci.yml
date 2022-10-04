@@ -1,4 +1,7 @@
-on: [pull_request]
+on:
+  pull_request:
+  schedule:
+    - cron: '0 5 * * *' # daily at 5am
 
 name: CI
 
@@ -57,7 +60,7 @@ jobs:
           args: --release
 
   platform-generic:
-    name: cargo fmt, roc format, typos
+    name: cargo fmt, roc format, roc check, typos
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -76,6 +79,9 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+
+      - name: roc check
+        run: find . -name '*.roc' | xargs -n 1 roc check
 
       - name: typos
         uses: crate-ci/typos@v1.0.4
