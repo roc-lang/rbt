@@ -60,7 +60,7 @@ jobs:
           args: --release
 
   platform-generic:
-    name: cargo fmt, roc format, typos
+    name: cargo fmt, roc format, roc check, typos
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
