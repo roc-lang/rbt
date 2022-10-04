@@ -16,7 +16,7 @@ pub struct Workspace(PathBuf);
 
 impl Workspace {
     pub fn create<Finality>(root: &Path, key: &job::Key<Finality>) -> Result<Self> {
-        let workspace = Workspace(root.join("workspaces").join(key.to_string()));
+        let workspace = Workspace(root.join(key.to_string()));
 
         std::fs::create_dir_all(&workspace.0).context("could not create workspace")?;
 
