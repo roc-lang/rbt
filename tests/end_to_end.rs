@@ -68,6 +68,7 @@ fn test_job_inputs() {
         output_of_default_job(&root, &PathBuf::from("tests/end_to_end/job_inputs/rbt.roc"))
             .unwrap();
 
+    println!("{:?}", &store_path);
     let greeting = std::fs::read_to_string(store_path.join("out")).unwrap();
 
     assert_eq!(String::from("Hello, World!\n"), greeting)
