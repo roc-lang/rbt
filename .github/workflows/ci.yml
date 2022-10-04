@@ -1,4 +1,7 @@
-on: [pull_request]
+on:
+  pull_request:
+  schedule:
+    - cron: '0 5 * * *' # daily at 5am
 
 name: CI
 
