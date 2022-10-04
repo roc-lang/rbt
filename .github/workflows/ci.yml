@@ -80,6 +80,9 @@ jobs:
           command: fmt
           args: --all -- --check
 
+      - name: roc check
+        run: find . -name '*.roc' | xargs -n 1 roc check
+
       - name: typos
         uses: crate-ci/typos@v1.0.4
 
