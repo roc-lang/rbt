@@ -47,8 +47,6 @@ impl<'roc> Builder<'roc> {
         // For more higher-level explanation of what we're going for, refer
         // to docs/internals/how-we-determine-when-to-run-jobs.md.
 
-        // let mut meta_to_hash: HashMap<u64, String> ;
-
         // We assume that there will be at least some overlap in inputs (i.e. at
         // least two targets needing the same file.) That assumption means that
         // it makes sense to deduplicate them to avoid duplicating filesystem
