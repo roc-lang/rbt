@@ -21,9 +21,20 @@ impl Cli {
     pub fn run(&self) -> Result<()> {
         let rbt = Self::load();
 
-        let store = Store::new(self.root_dir.join("store")).context("could not open store")?;
+        let db = self.open_db().context("could not open rbt's database")?;
 
-        let mut builder = coordinator::Builder::new(self.root_dir.to_path_buf(), store);
+        let store = Store::new(
+            db.open_tree("store")
+                .context("could not open the store database")?,
+            self.root_dir.join("store"),
+        )
+        .context("could not open store")?;
+
+        let mut builder = coordinator::Builder::new(
+            store,
+            db.open_tree("file_hashes")
+                .context("could not open file hashes database")?,
+        );
         builder.add_root(&rbt.default);
 
         let mut coordinator = builder
@@ -58,6 +69,14 @@ impl Cli {
             roc_init(input.as_mut_ptr());
             input.assume_init()
         }
+    }
+
+    pub fn open_db(&self) -> Result<sled::Db> {
+        sled::Config::default()
+            .path(self.root_dir.join("db"))
+            .mode(sled::Mode::HighThroughput)
+            .open()
+            .context("could not open sled database")
     }
 }
 

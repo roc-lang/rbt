@@ -32,6 +32,12 @@ pub struct Key<Finality> {
     phantom: PhantomData<Finality>,
 }
 
+impl<Finality> Key<Finality> {
+    pub fn to_db_key(&self) -> [u8; 8] {
+        self.key.to_le_bytes()
+    }
+}
+
 impl<Finality> Display for Key<Finality> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:x}", self.key)

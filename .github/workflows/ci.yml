@@ -81,10 +81,12 @@ jobs:
           args: --all -- --check
 
       - name: roc check
-        run: find . -name '*.roc' | xargs -n 1 roc check
+        run: git ls-files | grep -E '.roc$' | xargs -n 1 roc check
 
       - name: typos
         uses: crate-ci/typos@v1.0.4
+        with:
+          config: _typos.toml
 
       - name: roc format
-        run: find . -name '*.roc' | roc format --check
+        run: git ls-files | grep -E '.roc$' | xargs roc format --check
