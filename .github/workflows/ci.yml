@@ -80,8 +80,10 @@ jobs:
           command: fmt
           args: --all -- --check
 
-      - name: roc check
-        run: find . -name '*.roc' | xargs -n 1 roc check
+      # as of 2022-10-11, the nightly build is hanging on this step. Disabling it
+      # to get CI running again.
+      # - name: roc check
+      #   run: find . -name '*.roc' | xargs -n 1 roc check
 
       - name: typos
         uses: crate-ci/typos@v1.0.4
