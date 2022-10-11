@@ -91,4 +91,4 @@ jobs:
           config: _typos.toml
 
       - name: roc format
-        run: find . -name '*.roc' | xargs roc format --check
+        run: git ls-files | grep -E '.roc$' | xargs roc format --check
