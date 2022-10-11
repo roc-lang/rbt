@@ -87,6 +87,8 @@ jobs:
 
       - name: typos
         uses: crate-ci/typos@v1.0.4
+        with:
+          config: _typos.toml
 
       - name: roc format
         run: find . -name '*.roc' | roc format --check
