@@ -1,14 +1,36 @@
 use crate::coordinator;
-use crate::job::Job;
+use crate::job::{self, Job};
+use crate::store;
 use crate::workspace::Workspace;
 use anyhow::{Context, Result};
+use std::collections::HashMap;
+use std::path::PathBuf;
 use std::process::Command;
 
-#[derive(Debug, Default)]
-pub struct Runner;
+#[derive(Debug)]
+pub struct Runner {
+    workspace_root: PathBuf,
+}
+
+impl Runner {
+    pub fn new(workspace_root: PathBuf) -> Self {
+        Self { workspace_root }
+    }
+}
 
 impl coordinator::Runner for Runner {
-    fn run(&self, job: &Job, workspace: &Workspace) -> Result<()> {
+    fn run(
+        &self,
+        job: &Job,
+        job_to_content_hash: &HashMap<job::Key<job::Base>, store::Item>,
+    ) -> Result<Workspace> {
+        let workspace = Workspace::create(&self.workspace_root, &job.base_key)
+            .with_context(|| format!("could not create workspace for {}", job))?;
+
+        workspace
+            .set_up_files(job, job_to_content_hash)
+            .with_context(|| format!("could not set up workspace files for {}", job))?;
+
         let mut command: Command = job.into();
         command.current_dir(&workspace);
 
@@ -26,6 +48,6 @@ impl coordinator::Runner for Runner {
             None => anyhow::bail!("command failed with no exit code (maybe it was killed?)"),
         }
 
-        Ok(())
+        Ok(workspace)
     }
 }

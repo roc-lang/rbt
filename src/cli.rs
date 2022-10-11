@@ -30,7 +30,7 @@ impl Cli {
             .build()
             .context("could not initialize coordinator")?;
 
-        let runner = crate::runner::Runner;
+        let runner = crate::runner::Runner::new(self.root_dir.join("workspaces"));
 
         while coordinator.has_outstanding_work() {
             coordinator.run_next(&runner).context("failed to run job")?;
