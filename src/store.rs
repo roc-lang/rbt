@@ -270,7 +270,7 @@ impl Item {
 
     fn from_hex(root: &Path, hex: impl AsRef<[u8]>) -> Result<Self> {
         let hash =
-            blake3::Hash::from_hex(hex).context("could not load a blak3 hash from hex value")?;
+            blake3::Hash::from_hex(hex).context("could not load a blake3 hash from hex value")?;
 
         Ok(Self::from_hash(root, hash))
     }
