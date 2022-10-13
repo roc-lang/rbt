@@ -5,6 +5,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use core::mem::MaybeUninit;
 use std::path::PathBuf;
+use tokio::runtime;
 
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
@@ -15,6 +16,11 @@ pub struct Cli {
     /// Only useful for testing at the moment
     #[clap(long)]
     print_root_output_paths: bool,
+
+    /// How many worker threads should we spawn? If unset, this defaults to the
+    /// number of CPU cores on the system.
+    #[clap(long)]
+    worker_threads: Option<usize>,
 }
 
 impl Cli {
@@ -43,7 +49,11 @@ impl Cli {
 
         let runner = crate::runner::Runner::new(self.root_dir.join("workspaces"));
 
-        coordinator.run_all(runner).context("failed to run jobs")?;
+        let runtime = self.async_runtime()?;
+
+        runtime
+            .block_on(async { coordinator.run_all(runner) })
+            .context("failed to run jobs")?;
 
         if self.print_root_output_paths {
             for root in coordinator.roots() {
@@ -67,6 +77,17 @@ impl Cli {
             roc_init(input.as_mut_ptr());
             input.assume_init()
         }
+    }
+
+    pub fn async_runtime(&self) -> Result<runtime::Runtime> {
+        let mut builder = runtime::Builder::new_multi_thread();
+        builder.enable_io();
+
+        if let Some(count) = self.worker_threads {
+            builder.worker_threads(count);
+        }
+
+        builder.build().context("failed to build async runtime")
     }
 
     pub fn open_db(&self) -> Result<sled::Db> {
