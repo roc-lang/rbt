@@ -1,18 +1,14 @@
 use crate::glue;
 use crate::job::{self, Job};
+use crate::path_meta_key::PathMetaKey;
 use crate::store::{self, Store};
 use crate::workspace::Workspace;
 use anyhow::{Context, Result};
-use core::convert::{TryFrom, TryInto};
+use core::convert::TryInto;
 use std::collections::{HashMap, HashSet};
-use std::fs::{File, Metadata};
-use std::hash::{Hash, Hasher};
+use std::fs::File;
 use std::path::PathBuf;
-use std::time::SystemTime;
-use xxhash_rust::xxh3::{Xxh3, Xxh3Builder};
-
-#[cfg(target_family = "unix")]
-use std::os::unix::fs::MetadataExt;
+use xxhash_rust::xxh3::Xxh3Builder;
 
 pub struct Builder<'roc> {
     store: Store,
@@ -374,64 +370,5 @@ impl Runner for Box<dyn Runner> {
         job_to_content_hash: &HashMap<job::Key<job::Base>, store::Item>,
     ) -> Result<Workspace> {
         self.as_ref().run(job, job_to_content_hash)
-    }
-}
-
-#[derive(Debug, Hash)]
-struct PathMetaKey {
-    // common
-    modified: SystemTime,
-    len: u64,
-
-    // Unix-only
-    #[cfg(target_family = "unix")]
-    inode: u64,
-    #[cfg(target_family = "unix")]
-    mode: u32,
-    #[cfg(target_family = "unix")]
-    uid: u32,
-    #[cfg(target_family = "unix")]
-    gid: u32,
-    // TODO: extra info for Windows
-}
-
-impl PathMetaKey {
-    pub fn to_db_key(&self) -> [u8; 8] {
-        let mut hasher = Xxh3::new();
-        self.hash(&mut hasher);
-
-        hasher.finish().to_le_bytes()
-    }
-}
-
-#[cfg(target_family = "unix")]
-impl TryFrom<Metadata> for PathMetaKey {
-    type Error = anyhow::Error;
-
-    fn try_from(meta: Metadata) -> Result<PathMetaKey> {
-        Ok(PathMetaKey {
-            modified: meta
-                .modified()
-                .context("mtime is not supported on this system")?,
-            len: meta.len(),
-            inode: meta.ino(),
-            mode: meta.mode(),
-            uid: meta.uid(),
-            gid: meta.gid(),
-        })
-    }
-}
-
-#[cfg(not(target_family = "unix"))]
-impl TryFrom<Metadata> for PathMetaKey {
-    type Error = anyhow::Error;
-
-    fn try_from(meta: Metadata) -> Result<PathMetaKey> {
-        Ok(PathMetaKey {
-            modified: meta
-                .modified()
-                .context("mtime is not supported on this system")?,
-            len: meta.len(),
-        })
     }
 }

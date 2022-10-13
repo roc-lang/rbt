@@ -5,6 +5,7 @@ mod cli;
 mod coordinator;
 mod glue;
 mod job;
+mod path_meta_key;
 mod runner;
 mod store;
 mod workspace;
