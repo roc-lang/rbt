@@ -73,7 +73,7 @@ impl<'roc> Builder<'roc> {
             // each of which will have at least one leaf node.
             jobs: HashMap::with_capacity(self.roots.len()),
             blocked: HashMap::default(),
-            ready: Vec::with_capacity(self.roots.len()),
+            ready_immediately: Vec::with_capacity(self.roots.len()),
         };
 
         /////////////////////////////////////////////
@@ -221,7 +221,7 @@ impl<'roc> Builder<'roc> {
                     );
                 }
             } else {
-                coordinator.ready.push(job.base_key);
+                coordinator.ready_immediately.push(job.base_key);
             }
 
             glue_to_job_key.insert(glue_job, job.base_key);
@@ -261,7 +261,10 @@ pub struct Coordinator<'roc> {
     // which jobs should run when?
     jobs: HashMap<job::Key<job::Base>, Job<'roc>>,
     blocked: HashMap<job::Key<job::Base>, HashSet<job::Key<job::Base>>>,
-    ready: Vec<job::Key<job::Base>>,
+
+    // TODO: should this be calculated based on the keys that are in `jobs` but
+    // not in `blocked`?
+    ready_immediately: Vec<job::Key<job::Base>>,
 }
 
 impl<'roc> Coordinator<'roc> {
@@ -274,11 +277,11 @@ impl<'roc> Coordinator<'roc> {
     }
 
     pub fn has_outstanding_work(&self) -> bool {
-        !self.blocked.is_empty() || !self.ready.is_empty()
+        !self.blocked.is_empty() || !self.ready_immediately.is_empty()
     }
 
     pub fn run_next<R: Runner>(&mut self, runner: &R) -> Result<()> {
-        let id = match self.ready.pop() {
+        let id = match self.ready_immediately.pop() {
             Some(id) => id,
             None => anyhow::bail!("no work ready to do"),
         };
@@ -338,7 +341,7 @@ impl<'roc> Coordinator<'roc> {
             }
             !no_blockers_remaining
         });
-        self.ready.extend(newly_unblocked);
+        self.ready_immediately.extend(newly_unblocked);
 
         Ok(())
     }
