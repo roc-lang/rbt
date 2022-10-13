@@ -265,7 +265,7 @@ pub struct Coordinator<'roc> {
 }
 
 impl<'roc> Coordinator<'roc> {
-    pub fn run_all<R: Runner>(&mut self, runner: R) -> Result<()> {
+    pub async fn run_all<R: Runner>(&mut self, runner: R) -> Result<()> {
         while self.has_outstanding_work() {
             self.run_next(&runner).context("failed to run job")?;
         }
