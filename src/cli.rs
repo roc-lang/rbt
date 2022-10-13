@@ -43,9 +43,7 @@ impl Cli {
 
         let runner = crate::runner::Runner::new(self.root_dir.join("workspaces"));
 
-        while coordinator.has_outstanding_work() {
-            coordinator.run_next(&runner).context("failed to run job")?;
-        }
+        coordinator.run_all(runner).context("failed to run jobs")?;
 
         if self.print_root_output_paths {
             for root in coordinator.roots() {

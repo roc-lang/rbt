@@ -265,6 +265,14 @@ pub struct Coordinator<'roc> {
 }
 
 impl<'roc> Coordinator<'roc> {
+    pub fn run_all<R: Runner>(&mut self, runner: R) -> Result<()> {
+        while self.has_outstanding_work() {
+            self.run_next(&runner).context("failed to run job")?;
+        }
+
+        Ok(())
+    }
+
     pub fn has_outstanding_work(&self) -> bool {
         !self.blocked.is_empty() || !self.ready.is_empty()
     }
