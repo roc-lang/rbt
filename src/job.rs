@@ -301,4 +301,16 @@ mod test {
             job.base_key
         );
     }
+
+    fn assert_send<T: Send>() {}
+
+    // we've had Job need to be sendable on and off throughout rbt's
+    // development, and it's always been a hassle to get it re-sendable when
+    // we temporarily relax the restriction. So this is a kind of weird test,
+    // and we may not always need it, but it should at least prevent us from
+    // backsliding again.
+    #[test]
+    fn job_is_sendable() {
+        assert_send::<Job>()
+    }
 }
