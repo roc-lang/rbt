@@ -58,7 +58,7 @@ impl Default for Key<Final> {
 pub struct Job<'roc> {
     pub base_key: Key<Base>,
     pub command: &'roc glue::Command,
-    pub env: &'roc RocDict<RocStr, RocStr>,
+    pub env: HashMap<String, String>,
     pub input_files: HashSet<PathBuf>,
     pub input_jobs: HashMap<Key<Base>, HashSet<PathBuf>>,
     pub outputs: HashSet<PathBuf>,
@@ -145,12 +145,17 @@ impl<'roc> Job<'roc> {
             value.hash(&mut hasher);
         }
 
+        let mut env = HashMap::with_capacity(unwrapped.env.len());
+        for (k, v) in &unwrapped.env {
+            env.insert(k.as_str().into(), v.as_str().into());
+        }
+
         Ok(Job {
             base_key: Key {
                 key: hasher.finish(),
                 phantom: PhantomData,
             },
-            env: &unwrapped.env,
+            env,
             command: &unwrapped.command,
             input_files,
             input_jobs,
@@ -197,8 +202,8 @@ impl<'roc> From<&Job<'roc>> for Command {
             command.arg(arg.as_str());
         }
 
-        for (key, value) in job.env {
-            command.env(key.as_str(), value.as_str());
+        for (key, value) in &job.env {
+            command.env(key, value);
         }
 
         command
