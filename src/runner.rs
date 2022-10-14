@@ -1,4 +1,3 @@
-use crate::coordinator;
 use crate::job::{self, Job};
 use crate::store;
 use crate::workspace::Workspace;
@@ -18,8 +17,8 @@ impl Runner {
     }
 }
 
-impl coordinator::Runner for Runner {
-    fn run(
+impl Runner {
+    pub fn run(
         &self,
         job: &Job,
         job_to_content_hash: &HashMap<job::Key<job::Base>, store::Item>,

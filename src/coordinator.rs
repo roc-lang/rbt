@@ -1,8 +1,8 @@
 use crate::glue;
 use crate::job::{self, Job};
 use crate::path_meta_key::PathMetaKey;
+use crate::runner::Runner;
 use crate::store::{self, Store};
-use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use core::convert::TryInto;
 use std::collections::{HashMap, HashSet};
@@ -264,9 +264,9 @@ pub struct Coordinator<'roc> {
 }
 
 impl<'roc> Coordinator<'roc> {
-    pub async fn run_all<R: Runner>(&mut self, runner: R) -> Result<()> {
+    pub async fn run_all(&mut self, runner: &Runner) -> Result<()> {
         while self.has_outstanding_work() {
-            self.run_next(&runner).context("failed to run job")?;
+            self.run_next(runner).context("failed to run job")?;
         }
 
         Ok(())
@@ -276,7 +276,7 @@ impl<'roc> Coordinator<'roc> {
         !self.blocked.is_empty() || !self.ready_immediately.is_empty()
     }
 
-    pub fn run_next<R: Runner>(&mut self, runner: &R) -> Result<()> {
+    pub fn run_next(&mut self, runner: &Runner) -> Result<()> {
         let id = match self.ready_immediately.pop() {
             Some(id) => id,
             None => anyhow::bail!("no work ready to do"),
@@ -348,27 +348,5 @@ impl<'roc> Coordinator<'roc> {
 
     pub fn store_path(&self, key: &job::Key<job::Base>) -> Option<&store::Item> {
         self.job_to_content_hash.get(key)
-    }
-}
-
-/// Runner  abstracts over different kinds of builds. If they're local, we
-/// create a local workspace. If they're remote (hypothetically, in the future),
-/// we can tell the remote coordinator that we want to build the job with these
-/// particular hashes and ask if it can give us back the built files, please.
-pub trait Runner {
-    fn run(
-        &self,
-        job: &Job,
-        job_to_content_hash: &HashMap<job::Key<job::Base>, store::Item>,
-    ) -> Result<Workspace>;
-}
-
-impl Runner for Box<dyn Runner> {
-    fn run(
-        &self,
-        job: &Job,
-        job_to_content_hash: &HashMap<job::Key<job::Base>, store::Item>,
-    ) -> Result<Workspace> {
-        self.as_ref().run(job, job_to_content_hash)
     }
 }
