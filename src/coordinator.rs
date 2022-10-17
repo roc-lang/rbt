@@ -14,13 +14,15 @@ pub struct Builder<'roc> {
     store: Store,
     roots: Vec<&'roc glue::Job>,
     meta_to_hash: sled::Tree,
+    workspace_root: PathBuf,
 }
 
 impl<'roc> Builder<'roc> {
-    pub fn new(store: Store, meta_to_hash: sled::Tree) -> Self {
+    pub fn new(store: Store, meta_to_hash: sled::Tree, workspace_root: PathBuf) -> Self {
         Builder {
             store,
             meta_to_hash,
+            workspace_root,
 
             // it's very likely we'll have at least one root
             roots: Vec::with_capacity(1),
@@ -60,6 +62,7 @@ impl<'roc> Builder<'roc> {
 
         let mut coordinator = Coordinator {
             store: self.store,
+            workspace_root: self.workspace_root,
             roots: Vec::with_capacity(self.roots.len()),
 
             path_to_hash: HashMap::with_capacity(input_files.len()),
@@ -243,6 +246,7 @@ impl<'roc> Builder<'roc> {
 #[derive(Debug)]
 pub struct Coordinator {
     store: Store,
+    workspace_root: PathBuf,
 
     roots: Vec<job::Key<job::Base>>,
 
@@ -264,9 +268,11 @@ pub struct Coordinator {
 }
 
 impl<'roc> Coordinator {
-    pub async fn run_all(&mut self, runner: &Runner) -> Result<()> {
+    pub async fn run_all(&mut self) -> Result<()> {
+        let runner = Runner::new(self.workspace_root.clone());
+
         while self.has_outstanding_work() {
-            self.run_next(runner).context("failed to run job")?;
+            self.run_next(&runner).context("failed to run job")?;
         }
 
         Ok(())

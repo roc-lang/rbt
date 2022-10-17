@@ -40,6 +40,7 @@ impl Cli {
             store,
             db.open_tree("file_hashes")
                 .context("could not open file hashes database")?,
+            self.root_dir.join("workspaces"),
         );
         builder.add_root(&rbt.default);
 
@@ -47,12 +48,10 @@ impl Cli {
             .build()
             .context("could not initialize coordinator")?;
 
-        let runner = crate::runner::Runner::new(self.root_dir.join("workspaces"));
-
         let runtime = self.async_runtime()?;
 
         runtime
-            .block_on(coordinator.run_all(&runner))
+            .block_on(coordinator.run_all())
             .context("failed to run jobs")?;
 
         if self.print_root_output_paths {
