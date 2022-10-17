@@ -30,7 +30,7 @@ impl Runner {
             .set_up_files(job, job_to_content_hash)
             .with_context(|| format!("could not set up workspace files for {}", job))?;
 
-        let mut command: Command = job.into();
+        let mut command = Command::from(&job.command);
         command.current_dir(&workspace);
 
         // TODO: send stdout, stderr, etc to The Log Zone(tm)

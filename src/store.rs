@@ -83,7 +83,7 @@ impl Store {
 #[derive(Debug)]
 struct ItemBuilder<'job> {
     workspace: Workspace,
-    job: &'job Job<'job>,
+    job: &'job Job,
     item: Item,
 }
 

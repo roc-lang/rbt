@@ -1,13 +1,12 @@
 use crate::{glue, store};
 use anyhow::{Context, Result};
 use itertools::Itertools;
-use roc_std::{RocDict, RocStr};
+use roc_std::RocStr;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Display};
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::marker::PhantomData;
 use std::path::{Component, PathBuf};
-use std::process::Command;
 use xxhash_rust::xxh3::Xxh3;
 
 /// See docs on `Key`
@@ -55,18 +54,17 @@ impl Default for Key<Final> {
 }
 
 #[derive(Debug)]
-pub struct Job<'roc> {
+pub struct Job {
     pub base_key: Key<Base>,
-    pub command: &'roc glue::Command,
-    pub env: HashMap<String, String>,
+    pub command: Command,
     pub input_files: HashSet<PathBuf>,
     pub input_jobs: HashMap<Key<Base>, HashSet<PathBuf>>,
     pub outputs: HashSet<PathBuf>,
 }
 
-impl<'roc> Job<'roc> {
+impl Job {
     pub fn from_glue<S>(
-        job: &'roc glue::Job,
+        job: &glue::Job,
         glue_job_to_key: &HashMap<&glue::Job, Key<Base>, S>,
     ) -> Result<Self>
     where
@@ -145,18 +143,15 @@ impl<'roc> Job<'roc> {
             value.hash(&mut hasher);
         }
 
-        let mut env = HashMap::with_capacity(unwrapped.env.len());
-        for (k, v) in &unwrapped.env {
-            env.insert(k.as_str().into(), v.as_str().into());
-        }
+        let command = Command::new(unwrapped);
+        command.hash(&mut hasher);
 
         Ok(Job {
             base_key: Key {
                 key: hasher.finish(),
                 phantom: PhantomData,
             },
-            env,
-            command: &unwrapped.command,
+            command,
             input_files,
             input_jobs,
             outputs,
@@ -194,23 +189,34 @@ impl<'roc> Job<'roc> {
     }
 }
 
-impl<'roc> From<&Job<'roc>> for Command {
-    fn from(job: &Job) -> Self {
-        let mut command = Command::new(&job.command.tool.as_SystemTool().name.to_string());
+#[derive(Debug)]
+pub struct Command {
+    tool: String,
+    args: Vec<String>,
+    env: HashMap<String, String>,
+}
 
-        for arg in &job.command.args {
-            command.arg(arg.as_str());
+impl Command {
+    fn new(glue_job: &glue::R1) -> Self {
+        let mut env = HashMap::with_capacity(glue_job.env.len());
+        for (k, v) in &glue_job.env {
+            env.insert(k.as_str().into(), v.as_str().into());
         }
 
-        for (key, value) in &job.env {
-            command.env(key, value);
+        Command {
+            tool: glue_job.command.tool.as_SystemTool().name.to_string(),
+            args: glue_job
+                .command
+                .args
+                .iter()
+                .map(|arg| arg.as_str().into())
+                .collect(),
+            env,
         }
-
-        command
     }
 }
 
-impl<'roc> Display for Job<'roc> {
+impl Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // intention: make a best-effort version of part of how the command
         // would look if it were invoked from a shell. It's OK for right now
@@ -218,14 +224,11 @@ impl<'roc> Display for Job<'roc> {
         // for us to have some human-readable output in addition to the ID.
         let mut chars = 0;
 
-        write!(f, "{} (", self.base_key)?;
+        chars += self.tool.len();
 
-        let base = self.command.tool.as_SystemTool().name.to_string();
-        chars += base.len();
+        write!(f, "{}", self.tool)?;
 
-        write!(f, "{}", base)?;
-
-        for arg in &self.command.args {
+        for arg in &self.args {
             if chars >= 20 {
                 continue;
             }
@@ -239,7 +242,41 @@ impl<'roc> Display for Job<'roc> {
             }
         }
 
-        write!(f, ")")
+        Ok(())
+    }
+}
+
+impl Hash for Command {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.tool.hash(state);
+        self.args.hash(state);
+
+        for (key, value) in self.env.iter().sorted() {
+            key.hash(state);
+            value.hash(state);
+        }
+    }
+}
+
+impl From<&Command> for std::process::Command {
+    fn from(job_command: &Command) -> Self {
+        let mut command = std::process::Command::new(job_command.tool.as_str());
+
+        for arg in &job_command.args {
+            command.arg(arg.as_str());
+        }
+
+        for (key, value) in &job_command.env {
+            command.env(key, value);
+        }
+
+        command
+    }
+}
+
+impl Display for Job {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ({})", self.base_key, self.command)
     }
 }
 
@@ -272,7 +309,7 @@ pub fn sanitize_file_path(roc_str: &RocStr) -> Result<PathBuf> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use roc_std::RocList;
+    use roc_std::{RocDict, RocList};
 
     #[test]
     fn job_hash_stability() {
@@ -300,7 +337,7 @@ mod test {
 
         assert_eq!(
             Key {
-                key: 243796661244433339,
+                key: 4258861697155208119,
                 phantom: PhantomData
             },
             job.base_key

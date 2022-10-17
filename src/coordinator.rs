@@ -31,7 +31,7 @@ impl<'roc> Builder<'roc> {
         self.roots.push(job);
     }
 
-    pub fn build(self) -> Result<Coordinator<'roc>> {
+    pub fn build(self) -> Result<Coordinator> {
         // Here's the overview of what we're about to do: for each file in
         // each target job, we're going to look at metadata for that file and
         // use that metadata to look up the file's hash (if we don't have it
@@ -241,7 +241,7 @@ impl<'roc> Builder<'roc> {
 }
 
 #[derive(Debug)]
-pub struct Coordinator<'roc> {
+pub struct Coordinator {
     store: Store,
 
     roots: Vec<job::Key<job::Base>>,
@@ -255,7 +255,7 @@ pub struct Coordinator<'roc> {
     job_to_content_hash: HashMap<job::Key<job::Base>, store::Item>,
 
     // which jobs should run when?
-    jobs: HashMap<job::Key<job::Base>, Job<'roc>>,
+    jobs: HashMap<job::Key<job::Base>, Job>,
     blocked: HashMap<job::Key<job::Base>, HashSet<job::Key<job::Base>>>,
 
     // TODO: should this be calculated based on the keys that are in `jobs` but
@@ -263,7 +263,7 @@ pub struct Coordinator<'roc> {
     ready_immediately: Vec<job::Key<job::Base>>,
 }
 
-impl<'roc> Coordinator<'roc> {
+impl<'roc> Coordinator {
     pub async fn run_all(&mut self, runner: &Runner) -> Result<()> {
         while self.has_outstanding_work() {
             self.run_next(runner).context("failed to run job")?;
