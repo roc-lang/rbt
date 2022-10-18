@@ -258,9 +258,9 @@ impl Hash for Command {
     }
 }
 
-impl From<&Command> for std::process::Command {
+impl From<&Command> for tokio::process::Command {
     fn from(job_command: &Command) -> Self {
-        let mut command = std::process::Command::new(job_command.tool.as_str());
+        let mut command = tokio::process::Command::new(job_command.tool.as_str());
 
         for arg in &job_command.args {
             command.arg(arg.as_str());

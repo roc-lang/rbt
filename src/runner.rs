@@ -4,7 +4,7 @@ use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::process::Command;
+use tokio::process::Command;
 
 #[derive(Debug)]
 pub struct Runner {
@@ -41,6 +41,7 @@ impl Runner {
             .spawn()
             .context("could not run command")?
             .wait()
+            .await
             .context("command wasn't running")?;
 
         match status.code() {
