@@ -14,13 +14,14 @@ libc = "0.2"
 log = { version = "0.4.17", features = ["max_level_trace", "release_max_level_info"] }
 notify = "4"
 path-absolutize = "3.0.13"
+rand = "0.8.5"
 roc_std = { path = "vendor/roc_std" }
 serde = { version = "1.0.143", features = ["derive"] }
 serde_json = "1.0.83"
 simple_logger = { version = "2.2.0", features = ["stderr"] }
 sled = "0.34"
 tempfile = "3.2"
-tokio = { version = "1.21.2", features = ["rt", "rt-multi-thread", "process", "fs", "macros"] }
+tokio = { version = "1.21.2", features = ["rt", "rt-multi-thread", "process", "fs", "macros", "io-util"] }
 walkdir = "2.3"
 xxhash-rust = { version = "0.8.5", features = ["xxh3"] }
 zerocopy = "0.6"

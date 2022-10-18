@@ -4,8 +4,9 @@ use anyhow::{Context, Result};
 use itertools::Itertools;
 use std::collections::HashSet;
 use std::fmt::{self, Display};
-use std::fs::File;
 use std::path::{Path, PathBuf};
+use tokio::fs::{self, File};
+use tokio::io::AsyncReadExt;
 
 /// Store is responsible for managing a content-addressed store below some path
 /// and managing the associations between input job hashes and those paths.
@@ -50,17 +51,19 @@ impl Store {
     ///     is, they don't include any paths leading to the root or other
     ///     drives, or contain `..` elements that would take the path out of
     ///     the workspace root.)
-    pub fn store_from_workspace(
+    pub async fn store_from_workspace(
         &mut self,
         key: job::Key<job::Final>,
         job: &Job,
         workspace: Workspace,
     ) -> Result<Item> {
         let item_builder = ItemBuilder::load(&self.root, job, workspace)
+            .await
             .context("could get content addressed path from job")?;
 
         let item = item_builder
             .move_into_checked(&self.root)
+            .await
             .context("could not move item into the store")?;
 
         self.associate_job_with_hash(key, &item.to_string())
@@ -90,7 +93,7 @@ struct ItemBuilder<'job> {
 impl<'job> ItemBuilder<'job> {
     /// Load all the outputs from a job and workspace combo, creating a hash
     /// as we go.
-    fn load(root: &Path, job: &'job Job, workspace: Workspace) -> Result<Self> {
+    async fn load(root: &Path, job: &'job Job, workspace: Workspace) -> Result<ItemBuilder<'job>> {
         let mut hasher = blake3::Hasher::new();
 
         for path in job.outputs.iter().sorted() {
@@ -99,20 +102,25 @@ impl<'job> ItemBuilder<'job> {
                 None => anyhow::bail!("got a non-unicode path `{}`, but Roc should never have produced a Str with invalid unicode.", path.display()),
             };
 
-            let mut file = File::open(&workspace.join(path)).with_context(|| {
+            let mut file = File::open(&workspace.join(path)).await.with_context(|| {
                 format!(
                     "couldn't open `{}` for hashing. Did the build produce it?",
                     path.display()
                 )
             })?;
 
-            // TODO: docs for Blake3 say that a 16 KiB buffer is the most
-            // efficient (for SIMD reasons), but `std::io::copy` uses an 8KiB
-            // buffer. Gonna have to do this by hand at some point to take
-            // advantage of the algorithm's designed speed.
-            std::io::copy(&mut file, &mut hasher).with_context(|| {
-                format!("could not read `{}` to calculate hash", path.display())
-            })?;
+            // Blake3 is designed to take advantage of SIMD instructions when
+            // buffer size is 16KiB or more
+            let mut buffer = [0; 16 * 1024];
+            loop {
+                let bytes = file.read(&mut buffer).await.with_context(|| {
+                    format!("could not read `{}` to calculate hash", path.display())
+                })?;
+                if bytes == 0 {
+                    break;
+                }
+                hasher.update(&buffer[0..bytes]);
+            }
         }
 
         Ok(Self {
@@ -123,7 +131,7 @@ impl<'job> ItemBuilder<'job> {
     }
 
     // like `move_into`, but checks that the store path exists first
-    fn move_into_checked(self, root: &Path) -> Result<Item> {
+    async fn move_into_checked(self, root: &Path) -> Result<Item> {
         if self.item.exists() {
             log::debug!("we have already stored {}, so I'm skipping the move!", self,);
 
@@ -132,6 +140,7 @@ impl<'job> ItemBuilder<'job> {
             log::debug!("moving {} into store", self);
 
             self.move_into(root)
+                .await
                 .context("could not move item into the store")
         }
     }
@@ -140,12 +149,12 @@ impl<'job> ItemBuilder<'job> {
     /// safe to do this twice (we move files from the owned `Workspace` / passed
     /// in with `load`) Returns the only safe thing to use after calling this:
     /// the hash.
-    fn move_into(self, root: &Path) -> Result<Item> {
+    async fn move_into(self, root: &Path) -> Result<Item> {
         let final_path = self.item.path();
 
-        let temp = tempfile::Builder::new()
-            .prefix(&format!("tmp-{}", self))
-            .tempdir_in(&root)
+        let temp = root.join(format!("tmp-{}", rand::random::<u64>()));
+        fs::create_dir(&temp)
+            .await
             .context("couldn't create temporary directory for hashing")?;
 
         // We optimize disk IO based on the fact that the new temporary directory
@@ -184,15 +193,17 @@ impl<'job> ItemBuilder<'job> {
                 log::trace!(
                     "creating parent directory {} in {}",
                     &ancestor.display(),
-                    temp.path().display()
+                    &temp.display()
                 );
-                std::fs::create_dir(temp.path().join(&ancestor)).with_context(|| {
-                    format!(
-                        "could not create parent directory `{}` for output `{}`",
-                        ancestor.display(),
-                        output.display(),
-                    )
-                })?;
+                fs::create_dir(temp.join(&ancestor))
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "could not create parent directory `{}` for output `{}`",
+                            ancestor.display(),
+                            output.display(),
+                        )
+                    })?;
                 created_dirs.insert(ancestor);
             }
 
@@ -202,15 +213,17 @@ impl<'job> ItemBuilder<'job> {
             // we only move things into the store if the job succeeded, so
             // we'll be removing everything in it shortly anyway!
             log::trace!("moving `{}` into store path", &output.display());
-            let out = temp.path().join(&output);
-            std::fs::rename(self.workspace.join(&output), &out).with_context(|| {
-                format!(
-                    "could not move `{}` from workspace to store",
-                    output.display()
-                )
-            })?;
+            let out = temp.join(&output);
+            fs::rename(self.workspace.join(&output), &out)
+                .await
+                .with_context(|| {
+                    format!(
+                        "could not move `{}` from workspace to store",
+                        output.display()
+                    )
+                })?;
 
-            Self::make_readonly(&out).with_context(|| {
+            Self::make_readonly(&out).await.with_context(|| {
                 format!(
                     "could not make `{}` read-only after moving into store",
                     out.display()
@@ -221,30 +234,38 @@ impl<'job> ItemBuilder<'job> {
         // Now that we're all done moving files over and making them read-only,
         // we can safely make all the directories read-only too.
         for dir in &created_dirs {
-            Self::make_readonly(&temp.path().join(&dir)).with_context(|| {
-                format!("could not make `{}` read-only in the store", dir.display(),)
-            })?;
+            Self::make_readonly(&temp.join(&dir))
+                .await
+                .with_context(|| {
+                    format!("could not make `{}` read-only in the store", dir.display(),)
+                })?;
         }
 
         // important: at this point we need to take ownership of the tempdir so
         // that it doesn't get automatically removed when it's dropped. We've
         // so far avoided that to avoid leaving temporary directories laying
         // around in case of errors.
-        std::fs::rename(temp.into_path(), &final_path)
+        fs::rename(temp, &final_path)
+            .await
             .context("could not move temporary collection directory into the store")?;
-        Self::make_readonly(final_path).context("could not make store path readonly")?;
+        Self::make_readonly(final_path)
+            .await
+            .context("could not make store path readonly")?;
 
         Ok(self.item)
     }
 
-    fn make_readonly(path: &Path) -> Result<()> {
-        let mut perms = std::fs::metadata(&path)
+    async fn make_readonly(path: &Path) -> Result<()> {
+        let mut perms = fs::metadata(&path)
+            .await
             .context("could not get file metadata")?
             .permissions();
 
         perms.set_readonly(true);
 
-        std::fs::set_permissions(&path, perms).context("could not set permissions")
+        fs::set_permissions(&path, perms)
+            .await
+            .context("could not set permissions")
     }
 }
 

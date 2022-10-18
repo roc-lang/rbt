@@ -319,6 +319,7 @@ impl<'roc> Coordinator {
                     job.base_key,
                     self.store
                         .store_from_workspace(final_key, job, workspace)
+                        .await
                         .context("could not store job output")?,
                 );
             }
