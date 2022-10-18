@@ -24,10 +24,12 @@ impl Runner {
         job_to_content_hash: &HashMap<job::Key<job::Base>, store::Item>,
     ) -> Result<Workspace> {
         let workspace = Workspace::create(&self.workspace_root, &job.base_key)
+            .await
             .with_context(|| format!("could not create workspace for {}", job))?;
 
         workspace
             .set_up_files(job, job_to_content_hash)
+            .await
             .with_context(|| format!("could not set up workspace files for {}", job))?;
 
         let mut command = Command::from(&job.command);
