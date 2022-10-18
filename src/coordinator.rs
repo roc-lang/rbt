@@ -283,7 +283,61 @@ impl<'roc> Coordinator {
                 None => anyhow::bail!("no work ready to do"),
             };
 
-            self.run(&runner, &id).await.context("failed to run job")?;
+            let job = self
+                .jobs
+                .get(&id)
+                .context("had a bad job ID in Coordinator.ready")?;
+
+            log::debug!("preparing to run job {}", job);
+
+            let final_key = job
+                .final_key(&self.path_to_hash, &self.job_to_content_hash)
+                .context("could not calculate final cache key")?;
+
+            // build (or don't) based on the final key!
+            match self
+                .store
+                .item_for_job(&final_key)
+                .context("could not get a store path for the current job")?
+            {
+                Some(item) => {
+                    log::debug!("already had output of job {}; skipping", job);
+                    self.job_to_content_hash.insert(job.base_key, item);
+                }
+                None => {
+                    let workspace = runner
+                        .run(job, &self.job_to_content_hash)
+                        .await
+                        .context("could not run job")?;
+
+                    self.job_to_content_hash.insert(
+                        job.base_key,
+                        self.store
+                            .store_from_workspace(final_key, job, workspace)
+                            .await
+                            .context("could not store job output")?,
+                    );
+                }
+            }
+
+            // Now that we're done running the job, we update our bookkeeping to
+            // figure out what running that job just unblocked.
+            let mut newly_unblocked = vec![]; // avoiding mutating both fields of self in the loop below
+
+            self.blocked.retain(|blocked, blockers| {
+                let removed = blockers.remove(&id);
+                if !removed {
+                    return true;
+                }
+
+                let no_blockers_remaining = blockers.is_empty();
+                if no_blockers_remaining {
+                    log::debug!("unblocked {}", blocked);
+                    newly_unblocked.push(*blocked)
+                }
+                !no_blockers_remaining
+            });
+            self.ready_immediately.extend(newly_unblocked);
         }
 
         Ok(())
@@ -291,69 +345,6 @@ impl<'roc> Coordinator {
 
     pub fn has_outstanding_work(&self) -> bool {
         !self.blocked.is_empty() || !self.ready_immediately.is_empty()
-    }
-
-    pub async fn run(&mut self, runner: &Runner, id: &job::Key<job::Base>) -> Result<()> {
-        let job = self
-            .jobs
-            .get(&id)
-            .context("had a bad job ID in Coordinator.ready")?;
-
-        log::debug!("preparing to run job {}", job);
-
-        let final_key = job
-            .final_key(&self.path_to_hash, &self.job_to_content_hash)
-            .context("could not calculate final cache key")?;
-
-        // build (or don't) based on the final key!
-        match self
-            .store
-            .item_for_job(&final_key)
-            .context("could not get a store path for the current job")?
-        {
-            Some(item) => {
-                log::debug!("already had output of job {}; skipping", job);
-                self.job_to_content_hash.insert(job.base_key, item);
-            }
-            None => {
-                let workspace = runner
-                    .run(job, &self.job_to_content_hash)
-                    .await
-                    .context("could not run job")?;
-
-                self.job_to_content_hash.insert(
-                    job.base_key,
-                    self.store
-                        .store_from_workspace(final_key, job, workspace)
-                        .await
-                        .context("could not store job output")?,
-                );
-            }
-        }
-
-        // Now that we're done running the job, we update our bookkeeping to
-        // figure out what running that job just unblocked.
-        //
-        // As an implementation note, this will probably end up in a separate
-        // function once we're running tasks in parallel!
-        let mut newly_unblocked = vec![]; // avoiding mutating both fields of self in the loop below
-
-        self.blocked.retain(|blocked, blockers| {
-            let removed = blockers.remove(&id);
-            if !removed {
-                return true;
-            }
-
-            let no_blockers_remaining = blockers.is_empty();
-            if no_blockers_remaining {
-                log::debug!("unblocked {}", blocked);
-                newly_unblocked.push(*blocked)
-            }
-            !no_blockers_remaining
-        });
-        self.ready_immediately.extend(newly_unblocked);
-
-        Ok(())
     }
 
     pub fn roots(&self) -> &[job::Key<job::Base>] {
