@@ -7,6 +7,7 @@ use anyhow::{Context, Result};
 use core::convert::TryInto;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 use xxhash_rust::xxh3::Xxh3Builder;
 
@@ -132,11 +133,16 @@ impl<'roc> Builder<'roc> {
 
             hasher.reset();
 
-            // TODO: docs for Blake3 say that a 16 KiB buffer is the most
-            // efficient (for SIMD reasons), but `std::io::copy` uses an 8KiB
-            // buffer. Gonna have to do this by hand at some point to take
-            // advantage of the algorithm's designed speed.
-            std::io::copy(&mut file, &mut hasher)?;
+            // The docs for Blake3 say that a 16 KiB buffer is the most
+            // efficient (for SIMD reasons)
+            let mut buf = [0; 16 * 1024];
+            loop {
+                let bytes = file.read(&mut buf)?;
+                if bytes == 0 {
+                    break;
+                }
+                hasher.update(&buf[0..bytes]);
+            }
 
             let hash = hasher.finalize();
 
