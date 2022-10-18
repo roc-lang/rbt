@@ -18,7 +18,7 @@ impl Runner {
 }
 
 impl Runner {
-    pub fn run(
+    pub async fn run(
         &self,
         job: &Job,
         job_to_content_hash: &HashMap<job::Key<job::Base>, store::Item>,

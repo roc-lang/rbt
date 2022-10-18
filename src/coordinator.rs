@@ -272,7 +272,7 @@ impl<'roc> Coordinator {
         let runner = Runner::new(self.workspace_root.clone());
 
         while self.has_outstanding_work() {
-            self.run_next(&runner).context("failed to run job")?;
+            self.run_next(&runner).await.context("failed to run job")?;
         }
 
         Ok(())
@@ -282,7 +282,7 @@ impl<'roc> Coordinator {
         !self.blocked.is_empty() || !self.ready_immediately.is_empty()
     }
 
-    pub fn run_next(&mut self, runner: &Runner) -> Result<()> {
+    pub async fn run_next(&mut self, runner: &Runner) -> Result<()> {
         let id = match self.ready_immediately.pop() {
             Some(id) => id,
             None => anyhow::bail!("no work ready to do"),
@@ -312,6 +312,7 @@ impl<'roc> Coordinator {
             None => {
                 let workspace = runner
                     .run(job, &self.job_to_content_hash)
+                    .await
                     .context("could not run job")?;
 
                 self.job_to_content_hash.insert(
