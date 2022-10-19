@@ -289,75 +289,77 @@ impl<'roc> Coordinator {
                 .context("could not enqueue immedately-available job")?;
         }
 
-        while let Some(id) = ready_rx.recv().await {
-            let job = self
-                .jobs
-                .get(&id)
-                .context("had a bad job ID in Coordinator.ready")?;
+        loop {
+            tokio::select! {
+                Some(id) = ready_rx.recv() => {
+                    let job = self
+                        .jobs
+                        .get(&id)
+                        .context("had a bad job ID in Coordinator.ready")?;
 
-            log::debug!("preparing to run job {}", job);
+                    log::debug!("preparing to run job {}", job);
 
-            let final_key = job
-                .final_key(&self.path_to_hash, &self.job_to_content_hash)
-                .context("could not calculate final cache key")?;
+                    let final_key = job
+                        .final_key(&self.path_to_hash, &self.job_to_content_hash)
+                        .context("could not calculate final cache key")?;
 
-            // build (or don't) based on the final key!
-            match self
-                .store
-                .item_for_job(&final_key)
-                .context("could not get a store path for the current job")?
-            {
-                Some(item) => {
-                    log::debug!("already had output of job {}; skipping", job);
-                    self.job_to_content_hash.insert(job.base_key, item);
+                    // build (or don't) based on the final key!
+                    match self
+                        .store
+                        .item_for_job(&final_key)
+                        .context("could not get a store path for the current job")?
+                    {
+                        Some(item) => {
+                            log::debug!("already had output of job {}; skipping", job);
+                            self.job_to_content_hash.insert(job.base_key, item);
+                        }
+                        None => {
+                            let runner = runner_builder
+                                .build(job, &self.job_to_content_hash)
+                                .await
+                                .context("could not prepare job to run")?;
+
+                            let workspace = runner.run().await.context("could not run job")?;
+
+                            self.job_to_content_hash.insert(
+                                job.base_key,
+                                self.store
+                                    .store_from_workspace(final_key, job, workspace)
+                                    .await
+                                    .context("could not store job output")?,
+                            );
+                        }
+                    }
+
+                    // Now that we're done running the job, we update our bookkeeping to
+                    // figure out what running that job just unblocked.
+                    let mut newly_unblocked = vec![]; // get around needing an async context in the loop below
+
+                    // we're done!
+                    if self.blocked.is_empty() {
+                        return Ok(());
+                    }
+
+                    self.blocked.retain(|blocked, blockers| {
+                        let removed = blockers.remove(&id);
+                        if !removed {
+                            return true;
+                        }
+
+                        let no_blockers_remaining = blockers.is_empty();
+                        if no_blockers_remaining {
+                            log::debug!("unblocked {}", blocked);
+                            newly_unblocked.push(*blocked);
+                        }
+                        !no_blockers_remaining
+                    });
+
+                    for id in newly_unblocked.drain(..) {
+                        ready_tx.send(id).await?;
+                    }
                 }
-                None => {
-                    let runner = runner_builder
-                        .build(job, &self.job_to_content_hash)
-                        .await
-                        .context("could not prepare job to run")?;
-
-                    let workspace = runner.run().await.context("could not run job")?;
-
-                    self.job_to_content_hash.insert(
-                        job.base_key,
-                        self.store
-                            .store_from_workspace(final_key, job, workspace)
-                            .await
-                            .context("could not store job output")?,
-                    );
-                }
-            }
-
-            // Now that we're done running the job, we update our bookkeeping to
-            // figure out what running that job just unblocked.
-            let mut newly_unblocked = vec![]; // get around needing an async context in the loop below
-
-            // we're done!
-            if self.blocked.is_empty() {
-                return Ok(());
-            }
-
-            self.blocked.retain(|blocked, blockers| {
-                let removed = blockers.remove(&id);
-                if !removed {
-                    return true;
-                }
-
-                let no_blockers_remaining = blockers.is_empty();
-                if no_blockers_remaining {
-                    log::debug!("unblocked {}", blocked);
-                    newly_unblocked.push(*blocked);
-                }
-                !no_blockers_remaining
-            });
-
-            for id in newly_unblocked.drain(..) {
-                ready_tx.send(id).await?;
             }
         }
-
-        Ok(())
     }
 
     pub fn has_outstanding_work(&self) -> bool {
