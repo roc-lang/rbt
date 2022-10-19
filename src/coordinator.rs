@@ -1,7 +1,7 @@
 use crate::glue;
 use crate::job::{self, Job};
 use crate::path_meta_key::PathMetaKey;
-use crate::runner::Runner;
+use crate::runner::RunnerBuilder;
 use crate::store::{self, Store};
 use anyhow::{Context, Result};
 use core::convert::TryInto;
@@ -275,7 +275,7 @@ pub struct Coordinator {
 
 impl<'roc> Coordinator {
     pub async fn run_all(&mut self) -> Result<()> {
-        let runner = Runner::new(self.workspace_root.clone());
+        let runner_builder = RunnerBuilder::new(self.workspace_root.clone());
 
         while self.has_outstanding_work() {
             let id = match self.ready_immediately.pop() {
@@ -305,10 +305,12 @@ impl<'roc> Coordinator {
                     self.job_to_content_hash.insert(job.base_key, item);
                 }
                 None => {
-                    let workspace = runner
-                        .run(job, &self.job_to_content_hash)
+                    let runner = runner_builder
+                        .build(job, &self.job_to_content_hash)
                         .await
-                        .context("could not run job")?;
+                        .context("could not prepare job to run")?;
+
+                    let workspace = runner.run().await.context("could not run job")?;
 
                     self.job_to_content_hash.insert(
                         job.base_key,
