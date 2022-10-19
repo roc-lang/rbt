@@ -3,12 +3,14 @@ use crate::job::{self, Job};
 use crate::path_meta_key::PathMetaKey;
 use crate::runner::RunnerBuilder;
 use crate::store::{self, Store};
+use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use core::convert::TryInto;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
+use tokio::sync::mpsc;
 use xxhash_rust::xxh3::Xxh3Builder;
 
 pub struct Builder<'roc> {
@@ -277,12 +279,17 @@ impl<'roc> Coordinator {
     pub async fn run_all(&mut self) -> Result<()> {
         let runner_builder = RunnerBuilder::new(self.workspace_root.clone());
 
-        while self.has_outstanding_work() {
-            let id = match self.ready_immediately.pop() {
-                Some(id) => id,
-                None => anyhow::bail!("no work ready to do"),
-            };
+        // TODO: do some profiling on this to make sure it's not a bottleneck
+        let (ready_tx, mut ready_rx) = mpsc::channel::<job::Key<job::Base>>(self.jobs.len());
 
+        for starter_id in self.ready_immediately.drain(..) {
+            ready_tx
+                .send(starter_id)
+                .await
+                .context("could not enqueue immedately-available job")?;
+        }
+
+        while let Some(id) = ready_rx.recv().await {
             let job = self
                 .jobs
                 .get(&id)
@@ -324,7 +331,12 @@ impl<'roc> Coordinator {
 
             // Now that we're done running the job, we update our bookkeeping to
             // figure out what running that job just unblocked.
-            let mut newly_unblocked = vec![]; // avoiding mutating both fields of self in the loop below
+            let mut newly_unblocked = vec![]; // get around needing an async context in the loop below
+
+            // we're done!
+            if self.blocked.is_empty() {
+                return Ok(());
+            }
 
             self.blocked.retain(|blocked, blockers| {
                 let removed = blockers.remove(&id);
@@ -335,11 +347,14 @@ impl<'roc> Coordinator {
                 let no_blockers_remaining = blockers.is_empty();
                 if no_blockers_remaining {
                     log::debug!("unblocked {}", blocked);
-                    newly_unblocked.push(*blocked)
+                    newly_unblocked.push(*blocked);
                 }
                 !no_blockers_remaining
             });
-            self.ready_immediately.extend(newly_unblocked);
+
+            for id in newly_unblocked.drain(..) {
+                ready_tx.send(id).await?;
+            }
         }
 
         Ok(())
