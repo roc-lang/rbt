@@ -279,7 +279,10 @@ impl<'roc> Coordinator {
     pub async fn run_all(&mut self) -> Result<()> {
         let runner_builder = RunnerBuilder::new(self.workspace_root.clone());
 
-        // TODO: do some profiling on this to make sure it's not a bottleneck
+        // TODO: do some profiling on these to make sure the probably-bigger-
+        // than-we-need capacities not a bottleneck
+        let (done_tx, mut done_rx) =
+            mpsc::channel::<(job::Key<job::Base>, Option<Workspace>)>(self.jobs.len());
         let (ready_tx, mut ready_rx) = mpsc::channel::<job::Key<job::Base>>(self.jobs.len());
 
         for starter_id in self.ready_immediately.drain(..) {
@@ -289,13 +292,15 @@ impl<'roc> Coordinator {
                 .context("could not enqueue immedately-available job")?;
         }
 
+        let mut awaiting_jobs = 0;
+
         loop {
             tokio::select! {
                 Some(id) = ready_rx.recv() => {
                     let job = self
                         .jobs
                         .get(&id)
-                        .context("had a bad job ID in Coordinator.ready")?;
+                        .context("had a bad job ID")?;
 
                     log::debug!("preparing to run job {}", job);
 
@@ -312,6 +317,8 @@ impl<'roc> Coordinator {
                         Some(item) => {
                             log::debug!("already had output of job {}; skipping", job);
                             self.job_to_content_hash.insert(job.base_key, item);
+
+                            done_tx.send((id, None)).await?;
                         }
                         None => {
                             let runner = runner_builder
@@ -319,24 +326,47 @@ impl<'roc> Coordinator {
                                 .await
                                 .context("could not prepare job to run")?;
 
-                            let workspace = runner.run().await.context("could not run job")?;
+                            let job_done_tx = done_tx.clone();
 
-                            self.job_to_content_hash.insert(
-                                job.base_key,
-                                self.store
-                                    .store_from_workspace(final_key, job, workspace)
-                                    .await
-                                    .context("could not store job output")?,
-                            );
+                            tokio::spawn(async move {
+                                // TODO: allow sending errors from this closure
+                                let workspace = runner.run().await.context("could not run job").unwrap();
+
+                                job_done_tx.send((id, Some(workspace))).await.unwrap();
+                            });
                         }
                     }
+
+                    awaiting_jobs += 1;
+                },
+                Some((id, workspace_opt)) = done_rx.recv() => {
+                    awaiting_jobs -= 1;
+                    let job = self
+                        .jobs
+                        .get(&id)
+                        .context("had a bad job ID")?;
+
+                    // TODO: maybe send this in the done channel?
+                    let final_key = job
+                        .final_key(&self.path_to_hash, &self.job_to_content_hash)
+                        .context("could not calculate final cache key")?;
+
+                    if let Some(workspace) = workspace_opt {
+                        self.job_to_content_hash.insert(
+                            job.base_key,
+                            self.store
+                                .store_from_workspace(final_key, job, workspace)
+                                .await
+                                .context("could not store job output")?,
+                        );
+                    };
 
                     // Now that we're done running the job, we update our bookkeeping to
                     // figure out what running that job just unblocked.
                     let mut newly_unblocked = vec![]; // get around needing an async context in the loop below
 
                     // we're done!
-                    if self.blocked.is_empty() {
+                    if self.blocked.is_empty() && awaiting_jobs == 0 {
                         return Ok(());
                     }
 
@@ -360,10 +390,6 @@ impl<'roc> Coordinator {
                 }
             }
         }
-    }
-
-    pub fn has_outstanding_work(&self) -> bool {
-        !self.blocked.is_empty() || !self.ready_immediately.is_empty()
     }
 
     pub fn roots(&self) -> &[job::Key<job::Base>] {
