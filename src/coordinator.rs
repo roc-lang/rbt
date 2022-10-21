@@ -65,7 +65,6 @@ impl<'roc> Builder<'roc> {
 
         let mut coordinator = Coordinator {
             store: self.store,
-            workspace_root: self.workspace_root,
             roots: Vec::with_capacity(self.roots.len()),
 
             path_to_hash: HashMap::with_capacity(input_files.len()),
@@ -76,6 +75,10 @@ impl<'roc> Builder<'roc> {
             jobs: HashMap::with_capacity(self.roots.len()),
             blocked: HashMap::default(),
             ready_immediately: Vec::with_capacity(self.roots.len()),
+
+            // TODO: clean up bits of state
+            runner_builder: RunnerBuilder::new(self.workspace_root.clone()),
+            awaiting_jobs: 0,
         };
 
         /////////////////////////////////////////////
@@ -254,7 +257,6 @@ impl<'roc> Builder<'roc> {
 #[derive(Debug)]
 pub struct Coordinator {
     store: Store,
-    workspace_root: PathBuf,
 
     roots: Vec<job::Key<job::Base>>,
 
@@ -273,17 +275,22 @@ pub struct Coordinator {
     // TODO: should this be calculated based on the keys that are in `jobs` but
     // not in `blocked`?
     ready_immediately: Vec<job::Key<job::Base>>,
+
+    // TODO: clean up all these bits of state
+    runner_builder: RunnerBuilder,
+    awaiting_jobs: usize,
 }
+
+type DoneMsg = (job::Key<job::Base>, Option<Workspace>);
+
+type ReadyMsg = job::Key<job::Base>;
 
 impl<'roc> Coordinator {
     pub async fn run_all(&mut self) -> Result<()> {
-        let runner_builder = RunnerBuilder::new(self.workspace_root.clone());
-
         // TODO: do some profiling on these to make sure the probably-bigger-
         // than-we-need capacities not a bottleneck
-        let (done_tx, mut done_rx) =
-            mpsc::channel::<(job::Key<job::Base>, Option<Workspace>)>(self.jobs.len());
-        let (ready_tx, mut ready_rx) = mpsc::channel::<job::Key<job::Base>>(self.jobs.len());
+        let (done_tx, mut done_rx) = mpsc::channel::<DoneMsg>(self.jobs.len());
+        let (ready_tx, mut ready_rx) = mpsc::channel::<ReadyMsg>(self.jobs.len());
 
         for starter_id in self.ready_immediately.drain(..) {
             ready_tx
@@ -296,49 +303,7 @@ impl<'roc> Coordinator {
 
         loop {
             tokio::select! {
-                Some(id) = ready_rx.recv() => {
-                    let job = self
-                        .jobs
-                        .get(&id)
-                        .context("had a bad job ID")?;
-
-                    log::debug!("preparing to run job {}", job);
-
-                    let final_key = job
-                        .final_key(&self.path_to_hash, &self.job_to_content_hash)
-                        .context("could not calculate final cache key")?;
-
-                    // build (or don't) based on the final key!
-                    match self
-                        .store
-                        .item_for_job(&final_key)
-                        .context("could not get a store path for the current job")?
-                    {
-                        Some(item) => {
-                            log::debug!("already had output of job {}; skipping", job);
-                            self.job_to_content_hash.insert(job.base_key, item);
-
-                            done_tx.send((id, None)).await?;
-                        }
-                        None => {
-                            let runner = runner_builder
-                                .build(job, &self.job_to_content_hash)
-                                .await
-                                .context("could not prepare job to run")?;
-
-                            let job_done_tx = done_tx.clone();
-
-                            tokio::spawn(async move {
-                                // TODO: allow sending errors from this closure
-                                let workspace = runner.run().await.context("could not run job").unwrap();
-
-                                job_done_tx.send((id, Some(workspace))).await.unwrap();
-                            });
-                        }
-                    }
-
-                    awaiting_jobs += 1;
-                },
+                Some(id) = ready_rx.recv() => self.handle_ready(id, done_tx.clone()).await?,
                 Some((id, workspace_opt)) = done_rx.recv() => {
                     awaiting_jobs -= 1;
                     let job = self
@@ -390,6 +355,50 @@ impl<'roc> Coordinator {
                 }
             }
         }
+    }
+
+    async fn handle_ready(&mut self, id: ReadyMsg, done_tx: mpsc::Sender<DoneMsg>) -> Result<()> {
+        let job = self.jobs.get(&id).context("had a bad job ID")?;
+
+        log::debug!("preparing to run job {}", job);
+
+        let final_key = job
+            .final_key(&self.path_to_hash, &self.job_to_content_hash)
+            .context("could not calculate final cache key")?;
+
+        // build (or don't) based on the final key!
+        match self
+            .store
+            .item_for_job(&final_key)
+            .context("could not get a store path for the current job")?
+        {
+            Some(item) => {
+                log::debug!("already had output of job {}; skipping", job);
+                self.job_to_content_hash.insert(job.base_key, item);
+
+                done_tx.send((id, None)).await?;
+            }
+            None => {
+                let runner = self
+                    .runner_builder
+                    .build(job, &self.job_to_content_hash)
+                    .await
+                    .context("could not prepare job to run")?;
+
+                let job_done_tx = done_tx.clone();
+
+                tokio::spawn(async move {
+                    // TODO: allow sending errors from this closure
+                    let workspace = runner.run().await.context("could not run job").unwrap();
+
+                    job_done_tx.send((id, Some(workspace))).await.unwrap();
+                });
+            }
+        }
+
+        self.awaiting_jobs += 1;
+
+        Ok(())
     }
 
     pub fn roots(&self) -> &[job::Key<job::Base>] {
