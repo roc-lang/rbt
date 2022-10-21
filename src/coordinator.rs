@@ -6,11 +6,12 @@ use crate::store::{self, Store};
 use crate::workspace::Workspace;
 use anyhow::{Context, Result};
 use core::convert::TryInto;
+use futures::stream::{FuturesUnordered, StreamExt};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
-use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 use xxhash_rust::xxh3::Xxh3Builder;
 
 pub struct Builder<'roc> {
@@ -74,11 +75,12 @@ impl<'roc> Builder<'roc> {
             // each of which will have at least one leaf node.
             jobs: HashMap::with_capacity(self.roots.len()),
             blocked: HashMap::default(),
+
             ready: Vec::with_capacity(self.roots.len()),
+            running: FuturesUnordered::new(),
 
             // TODO: clean up bits of state
             runner_builder: RunnerBuilder::new(self.workspace_root.clone()),
-            awaiting_jobs: 0,
         };
 
         /////////////////////////////////////////////
@@ -257,6 +259,7 @@ impl<'roc> Builder<'roc> {
 #[derive(Debug)]
 pub struct Coordinator {
     store: Store,
+    runner_builder: RunnerBuilder,
 
     roots: Vec<job::Key<job::Base>>,
 
@@ -272,13 +275,9 @@ pub struct Coordinator {
     jobs: HashMap<job::Key<job::Base>, Job>,
     blocked: HashMap<job::Key<job::Base>, HashSet<job::Key<job::Base>>>,
 
-    // TODO: should this be calculated based on the keys that are in `jobs` but
-    // not in `blocked`?
+    // what's the state of the coordinator while running?
     ready: Vec<job::Key<job::Base>>,
-
-    // TODO: clean up all these bits of state
-    runner_builder: RunnerBuilder,
-    awaiting_jobs: usize,
+    running: FuturesUnordered<JoinHandle<Result<DoneMsg>>>,
 }
 
 type DoneMsg = (job::Key<job::Base>, Option<Workspace>);
@@ -287,34 +286,29 @@ type ReadyMsg = job::Key<job::Base>;
 
 impl<'roc> Coordinator {
     pub async fn run_all(&mut self) -> Result<()> {
-        // TODO: do some profiling on these to make sure the probably-bigger-
-        // than-we-need capacities not a bottleneck
-        let (done_tx, mut done_rx) = mpsc::channel::<DoneMsg>(self.jobs.len());
-        let (ready_tx, mut ready_rx) = mpsc::channel::<ReadyMsg>(self.jobs.len());
-
-        for starter_id in self.ready.drain(..) {
-            ready_tx
-                .send(starter_id)
+        // TODO: when we have concurrency limits, we should only drain the first N jobs
+        let mut ready_now = std::mem::take(&mut self.ready);
+        for id in ready_now.drain(..) {
+            self.start(id)
                 .await
-                .context("could not enqueue immedately-available job")?;
-            self.awaiting_jobs += 1;
+                .context("could not start job from immediately-available set")?;
         }
 
-        loop {
-            tokio::select! {
-                Some(id) = ready_rx.recv() => self.run(id, done_tx.clone()).await?,
-                Some(msg) = done_rx.recv() => {
-                    self.handle_done(msg, ready_tx.clone()).await?;
-
-                    if self.blocked.is_empty() && self.awaiting_jobs == 0 {
-                        return Ok(())
-                    }
-                },
+        while let Some(join_res) = self.running.next().await {
+            match join_res {
+                Ok(Ok(done_msg)) => self
+                    .handle_done(done_msg)
+                    .await
+                    .context("could not finish job")?,
+                Ok(Err(err)) => todo!("handle jobs that return in failure. Error was: #{err:#?}"),
+                Err(err) => todo!("handle jobs that cannot be joined. Error was: #{err:#?}"),
             }
         }
+
+        Ok(())
     }
 
-    async fn run(&mut self, id: ReadyMsg, done_tx: mpsc::Sender<DoneMsg>) -> Result<()> {
+    async fn start(&mut self, id: ReadyMsg) -> Result<()> {
         let job = self.jobs.get(&id).context("had a bad job ID")?;
 
         log::debug!("preparing to run job {}", job);
@@ -324,7 +318,7 @@ impl<'roc> Coordinator {
             .context("could not calculate final cache key")?;
 
         // build (or don't) based on the final key!
-        match self
+        let join_handle = match self
             .store
             .item_for_job(&final_key)
             .context("could not get a store path for the current job")?
@@ -333,33 +327,43 @@ impl<'roc> Coordinator {
                 log::debug!("already had output of job {}; skipping", job);
                 self.job_to_content_hash.insert(job.base_key, item);
 
-                done_tx.send((id, None)).await?;
+                tokio::spawn(async move { Ok((id, None)) })
             }
             None => {
+                // TODO:  this preparation step probably represents a
+                // bottleneck. In the current design, we need to be able to
+                // access `job_to_content_hash` to prepare the workspace. It's
+                // not send-safe, so we either need to copy only the keys we
+                // need for the current job or use some data structure that
+                // is sendable.
+                //
+                // Doing that would also mean that we could move preparation
+                // into the spawned task, which would remove the requirement
+                // that `start` be `async` (at least as of the writing of this
+                // comment.)
                 let runner = self
                     .runner_builder
                     .build(job, &self.job_to_content_hash)
                     .await
                     .context("could not prepare job to run")?;
 
-                let job_done_tx = done_tx.clone();
-
                 tokio::spawn(async move {
                     // TODO: allow sending errors from this closure
                     let workspace = runner.run().await.context("could not run job").unwrap();
 
-                    job_done_tx.send((id, Some(workspace))).await.unwrap();
-                });
+                    Ok((id, Some(workspace)))
+                })
             }
-        }
+        };
+
+        self.running.push(join_handle);
 
         Ok(())
     }
 
-    async fn handle_done(&mut self, msg: DoneMsg, ready_tx: mpsc::Sender<ReadyMsg>) -> Result<()> {
+    async fn handle_done(&mut self, msg: DoneMsg) -> Result<()> {
         let (id, workspace_opt) = msg;
 
-        self.awaiting_jobs -= 1;
         let job = self.jobs.get(&id).context("had a bad job ID")?;
 
         // TODO: maybe send this in the done channel?
@@ -396,8 +400,9 @@ impl<'roc> Coordinator {
         });
 
         for id in newly_unblocked.drain(..) {
-            ready_tx.send(id).await?;
-            self.awaiting_jobs += 1;
+            self.start(id)
+                .await
+                .context("could not launch newly-unblocked job")?;
         }
 
         Ok(())
