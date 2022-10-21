@@ -302,7 +302,7 @@ impl<'roc> Coordinator {
 
         loop {
             tokio::select! {
-                Some(id) = ready_rx.recv() => self.handle_ready(id, done_tx.clone()).await?,
+                Some(id) = ready_rx.recv() => self.run(id, done_tx.clone()).await?,
                 Some(msg) = done_rx.recv() => {
                     self.handle_done(msg, ready_tx.clone()).await?;
 
@@ -314,7 +314,7 @@ impl<'roc> Coordinator {
         }
     }
 
-    async fn handle_ready(&mut self, id: ReadyMsg, done_tx: mpsc::Sender<DoneMsg>) -> Result<()> {
+    async fn run(&mut self, id: ReadyMsg, done_tx: mpsc::Sender<DoneMsg>) -> Result<()> {
         let job = self.jobs.get(&id).context("had a bad job ID")?;
 
         log::debug!("preparing to run job {}", job);
