@@ -94,6 +94,7 @@ pub fn rust_main() -> isize {
 
     simple_logger::SimpleLogger::new()
         .with_module_level("sled", log::LevelFilter::Info)
+        .with_level(cli.log_level)
         .init()
         .expect("failed to initialize logger");
 

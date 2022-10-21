@@ -23,6 +23,9 @@ pub struct Cli {
     /// than zero.
     #[clap(long, short('j'))]
     max_local_jobs: Option<NonZeroUsize>,
+
+    #[clap(long, default_value = "trace")]
+    pub log_level: log::LevelFilter,
 }
 
 impl Cli {
