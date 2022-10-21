@@ -57,7 +57,7 @@ impl Cli {
         let runtime = self.async_runtime()?;
 
         runtime
-            .block_on(coordinator.run_all())
+            .block_on(coordinator.run())
             .context("failed to run jobs")?;
 
         if self.print_root_output_paths {

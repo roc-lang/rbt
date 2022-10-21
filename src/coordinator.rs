@@ -295,7 +295,8 @@ pub struct Coordinator {
 }
 
 impl<'roc> Coordinator {
-    pub async fn run_all(&mut self) -> Result<()> {
+    /// Run the build from start to finish.
+    pub async fn run(&mut self) -> Result<()> {
         log::trace!("scheduling immediately-available jobs");
         self.schedule()
             .await
@@ -316,6 +317,9 @@ impl<'roc> Coordinator {
         Ok(())
     }
 
+    /// Start any outstanding work according to our scheduling rules. Right
+    /// now that just means that we won't ever be running more jobs than
+    /// `self.max_local_jobs`.
     async fn schedule(&mut self) -> Result<()> {
         let maximum_schedulable = (self.max_local_jobs - self.running.len()).max(0);
 
@@ -335,6 +339,7 @@ impl<'roc> Coordinator {
         Ok(())
     }
 
+    /// Start and track a single job by ID.
     async fn start(&mut self, id: job::Key<job::Base>) -> Result<()> {
         let job = self.jobs.get(&id).context("had a bad job ID")?;
 
