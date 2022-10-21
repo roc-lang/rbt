@@ -1,7 +1,9 @@
 [package]
-name = "roc-build"
+name = "rbt"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
+
+links = "app"
 
 [dependencies]
 anyhow = "1.0"
@@ -29,7 +31,12 @@ zerocopy = "0.6"
 
 [lib]
 name = "host"
-crate-type = ["staticlib"]
+path = "src/lib.rs"
+crate-type = ["staticlib", "rlib"]
+
+[[bin]]
+name = "host"
+path = "src/main.rs"
 
 [dev-dependencies]
 assert_cmd = { version = "2.0.4", features = ["color-auto"] }
