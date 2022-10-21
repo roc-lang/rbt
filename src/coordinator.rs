@@ -74,7 +74,7 @@ impl<'roc> Builder<'roc> {
             // each of which will have at least one leaf node.
             jobs: HashMap::with_capacity(self.roots.len()),
             blocked: HashMap::default(),
-            ready_immediately: Vec::with_capacity(self.roots.len()),
+            ready: Vec::with_capacity(self.roots.len()),
 
             // TODO: clean up bits of state
             runner_builder: RunnerBuilder::new(self.workspace_root.clone()),
@@ -231,7 +231,7 @@ impl<'roc> Builder<'roc> {
                     );
                 }
             } else {
-                coordinator.ready_immediately.push(job.base_key);
+                coordinator.ready.push(job.base_key);
             }
 
             glue_to_job_key.insert(glue_job, job.base_key);
@@ -274,7 +274,7 @@ pub struct Coordinator {
 
     // TODO: should this be calculated based on the keys that are in `jobs` but
     // not in `blocked`?
-    ready_immediately: Vec<job::Key<job::Base>>,
+    ready: Vec<job::Key<job::Base>>,
 
     // TODO: clean up all these bits of state
     runner_builder: RunnerBuilder,
@@ -292,7 +292,7 @@ impl<'roc> Coordinator {
         let (done_tx, mut done_rx) = mpsc::channel::<DoneMsg>(self.jobs.len());
         let (ready_tx, mut ready_rx) = mpsc::channel::<ReadyMsg>(self.jobs.len());
 
-        for starter_id in self.ready_immediately.drain(..) {
+        for starter_id in self.ready.drain(..) {
             ready_tx
                 .send(starter_id)
                 .await
