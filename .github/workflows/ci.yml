@@ -38,7 +38,7 @@ jobs:
 
       - name: download Roc nightly build (macOS)
         if: startsWith(matrix.os, 'macos')
-        run: ./ci/download_latest_nightly.sh macos_x86_64
+        run: ./ci/download_latest_nightly.sh macos_12_x86_64
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
