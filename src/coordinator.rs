@@ -296,14 +296,12 @@ pub struct Coordinator {
 
 impl<'roc> Coordinator {
     pub async fn run_all(&mut self) -> Result<()> {
-        log::trace!("starting runner loop");
-
+        log::trace!("scheduling immediately-available jobs");
         self.schedule()
             .await
             .context("could not start immediately-ready jobs")?;
 
-        log::trace!("started initial batch of jobs");
-
+        log::trace!("starting coordinator loop");
         while let Some(join_res) = self.running.next().await {
             match join_res {
                 Ok(Ok(done_msg)) => self
