@@ -297,62 +297,19 @@ impl<'roc> Coordinator {
                 .send(starter_id)
                 .await
                 .context("could not enqueue immedately-available job")?;
+            self.awaiting_jobs += 1;
         }
-
-        let mut awaiting_jobs = 0;
 
         loop {
             tokio::select! {
                 Some(id) = ready_rx.recv() => self.handle_ready(id, done_tx.clone()).await?,
-                Some((id, workspace_opt)) = done_rx.recv() => {
-                    awaiting_jobs -= 1;
-                    let job = self
-                        .jobs
-                        .get(&id)
-                        .context("had a bad job ID")?;
+                Some(msg) = done_rx.recv() => {
+                    self.handle_done(msg, ready_tx.clone()).await?;
 
-                    // TODO: maybe send this in the done channel?
-                    let final_key = job
-                        .final_key(&self.path_to_hash, &self.job_to_content_hash)
-                        .context("could not calculate final cache key")?;
-
-                    if let Some(workspace) = workspace_opt {
-                        self.job_to_content_hash.insert(
-                            job.base_key,
-                            self.store
-                                .store_from_workspace(final_key, job, workspace)
-                                .await
-                                .context("could not store job output")?,
-                        );
-                    };
-
-                    // Now that we're done running the job, we update our bookkeeping to
-                    // figure out what running that job just unblocked.
-                    let mut newly_unblocked = vec![]; // get around needing an async context in the loop below
-
-                    // we're done!
-                    if self.blocked.is_empty() && awaiting_jobs == 0 {
-                        return Ok(());
+                    if self.blocked.is_empty() && self.awaiting_jobs == 0 {
+                        return Ok(())
                     }
-
-                    self.blocked.retain(|blocked, blockers| {
-                        let removed = blockers.remove(&id);
-                        if !removed {
-                            return true;
-                        }
-
-                        let no_blockers_remaining = blockers.is_empty();
-                        if no_blockers_remaining {
-                            log::debug!("unblocked {}", blocked);
-                            newly_unblocked.push(*blocked);
-                        }
-                        !no_blockers_remaining
-                    });
-
-                    for id in newly_unblocked.drain(..) {
-                        ready_tx.send(id).await?;
-                    }
-                }
+                },
             }
         }
     }
@@ -396,7 +353,52 @@ impl<'roc> Coordinator {
             }
         }
 
-        self.awaiting_jobs += 1;
+        Ok(())
+    }
+
+    async fn handle_done(&mut self, msg: DoneMsg, ready_tx: mpsc::Sender<ReadyMsg>) -> Result<()> {
+        let (id, workspace_opt) = msg;
+
+        self.awaiting_jobs -= 1;
+        let job = self.jobs.get(&id).context("had a bad job ID")?;
+
+        // TODO: maybe send this in the done channel?
+        let final_key = job
+            .final_key(&self.path_to_hash, &self.job_to_content_hash)
+            .context("could not calculate final cache key")?;
+
+        if let Some(workspace) = workspace_opt {
+            self.job_to_content_hash.insert(
+                job.base_key,
+                self.store
+                    .store_from_workspace(final_key, job, workspace)
+                    .await
+                    .context("could not store job output")?,
+            );
+        };
+
+        // Now that we're done running the job, we update our bookkeeping to
+        // figure out what running that job just unblocked.
+        let mut newly_unblocked = vec![]; // get around needing an async context in the loop below
+
+        self.blocked.retain(|blocked, blockers| {
+            let removed = blockers.remove(&id);
+            if !removed {
+                return true;
+            }
+
+            let no_blockers_remaining = blockers.is_empty();
+            if no_blockers_remaining {
+                log::debug!("unblocked {}", blocked);
+                newly_unblocked.push(*blocked);
+            }
+            !no_blockers_remaining
+        });
+
+        for id in newly_unblocked.drain(..) {
+            ready_tx.send(id).await?;
+            self.awaiting_jobs += 1;
+        }
 
         Ok(())
     }
