@@ -79,6 +79,7 @@ impl<'roc> Builder<'roc> {
 
             path_to_hash: HashMap::with_capacity(input_files.len()),
             job_to_content_hash: HashMap::with_capacity(self.roots.len()),
+            final_keys: HashMap::with_capacity(self.roots.len()),
 
             // On capacities: we'll have at least as many jobs as we have targets,
             // each of which will have at least one leaf node.
@@ -277,6 +278,7 @@ pub struct Coordinator {
 
     // caches
     path_to_hash: HashMap<PathBuf, String>,
+    final_keys: HashMap<job::Key<job::Base>, job::Key<job::Final>>,
 
     // note:  this mapping is only safe to use in the context of a single
     // execution since a job's final key may change without the base key
@@ -338,6 +340,7 @@ impl<'roc> Coordinator {
         let final_key = job
             .final_key(&self.path_to_hash, &self.job_to_content_hash)
             .context("could not calculate final cache key")?;
+        self.final_keys.insert(id, final_key);
 
         // build (or don't) based on the final key!
         let join_handle = match self
@@ -388,16 +391,16 @@ impl<'roc> Coordinator {
 
         let job = self.jobs.get(&id).context("had a bad job ID")?;
 
-        // TODO: maybe send this in the done channel?
-        let final_key = job
-            .final_key(&self.path_to_hash, &self.job_to_content_hash)
-            .context("could not calculate final cache key")?;
+        let final_key = self
+            .final_keys
+            .get(&id)
+            .context("could not retrieve final cache key; was it calculated in `start`?")?;
 
         if let Some(workspace) = workspace_opt {
             self.job_to_content_hash.insert(
                 job.base_key,
                 self.store
-                    .store_from_workspace(final_key, job, workspace)
+                    .store_from_workspace(*final_key, job, workspace)
                     .await
                     .context("could not store job output")?,
             );
