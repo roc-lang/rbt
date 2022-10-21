@@ -317,10 +317,15 @@ impl<'roc> Coordinator {
     }
 
     async fn schedule(&mut self) -> Result<()> {
+        let maximum_schedulable = (self.max_local_jobs - self.running.len()).max(0);
+
+        // The intent here is to drain a certain number of items from
+        // `self.ready`. If the borrowing rules allowed it, we'd drain directly.
         let mut ready_now = self
             .ready
-            .split_off(self.ready.len() - self.max_local_jobs.min(self.ready.len()));
+            .split_off(self.ready.len() - maximum_schedulable.min(self.ready.len()));
 
+        log::debug!("scheduling {} jobs", ready_now.len());
         for id in ready_now.drain(..) {
             self.start(id)
                 .await
