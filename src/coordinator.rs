@@ -10,6 +10,7 @@ use futures::stream::{FuturesUnordered, StreamExt};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use tokio::task::JoinHandle;
 use xxhash_rust::xxh3::Xxh3Builder;
@@ -19,14 +20,21 @@ pub struct Builder<'roc> {
     roots: Vec<&'roc glue::Job>,
     meta_to_hash: sled::Tree,
     workspace_root: PathBuf,
+    max_local_jobs: NonZeroUsize,
 }
 
 impl<'roc> Builder<'roc> {
-    pub fn new(store: Store, meta_to_hash: sled::Tree, workspace_root: PathBuf) -> Self {
+    pub fn new(
+        store: Store,
+        meta_to_hash: sled::Tree,
+        workspace_root: PathBuf,
+        max_local_jobs: NonZeroUsize,
+    ) -> Self {
         Builder {
             store,
             meta_to_hash,
             workspace_root,
+            max_local_jobs,
 
             // it's very likely we'll have at least one root
             roots: Vec::with_capacity(1),
@@ -67,6 +75,7 @@ impl<'roc> Builder<'roc> {
         let mut coordinator = Coordinator {
             store: self.store,
             roots: Vec::with_capacity(self.roots.len()),
+            max_local_jobs: self.max_local_jobs.get(),
 
             path_to_hash: HashMap::with_capacity(input_files.len()),
             job_to_content_hash: HashMap::with_capacity(self.roots.len()),
@@ -262,6 +271,7 @@ pub struct Coordinator {
     runner_builder: RunnerBuilder,
 
     roots: Vec<job::Key<job::Base>>,
+    max_local_jobs: usize,
 
     // caches
     path_to_hash: HashMap<PathBuf, String>,
@@ -286,13 +296,13 @@ type ReadyMsg = job::Key<job::Base>;
 
 impl<'roc> Coordinator {
     pub async fn run_all(&mut self) -> Result<()> {
-        // TODO: when we have concurrency limits, we should only drain the first N jobs
-        let mut ready_now = std::mem::take(&mut self.ready);
-        for id in ready_now.drain(..) {
-            self.start(id)
-                .await
-                .context("could not start job from immediately-available set")?;
-        }
+        log::trace!("starting runner loop");
+
+        self.schedule()
+            .await
+            .context("could not start immediately-ready jobs")?;
+
+        log::trace!("started initial batch of jobs");
 
         while let Some(join_res) = self.running.next().await {
             match join_res {
@@ -303,6 +313,20 @@ impl<'roc> Coordinator {
                 Ok(Err(err)) => todo!("handle jobs that return in failure. Error was: #{err:#?}"),
                 Err(err) => todo!("handle jobs that cannot be joined. Error was: #{err:#?}"),
             }
+        }
+
+        Ok(())
+    }
+
+    async fn schedule(&mut self) -> Result<()> {
+        let mut ready_now = self
+            .ready
+            .split_off(self.ready.len() - self.max_local_jobs.min(self.ready.len()));
+
+        for id in ready_now.drain(..) {
+            self.start(id)
+                .await
+                .context("could not start job from immediately-available set")?;
         }
 
         Ok(())
@@ -400,10 +424,10 @@ impl<'roc> Coordinator {
         });
 
         for id in newly_unblocked.drain(..) {
-            self.start(id)
-                .await
-                .context("could not launch newly-unblocked job")?;
+            self.ready.push(id)
         }
+
+        self.schedule().await.context("could not start new jobs")?;
 
         Ok(())
     }

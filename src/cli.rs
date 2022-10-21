@@ -4,6 +4,7 @@ use crate::store::Store;
 use anyhow::{Context, Result};
 use clap::Parser;
 use core::mem::MaybeUninit;
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use tokio::runtime;
 
@@ -17,10 +18,11 @@ pub struct Cli {
     #[clap(long)]
     print_root_output_paths: bool,
 
-    /// How many worker threads should we spawn? If unset, this defaults to the
-    /// number of CPU cores on the system.
-    #[clap(long)]
-    worker_threads: Option<usize>,
+    /// How many worker threads should we spawn? If unset, we'll calculate a
+    /// reasonable number based on the host. If set manually, must be greater
+    /// than zero.
+    #[clap(long, short('j'))]
+    max_local_jobs: Option<NonZeroUsize>,
 }
 
 impl Cli {
@@ -41,6 +43,7 @@ impl Cli {
             db.open_tree("file_hashes")
                 .context("could not open file hashes database")?,
             self.root_dir.join("workspaces"),
+            self.max_local_jobs()?,
         );
         builder.add_root(&rbt.default);
 
@@ -82,10 +85,6 @@ impl Cli {
         let mut builder = runtime::Builder::new_multi_thread();
         builder.enable_io();
 
-        if let Some(count) = self.worker_threads {
-            builder.worker_threads(count);
-        }
-
         builder.build().context("failed to build async runtime")
     }
 
@@ -95,6 +94,15 @@ impl Cli {
             .mode(sled::Mode::HighThroughput)
             .open()
             .context("could not open sled database")
+    }
+
+    fn max_local_jobs(&self) -> Result<NonZeroUsize> {
+        if let Some(explicit) = self.max_local_jobs {
+            return Ok(explicit);
+        }
+
+        std::thread::available_parallelism()
+            .context("could not determine a reasonable number of local jobs to run simultaneously")
     }
 }
 
