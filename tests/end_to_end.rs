@@ -12,7 +12,6 @@ fn output_of_default_job(root: &TempDir, rbt_dot_roc: &Path) -> Result<PathBuf> 
 
     let output = std::process::Command::new("roc")
         .arg("run")
-        .arg("--linker=legacy")
         .arg(filename)
         .arg("--")
         .arg("--root-dir")
