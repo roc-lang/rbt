@@ -265,6 +265,8 @@ impl<'roc> Builder<'roc> {
     }
 }
 
+type DoneMsg = (job::Key<job::Base>, Option<Workspace>);
+
 #[derive(Debug)]
 pub struct Coordinator {
     store: Store,
@@ -289,10 +291,6 @@ pub struct Coordinator {
     ready: Vec<job::Key<job::Base>>,
     running: FuturesUnordered<JoinHandle<Result<DoneMsg>>>,
 }
-
-type DoneMsg = (job::Key<job::Base>, Option<Workspace>);
-
-type ReadyMsg = job::Key<job::Base>;
 
 impl<'roc> Coordinator {
     pub async fn run_all(&mut self) -> Result<()> {
@@ -332,7 +330,7 @@ impl<'roc> Coordinator {
         Ok(())
     }
 
-    async fn start(&mut self, id: ReadyMsg) -> Result<()> {
+    async fn start(&mut self, id: job::Key<job::Base>) -> Result<()> {
         let job = self.jobs.get(&id).context("had a bad job ID")?;
 
         log::debug!("preparing to run job {}", job);
