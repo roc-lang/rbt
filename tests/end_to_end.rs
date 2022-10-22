@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
@@ -61,6 +62,30 @@ fn test_env() {
 }
 
 #[test]
+fn test_cleanup() {
+    let root = TempDir::new().unwrap();
+
+    let store_path = output_of_default_job(
+        &root,
+        &PathBuf::from("tests/end_to_end/env_cleanup/rbt.roc"),
+    )
+    .unwrap();
+
+    let echoed_variables = std::fs::read_to_string(store_path.join("out")).unwrap();
+
+    let variables = list_environment_variables(echoed_variables);
+
+    let expected_variables = HashSet::from([
+        "HOME".to_string(),
+        "_".to_string(),
+        "PWD".to_string(),
+        "SHLVL".to_string(),
+    ]);
+
+    assert_eq!(expected_variables, variables)
+}
+
+#[test]
 fn test_job_inputs() {
     let root = TempDir::new().unwrap();
 
@@ -86,4 +111,17 @@ fn test_job_inputs_branching() {
     let greeting = std::fs::read_to_string(store_path.join("out")).unwrap();
 
     assert_eq!(String::from("Hello, World!\n"), greeting)
+}
+
+fn list_environment_variables(environment_string: String) -> HashSet<String> {
+    environment_string
+        .split_ascii_whitespace()
+        .map(|str| {
+            str.split_terminator('=')
+                .collect::<Vec<&str>>()
+                .first()
+                .unwrap()
+                .to_string()
+        })
+        .collect()
 }
