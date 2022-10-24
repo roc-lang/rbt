@@ -73,14 +73,17 @@ fn test_cleanup() {
 
     let echoed_variables = std::fs::read_to_string(store_path.join("out")).unwrap();
 
-    let variables = list_environment_variables(echoed_variables);
+    let variables: HashSet<&str> = echoed_variables
+        .split_ascii_whitespace()
+        .map(|str| {
+            *str.split_terminator('=')
+                .collect::<Vec<&str>>()
+                .first()
+                .unwrap()
+        })
+        .collect();
 
-    let expected_variables = HashSet::from([
-        "HOME".to_string(),
-        "_".to_string(),
-        "PWD".to_string(),
-        "SHLVL".to_string(),
-    ]);
+    let expected_variables = HashSet::from(["HOME", "_", "PWD", "SHLVL"]);
 
     assert_eq!(expected_variables, variables)
 }
@@ -111,17 +114,4 @@ fn test_job_inputs_branching() {
     let greeting = std::fs::read_to_string(store_path.join("out")).unwrap();
 
     assert_eq!(String::from("Hello, World!\n"), greeting)
-}
-
-fn list_environment_variables(environment_string: String) -> HashSet<String> {
-    environment_string
-        .split_ascii_whitespace()
-        .map(|str| {
-            str.split_terminator('=')
-                .collect::<Vec<&str>>()
-                .first()
-                .unwrap()
-                .to_string()
-        })
-        .collect()
 }
