@@ -194,18 +194,11 @@ impl<'roc> From<&Job<'roc>> for Command {
     fn from(job: &Job) -> Self {
         let mut command = Command::new(&job.command.tool.as_SystemTool().name.to_string());
 
-        let home = env::vars()
-            .find_map(|(var_name, var_value)| {
-                if var_name == "HOME" {
-                    Some(var_value)
-                } else {
-                    None
-                }
-            })
-            .unwrap_or_default();
-
         command.env_clear();
-        command.env("HOME", home);
+
+        if let Ok(home) = env::var("HOME") {
+            command.env("HOME", home);
+        }
 
         for arg in &job.command.args {
             command.arg(arg.as_str());

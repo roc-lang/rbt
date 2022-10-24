@@ -83,7 +83,7 @@ fn test_cleanup() {
         })
         .collect();
 
-    let expected_variables = HashSet::from(["HOME", "_", "PWD", "SHLVL"]);
+    let expected_variables = HashSet::from(["_", "PWD", "SHLVL"]);
 
     assert_eq!(expected_variables, variables)
 }
