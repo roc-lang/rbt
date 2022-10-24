@@ -12,7 +12,7 @@ hello =
     job {
         command: exec (systemTool "bash") [
             "-c",
-            "echo $(printenv) > out",
+            "env > out",
         ],
         inputs: [],
         outputs: ["out"],
