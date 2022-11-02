@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
@@ -57,6 +58,35 @@ fn test_env() {
     let greeting = std::fs::read_to_string(store_path.join("out")).unwrap();
 
     assert_eq!(String::from("Hello, World!\n"), greeting)
+}
+
+#[test]
+fn test_cleanup() {
+    let root = TempDir::new().unwrap();
+
+    let store_path = output_of_default_job(
+        &root,
+        &PathBuf::from("tests/end_to_end/env_cleanup/rbt.roc"),
+    )
+    .unwrap();
+
+    let echoed_variables = std::fs::read_to_string(store_path.join("out")).unwrap();
+
+    let variables: HashSet<&str> = echoed_variables
+        .split_ascii_whitespace()
+        .map(|str| {
+            *str.split_terminator('=')
+                .collect::<Vec<&str>>()
+                .first()
+                .unwrap()
+        })
+        .collect();
+
+    // This are built-ins environment variables from the shell, and are generated every time we run a command
+    // Once we add support to save a command's stdout instead of using a shell for everything, this can be removed from the tests
+    let expected_variables = HashSet::from(["_", "PWD", "SHLVL"]);
+
+    assert_eq!(expected_variables, variables)
 }
 
 #[test]

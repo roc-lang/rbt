@@ -266,6 +266,8 @@ impl From<&Command> for tokio::process::Command {
             command.arg(arg.as_str());
         }
 
+        command.env_clear();
+
         for (key, value) in &job_command.env {
             command.env(key, value);
         }
