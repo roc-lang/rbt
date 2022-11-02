@@ -54,6 +54,9 @@ jobs:
           command: clippy
           args: -- -D warnings
 
+      - name: gen-stub-lib
+        run: roc gen-stub-lib ./examples/hello/rbt.roc
+
       - name: cargo test
         uses: actions-rs/cargo@v1
         with:
