@@ -1,4 +1,5 @@
 *.o
 .envrc
 .rbt
+libapp.so
 target/
