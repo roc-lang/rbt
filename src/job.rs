@@ -193,6 +193,8 @@ impl<'roc> From<&Job<'roc>> for Command {
     fn from(job: &Job) -> Self {
         let mut command = Command::new(&job.command.tool.as_SystemTool().name.to_string());
 
+        command.env_clear();
+
         for arg in &job.command.args {
             command.arg(arg.as_str());
         }
