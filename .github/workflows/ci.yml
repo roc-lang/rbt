@@ -61,7 +61,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: -vv --release
+          args: -vv
 
   platform-generic:
     name: cargo fmt, roc format, roc check, typos
