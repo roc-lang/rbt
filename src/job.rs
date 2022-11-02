@@ -3,7 +3,6 @@ use anyhow::{Context, Result};
 use itertools::Itertools;
 use roc_std::{RocDict, RocStr};
 use std::collections::{HashMap, HashSet};
-use std::env;
 use std::fmt::{self, Display};
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::marker::PhantomData;
@@ -195,10 +194,6 @@ impl<'roc> From<&Job<'roc>> for Command {
         let mut command = Command::new(&job.command.tool.as_SystemTool().name.to_string());
 
         command.env_clear();
-
-        if let Ok(home) = env::var("HOME") {
-            command.env("HOME", home);
-        }
 
         for arg in &job.command.args {
             command.arg(arg.as_str());
