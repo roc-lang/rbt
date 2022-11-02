@@ -54,7 +54,12 @@ jobs:
           command: clippy
           args: -- -D warnings
 
-      - name: gen-stub-lib
+      - name: make libapp.so via roc build
+        if: startsWith(matrix.os, 'ubuntu')
+        run: roc build ./examples/hello/rbt.roc
+
+      - name: make libapp.so via gen-stub-lib
+        if: startsWith(matrix.os, 'macos')
         run: roc gen-stub-lib ./examples/hello/rbt.roc
 
       - name: cargo test
