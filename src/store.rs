@@ -213,8 +213,8 @@ impl<'job> ItemBuilder<'job> {
             // we only move things into the store if the job succeeded, so
             // we'll be removing everything in it shortly anyway!
             log::trace!("moving `{}` into store path", &output.display());
-            let out = temp.join(&output);
-            fs::rename(self.workspace.join(&output), &out)
+            let out = temp.join(output);
+            fs::rename(self.workspace.join(output), &out)
                 .await
                 .with_context(|| {
                     format!(
@@ -234,7 +234,7 @@ impl<'job> ItemBuilder<'job> {
         // Now that we're all done moving files over and making them read-only,
         // we can safely make all the directories read-only too.
         for dir in &created_dirs {
-            Self::make_readonly(&temp.join(&dir))
+            Self::make_readonly(&temp.join(dir))
                 .await
                 .with_context(|| {
                     format!("could not make `{}` read-only in the store", dir.display(),)

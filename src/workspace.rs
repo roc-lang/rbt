@@ -119,7 +119,7 @@ mod tests {
         job::Key::default()
     }
 
-    fn glue_job_with_files<'roc>(files: &[&str]) -> glue::Job {
+    fn glue_job_with_files(files: &[&str]) -> glue::Job {
         glue::Job::Job(glue::R1 {
             command: glue::Command {
                 tool: glue::Tool::SystemTool(glue::SystemToolPayload {

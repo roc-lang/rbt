@@ -134,7 +134,7 @@ impl<'roc> Builder<'roc> {
             let key = cache_key.to_db_key();
             if let Some(hash) = self
                 .meta_to_hash
-                .get(&key)
+                .get(key)
                 .context("could not read file hash from database")?
             {
                 coordinator.path_to_hash.insert(
@@ -145,7 +145,7 @@ impl<'roc> Builder<'roc> {
                 continue;
             }
 
-            let mut file = File::open(&path)
+            let mut file = File::open(path)
                 .with_context(|| format!("couldn't open `{}` for hashing.", path.display()))?;
 
             hasher.reset();
