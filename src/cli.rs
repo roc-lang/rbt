@@ -4,7 +4,9 @@ use crate::store::Store;
 use anyhow::{Context, Result};
 use clap::Parser;
 use core::mem::MaybeUninit;
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
+use tokio::runtime;
 
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
@@ -15,6 +17,15 @@ pub struct Cli {
     /// Only useful for testing at the moment
     #[clap(long)]
     print_root_output_paths: bool,
+
+    /// How many worker threads should we spawn? If unset, we'll calculate a
+    /// reasonable number based on the host. If set manually, must be greater
+    /// than zero.
+    #[clap(long, short('j'))]
+    max_local_jobs: Option<NonZeroUsize>,
+
+    #[clap(long, default_value = "trace")]
+    pub log_level: log::LevelFilter,
 }
 
 impl Cli {
@@ -34,6 +45,8 @@ impl Cli {
             store,
             db.open_tree("file_hashes")
                 .context("could not open file hashes database")?,
+            self.root_dir.join("workspaces"),
+            self.max_local_jobs()?,
         );
         builder.add_root(&rbt.default);
 
@@ -41,11 +54,11 @@ impl Cli {
             .build()
             .context("could not initialize coordinator")?;
 
-        let runner = crate::runner::Runner::new(self.root_dir.join("workspaces"));
+        let runtime = self.async_runtime()?;
 
-        while coordinator.has_outstanding_work() {
-            coordinator.run_next(&runner).context("failed to run job")?;
-        }
+        runtime
+            .block_on(coordinator.run())
+            .context("failed to run jobs")?;
 
         if self.print_root_output_paths {
             for root in coordinator.roots() {
@@ -71,12 +84,28 @@ impl Cli {
         }
     }
 
+    pub fn async_runtime(&self) -> Result<runtime::Runtime> {
+        let mut builder = runtime::Builder::new_multi_thread();
+        builder.enable_io();
+
+        builder.build().context("failed to build async runtime")
+    }
+
     pub fn open_db(&self) -> Result<sled::Db> {
         sled::Config::default()
             .path(self.root_dir.join("db"))
             .mode(sled::Mode::HighThroughput)
             .open()
             .context("could not open sled database")
+    }
+
+    fn max_local_jobs(&self) -> Result<NonZeroUsize> {
+        if let Some(explicit) = self.max_local_jobs {
+            return Ok(explicit);
+        }
+
+        std::thread::available_parallelism()
+            .context("could not determine a reasonable number of local jobs to run simultaneously")
     }
 }
 

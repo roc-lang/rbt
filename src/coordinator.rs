@@ -1,30 +1,40 @@
 use crate::glue;
 use crate::job::{self, Job};
+use crate::path_meta_key::PathMetaKey;
+use crate::runner::RunnerBuilder;
 use crate::store::{self, Store};
 use crate::workspace::Workspace;
 use anyhow::{Context, Result};
-use core::convert::{TryFrom, TryInto};
+use core::convert::TryInto;
+use futures::stream::{FuturesUnordered, StreamExt};
 use std::collections::{HashMap, HashSet};
-use std::fs::{File, Metadata};
-use std::hash::{Hash, Hasher};
+use std::fs::File;
+use std::io::Read;
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
-use std::time::SystemTime;
-use xxhash_rust::xxh3::{Xxh3, Xxh3Builder};
-
-#[cfg(target_family = "unix")]
-use std::os::unix::fs::MetadataExt;
+use tokio::task::JoinHandle;
+use xxhash_rust::xxh3::Xxh3Builder;
 
 pub struct Builder<'roc> {
     store: Store,
     roots: Vec<&'roc glue::Job>,
     meta_to_hash: sled::Tree,
+    workspace_root: PathBuf,
+    max_local_jobs: NonZeroUsize,
 }
 
 impl<'roc> Builder<'roc> {
-    pub fn new(store: Store, meta_to_hash: sled::Tree) -> Self {
+    pub fn new(
+        store: Store,
+        meta_to_hash: sled::Tree,
+        workspace_root: PathBuf,
+        max_local_jobs: NonZeroUsize,
+    ) -> Self {
         Builder {
             store,
             meta_to_hash,
+            workspace_root,
+            max_local_jobs,
 
             // it's very likely we'll have at least one root
             roots: Vec::with_capacity(1),
@@ -35,7 +45,7 @@ impl<'roc> Builder<'roc> {
         self.roots.push(job);
     }
 
-    pub fn build(self) -> Result<Coordinator<'roc>> {
+    pub fn build(self) -> Result<Coordinator> {
         // Here's the overview of what we're about to do: for each file in
         // each target job, we're going to look at metadata for that file and
         // use that metadata to look up the file's hash (if we don't have it
@@ -65,15 +75,22 @@ impl<'roc> Builder<'roc> {
         let mut coordinator = Coordinator {
             store: self.store,
             roots: Vec::with_capacity(self.roots.len()),
+            max_local_jobs: self.max_local_jobs.get(),
 
             path_to_hash: HashMap::with_capacity(input_files.len()),
             job_to_content_hash: HashMap::with_capacity(self.roots.len()),
+            final_keys: HashMap::with_capacity(self.roots.len()),
 
             // On capacities: we'll have at least as many jobs as we have targets,
             // each of which will have at least one leaf node.
             jobs: HashMap::with_capacity(self.roots.len()),
             blocked: HashMap::default(),
+
             ready: Vec::with_capacity(self.roots.len()),
+            running: FuturesUnordered::new(),
+
+            // TODO: clean up bits of state
+            runner_builder: RunnerBuilder::new(self.workspace_root.clone()),
         };
 
         /////////////////////////////////////////////
@@ -117,7 +134,7 @@ impl<'roc> Builder<'roc> {
             let key = cache_key.to_db_key();
             if let Some(hash) = self
                 .meta_to_hash
-                .get(&key)
+                .get(key)
                 .context("could not read file hash from database")?
             {
                 coordinator.path_to_hash.insert(
@@ -128,16 +145,21 @@ impl<'roc> Builder<'roc> {
                 continue;
             }
 
-            let mut file = File::open(&path)
+            let mut file = File::open(path)
                 .with_context(|| format!("couldn't open `{}` for hashing.", path.display()))?;
 
             hasher.reset();
 
-            // TODO: docs for Blake3 say that a 16 KiB buffer is the most
-            // efficient (for SIMD reasons), but `std::io::copy` uses an 8KiB
-            // buffer. Gonna have to do this by hand at some point to take
-            // advantage of the algorithm's designed speed.
-            std::io::copy(&mut file, &mut hasher)?;
+            // The docs for Blake3 say that a 16 KiB buffer is the most
+            // efficient (for SIMD reasons)
+            let mut buf = [0; 16 * 1024];
+            loop {
+                let bytes = file.read(&mut buf)?;
+                if bytes == 0 {
+                    break;
+                }
+                hasher.update(&buf[0..bytes]);
+            }
 
             let hash = hasher.finalize();
 
@@ -244,14 +266,19 @@ impl<'roc> Builder<'roc> {
     }
 }
 
+type DoneMsg = (job::Key<job::Base>, Option<Workspace>);
+
 #[derive(Debug)]
-pub struct Coordinator<'roc> {
+pub struct Coordinator {
     store: Store,
+    runner_builder: RunnerBuilder,
 
     roots: Vec<job::Key<job::Base>>,
+    max_local_jobs: usize,
 
     // caches
     path_to_hash: HashMap<PathBuf, String>,
+    final_keys: HashMap<job::Key<job::Base>, job::Key<job::Final>>,
 
     // note:  this mapping is only safe to use in the context of a single
     // execution since a job's final key may change without the base key
@@ -259,35 +286,72 @@ pub struct Coordinator<'roc> {
     job_to_content_hash: HashMap<job::Key<job::Base>, store::Item>,
 
     // which jobs should run when?
-    jobs: HashMap<job::Key<job::Base>, Job<'roc>>,
+    jobs: HashMap<job::Key<job::Base>, Job>,
     blocked: HashMap<job::Key<job::Base>, HashSet<job::Key<job::Base>>>,
+
+    // what's the state of the coordinator while running?
     ready: Vec<job::Key<job::Base>>,
+    running: FuturesUnordered<JoinHandle<Result<DoneMsg>>>,
 }
 
-impl<'roc> Coordinator<'roc> {
-    pub fn has_outstanding_work(&self) -> bool {
-        !self.blocked.is_empty() || !self.ready.is_empty()
+impl<'roc> Coordinator {
+    /// Run the build from start to finish.
+    pub async fn run(&mut self) -> Result<()> {
+        log::trace!("scheduling immediately-available jobs");
+        self.schedule()
+            .await
+            .context("could not start immediately-ready jobs")?;
+
+        log::trace!("starting coordinator loop");
+        while let Some(join_res) = self.running.next().await {
+            match join_res {
+                Ok(Ok(done_msg)) => self
+                    .handle_done(done_msg)
+                    .await
+                    .context("could not finish job")?,
+                Ok(Err(err)) => todo!("handle jobs that return in failure. Error was: #{err:#?}"),
+                Err(err) => todo!("handle jobs that cannot be joined. Error was: #{err:#?}"),
+            }
+        }
+
+        Ok(())
     }
 
-    pub fn run_next<R: Runner>(&mut self, runner: &R) -> Result<()> {
-        let id = match self.ready.pop() {
-            Some(id) => id,
-            None => anyhow::bail!("no work ready to do"),
-        };
+    /// Start any outstanding work according to our scheduling rules. Right
+    /// now that just means that we won't ever be running more jobs than
+    /// `self.max_local_jobs`.
+    async fn schedule(&mut self) -> Result<()> {
+        let maximum_schedulable = self.max_local_jobs.saturating_sub(self.running.len());
 
-        let job = self
-            .jobs
-            .get(&id)
-            .context("had a bad job ID in Coordinator.ready")?;
+        // The intent here is to drain a certain number of items from
+        // `self.ready`. If the borrowing rules allowed it, we'd drain directly.
+        let mut ready_now = self
+            .ready
+            .split_off(self.ready.len() - maximum_schedulable.min(self.ready.len()));
+
+        log::debug!("scheduling {} jobs", ready_now.len());
+        for id in ready_now.drain(..) {
+            self.start(id)
+                .await
+                .context("could not start job from immediately-available set")?;
+        }
+
+        Ok(())
+    }
+
+    /// Start and track a single job by ID.
+    async fn start(&mut self, id: job::Key<job::Base>) -> Result<()> {
+        let job = self.jobs.get(&id).context("had a bad job ID")?;
 
         log::debug!("preparing to run job {}", job);
 
         let final_key = job
             .final_key(&self.path_to_hash, &self.job_to_content_hash)
             .context("could not calculate final cache key")?;
+        self.final_keys.insert(id, final_key);
 
         // build (or don't) based on the final key!
-        match self
+        let join_handle = match self
             .store
             .item_for_job(&final_key)
             .context("could not get a store path for the current job")?
@@ -295,27 +359,64 @@ impl<'roc> Coordinator<'roc> {
             Some(item) => {
                 log::debug!("already had output of job {}; skipping", job);
                 self.job_to_content_hash.insert(job.base_key, item);
+
+                tokio::spawn(async move { Ok((id, None)) })
             }
             None => {
-                let workspace = runner
-                    .run(job, &self.job_to_content_hash)
-                    .context("could not run job")?;
+                // TODO:  this preparation step probably represents a
+                // bottleneck. In the current design, we need to be able to
+                // access `job_to_content_hash` to prepare the workspace. It's
+                // not send-safe, so we either need to copy only the keys we
+                // need for the current job or use some data structure that
+                // is sendable.
+                //
+                // Doing that would also mean that we could move preparation
+                // into the spawned task, which would remove the requirement
+                // that `start` be `async` (at least as of the writing of this
+                // comment.)
+                let runner = self
+                    .runner_builder
+                    .build(job, &self.job_to_content_hash)
+                    .await
+                    .context("could not prepare job to run")?;
 
-                self.job_to_content_hash.insert(
-                    job.base_key,
-                    self.store
-                        .store_from_workspace(final_key, job, workspace)
-                        .context("could not store job output")?,
-                );
+                tokio::spawn(async move {
+                    // TODO: allow sending errors from this closure
+                    let workspace = runner.run().await.context("could not run job").unwrap();
+
+                    Ok((id, Some(workspace)))
+                })
             }
-        }
+        };
+
+        self.running.push(join_handle);
+
+        Ok(())
+    }
+
+    async fn handle_done(&mut self, msg: DoneMsg) -> Result<()> {
+        let (id, workspace_opt) = msg;
+
+        let job = self.jobs.get(&id).context("had a bad job ID")?;
+
+        let final_key = self
+            .final_keys
+            .get(&id)
+            .context("could not retrieve final cache key; was it calculated in `start`?")?;
+
+        if let Some(workspace) = workspace_opt {
+            self.job_to_content_hash.insert(
+                job.base_key,
+                self.store
+                    .store_from_workspace(*final_key, job, workspace)
+                    .await
+                    .context("could not store job output")?,
+            );
+        };
 
         // Now that we're done running the job, we update our bookkeeping to
         // figure out what running that job just unblocked.
-        //
-        // As an implementation note, this will probably end up in a separate
-        // function once we're running tasks in parallel!
-        let mut newly_unblocked = vec![]; // avoiding mutating both fields of self in the loop below
+        let mut newly_unblocked = vec![]; // get around needing an async context in the loop below
 
         self.blocked.retain(|blocked, blockers| {
             let removed = blockers.remove(&id);
@@ -326,11 +427,16 @@ impl<'roc> Coordinator<'roc> {
             let no_blockers_remaining = blockers.is_empty();
             if no_blockers_remaining {
                 log::debug!("unblocked {}", blocked);
-                newly_unblocked.push(*blocked)
+                newly_unblocked.push(*blocked);
             }
             !no_blockers_remaining
         });
-        self.ready.extend(newly_unblocked);
+
+        for id in newly_unblocked.drain(..) {
+            self.ready.push(id)
+        }
+
+        self.schedule().await.context("could not start new jobs")?;
 
         Ok(())
     }
@@ -341,86 +447,5 @@ impl<'roc> Coordinator<'roc> {
 
     pub fn store_path(&self, key: &job::Key<job::Base>) -> Option<&store::Item> {
         self.job_to_content_hash.get(key)
-    }
-}
-
-/// Runner  abstracts over different kinds of builds. If they're local, we
-/// create a local workspace. If they're remote (hypothetically, in the future),
-/// we can tell the remote coordinator that we want to build the job with these
-/// particular hashes and ask if it can give us back the built files, please.
-pub trait Runner {
-    fn run(
-        &self,
-        job: &Job,
-        job_to_content_hash: &HashMap<job::Key<job::Base>, store::Item>,
-    ) -> Result<Workspace>;
-}
-
-impl Runner for Box<dyn Runner> {
-    fn run(
-        &self,
-        job: &Job,
-        job_to_content_hash: &HashMap<job::Key<job::Base>, store::Item>,
-    ) -> Result<Workspace> {
-        self.as_ref().run(job, job_to_content_hash)
-    }
-}
-
-#[derive(Debug, Hash)]
-struct PathMetaKey {
-    // common
-    modified: SystemTime,
-    len: u64,
-
-    // Unix-only
-    #[cfg(target_family = "unix")]
-    inode: u64,
-    #[cfg(target_family = "unix")]
-    mode: u32,
-    #[cfg(target_family = "unix")]
-    uid: u32,
-    #[cfg(target_family = "unix")]
-    gid: u32,
-    // TODO: extra info for Windows
-}
-
-impl PathMetaKey {
-    pub fn to_db_key(&self) -> [u8; 8] {
-        let mut hasher = Xxh3::new();
-        self.hash(&mut hasher);
-
-        hasher.finish().to_le_bytes()
-    }
-}
-
-#[cfg(target_family = "unix")]
-impl TryFrom<Metadata> for PathMetaKey {
-    type Error = anyhow::Error;
-
-    fn try_from(meta: Metadata) -> Result<PathMetaKey> {
-        Ok(PathMetaKey {
-            modified: meta
-                .modified()
-                .context("mtime is not supported on this system")?,
-            len: meta.len(),
-            inode: meta.ino(),
-            mode: meta.mode(),
-            uid: meta.uid(),
-            gid: meta.gid(),
-        })
-    }
-}
-
-#[cfg(not(target_family = "unix"))]
-impl TryFrom<Metadata> for PathMetaKey {
-    type Error = anyhow::Error;
-
-    fn try_from(meta: Metadata) -> Result<PathMetaKey> {
-        Ok(PathMetaKey {
-            modified: meta
-                .modified()
-                .context("mtime is not supported on this system")?,
-            len: meta.len(),
-        })
     }
 }

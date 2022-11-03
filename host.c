@@ -1,7 +1,3 @@
-#include <stdio.h>
+extern unsigned char rust_main();
 
-extern int rust_main();
-
-int main() {
-  return rust_main();
-}
+int main() { return (int)rust_main(); }

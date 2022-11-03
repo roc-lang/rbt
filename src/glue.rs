@@ -17,6 +17,7 @@
 #![allow(clippy::redundant_static_lifetimes)]
 #![allow(clippy::needless_borrow)]
 #![allow(clippy::clone_on_copy)]
+#![allow(clippy::explicit_auto_deref)]
 
 #[cfg(any(
     target_arch = "arm",

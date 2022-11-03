@@ -2,11 +2,8 @@ use crate::{job, store};
 use anyhow::{Context, Result};
 use path_absolutize::Absolutize;
 use std::collections::HashMap;
-use std::fs;
 use std::path::{Path, PathBuf};
-
-#[cfg(target_family = "unix")]
-use std::os::unix::fs::symlink;
+use tokio::fs;
 
 #[cfg(target_family = "windows")]
 use std::os::windows::fs::symlink_file;
@@ -15,7 +12,7 @@ use std::os::windows::fs::symlink_file;
 pub struct Workspace(PathBuf);
 
 impl Workspace {
-    pub fn create<Finality>(root: &Path, key: &job::Key<Finality>) -> Result<Self> {
+    pub async fn create<Finality>(root: &Path, key: &job::Key<Finality>) -> Result<Self> {
         let workspace = Workspace(root.join(key.to_string()));
 
         std::fs::create_dir_all(&workspace.0).context("could not create workspace")?;
@@ -23,13 +20,13 @@ impl Workspace {
         Ok(workspace)
     }
 
-    pub fn set_up_files(
+    pub async fn set_up_files(
         &self,
         job: &job::Job,
         job_to_store_path: &HashMap<job::Key<job::Base>, store::Item>,
     ) -> Result<()> {
         for file in &job.input_files {
-            self.set_up_path(file, file)?
+            self.set_up_path(file, file).await?
         }
 
         for (key, files) in &job.input_jobs {
@@ -37,18 +34,21 @@ impl Workspace {
                 .get(key)
                 .with_context(|| format!("could not find a store path for job {}", key))?;
 
+            // TODO: could we spawn all these in parallel? Seems like we could,
+            // but creating parent directories in parallel may cause contention
+            // issues.
             for file in files {
-                self.set_up_path(&store_item.join(file), file)?
+                self.set_up_path(&store_item.join(file), file).await?
             }
         }
 
         Ok(())
     }
 
-    fn set_up_path(&self, src: &Path, dest: &Path) -> Result<()> {
+    async fn set_up_path(&self, src: &Path, dest: &Path) -> Result<()> {
         // validate that the path exists and is a file
-        let meta = src
-            .metadata()
+        let meta = fs::metadata(src)
+            .await
             .with_context(|| format!("`{}` does not exist", dest.display()))?;
 
         if meta.is_dir() {
@@ -63,6 +63,7 @@ impl Workspace {
 
             if !parent.exists() {
                 fs::create_dir_all(parent)
+                    .await
                     .with_context(|| format!("could not create parent for `{}`", dest.display()))?;
             }
         }
@@ -72,11 +73,13 @@ impl Workspace {
         })?;
 
         #[cfg(target_family = "unix")]
-        symlink(absolute_src, self.join(dest))
+        fs::symlink(absolute_src, self.join(dest))
+            .await
             .with_context(|| format!("could not symlink `{}` into workspace", dest.display()))?;
 
         #[cfg(target_family = "windows")]
-        symlink_file(absolute_src, workspace.join(dest))
+        fs::symlink_file(absolute_src, workspace.join(dest))
+            .await
             .with_context(|| format!("could not symlink `{}` into workspace", file.display()))?;
 
         Ok(())
@@ -88,6 +91,9 @@ impl Workspace {
 }
 
 impl Drop for Workspace {
+    // TODO: measure and see if blocking on these drops is affecting
+    // performance, and consider moving this to a cleanup function that we call
+    // by hand.
     fn drop(&mut self) {
         if let Err(problem) = std::fs::remove_dir_all(&self.0) {
             log::warn!("problem removing workspace dir: {}", problem);
@@ -113,7 +119,7 @@ mod tests {
         job::Key::default()
     }
 
-    fn glue_job_with_files<'roc>(files: &[&str]) -> glue::Job {
+    fn glue_job_with_files(files: &[&str]) -> glue::Job {
         glue::Job::Job(glue::R1 {
             command: glue::Command {
                 tool: glue::Tool::SystemTool(glue::SystemToolPayload {
@@ -132,11 +138,13 @@ mod tests {
         })
     }
 
-    #[test]
-    fn sets_up_and_tears_down() {
+    #[tokio::test]
+    async fn sets_up_and_tears_down() {
         let temp = TempDir::new().unwrap();
 
-        let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
+        let workspace = Workspace::create(temp.path(), &key())
+            .await
+            .expect("could not create workspace");
         let path = workspace.as_ref().to_path_buf();
 
         assert!(path.is_dir());
@@ -146,15 +154,18 @@ mod tests {
         assert!(!path.exists());
     }
 
-    #[test]
-    fn test_sets_up_file() {
+    #[tokio::test]
+    async fn test_sets_up_file() {
         let temp = TempDir::new().unwrap();
-        let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
+        let workspace = Workspace::create(temp.path(), &key())
+            .await
+            .expect("could not create workspace");
 
         let glue_job = glue_job_with_files(&[file!()]);
         let job = job::Job::from_glue(&glue_job, &HashMap::new()).unwrap();
         workspace
             .set_up_files(&job, &HashMap::new())
+            .await
             .expect("failed to set up files");
 
         let path = workspace.join(file!());
@@ -166,11 +177,13 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_rejects_missing_file() {
+    #[tokio::test]
+    async fn test_rejects_missing_file() {
         let temp = TempDir::new().unwrap();
 
-        let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
+        let workspace = Workspace::create(temp.path(), &key())
+            .await
+            .expect("could not create workspace");
         let glue_job = glue_job_with_files(&["does-not-exist"]);
         let job = job::Job::from_glue(&glue_job, &HashMap::new()).unwrap();
 
@@ -178,15 +191,18 @@ mod tests {
             String::from("`does-not-exist` does not exist"),
             workspace
                 .set_up_files(&job, &HashMap::new())
+                .await
                 .unwrap_err()
                 .to_string(),
         )
     }
 
-    #[test]
-    fn test_rejects_directory() {
+    #[tokio::test]
+    async fn test_rejects_directory() {
         let temp = TempDir::new().unwrap();
-        let workspace = Workspace::create(temp.path(), &key()).expect("could not create workspace");
+        let workspace = Workspace::create(temp.path(), &key())
+            .await
+            .expect("could not create workspace");
 
         // currently, `file!()` gives us `src/workspace.rs`. This works for us at
         // the moment, but all we really need is a path containing a directory.
@@ -203,6 +219,7 @@ mod tests {
             ),
             workspace
                 .set_up_files(&job, &HashMap::new())
+                .await
                 .unwrap_err()
                 .to_string()
         );
