@@ -55,19 +55,13 @@ jobs:
           command: clippy
           args: -- -D warnings
 
-      - name: make libapp.so via roc build
-        if: startsWith(matrix.os, 'ubuntu')
-        run: roc build ./examples/hello/rbt.roc
-
-      - name: make libapp.so via gen-stub-lib
-        if: startsWith(matrix.os, 'macos')
+      - name: make libapp.so
         run: roc gen-stub-lib ./examples/hello/rbt.roc
 
       - name: cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: -vv
 
   platform-generic:
     name: cargo fmt, roc format, roc check, typos
