@@ -321,7 +321,7 @@ impl<'roc> Coordinator {
     /// now that just means that we won't ever be running more jobs than
     /// `self.max_local_jobs`.
     async fn schedule(&mut self) -> Result<()> {
-        let maximum_schedulable = (self.max_local_jobs - self.running.len()).max(0);
+        let maximum_schedulable = self.max_local_jobs.saturating_sub(self.running.len());
 
         // The intent here is to drain a certain number of items from
         // `self.ready`. If the borrowing rules allowed it, we'd drain directly.
