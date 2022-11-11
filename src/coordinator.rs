@@ -313,8 +313,8 @@ impl<'roc> Coordinator {
                     .handle_done(done_msg)
                     .await
                     .context("could not finish job")?,
-                Ok(Err(err)) => todo!("handle jobs that return in failure. Error was: #{err:#?}"),
-                Err(err) => todo!("handle jobs that cannot be joined. Error was: #{err:#?}"),
+                Ok(Err(err)) => return Err(err).context("job failed"),
+                Err(err) => return Err(err).context("could not join async task"),
             }
         }
 
