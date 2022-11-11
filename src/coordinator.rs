@@ -139,7 +139,9 @@ impl<'roc> Builder<'roc> {
             {
                 coordinator.path_to_hash.insert(
                     path.to_path_buf(),
-                    std::str::from_utf8(hash.as_ref())?.into(),
+                    std::str::from_utf8(hash.as_ref())
+                        .with_context(|| format!("could not convert hash `{:?}` from UTF-8", hash))?
+                        .into(),
                 );
 
                 continue;
