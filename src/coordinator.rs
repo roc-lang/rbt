@@ -385,8 +385,7 @@ impl<'roc> Coordinator {
                     .context("could not prepare job to run")?;
 
                 tokio::spawn(async move {
-                    // TODO: allow sending errors from this closure
-                    let workspace = runner.run().await.context("could not run job").unwrap();
+                    let workspace = runner.run().await.context("could not run job")?;
 
                     Ok((id, Some(workspace)))
                 })
