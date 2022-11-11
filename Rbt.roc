@@ -1,5 +1,5 @@
 interface Rbt
-    exposes [Rbt, init, Job, job, Command, exec, Tool, tool, systemTool, projectFiles, fromJob, Input, sourceFile]
+    exposes [Rbt, init, Job, job, Command, exec, Tool, tool, systemTool, projectFiles, fromJob, Input, sourceFile, withFilename]
     imports []
 
 # TODO: these are all out of order due to https://github.com/rtfeldman/roc/issues/1642. Once that's fixed, they should rearrange into the order in `exposes`
@@ -26,10 +26,13 @@ exec : Tool, List Str -> Command
 exec = \execTool, args ->
     @Command { tool: execTool, args }
 
-FileMapping := Str
+FileMapping := { source : Str, dest : Str }
 
 sourceFile : Str -> FileMapping
-sourceFile = \name -> @FileMapping name
+sourceFile = \name -> @FileMapping { source: name, dest: name }
+
+withFilename : FileMapping, Str -> FileMapping
+withFilename = \@FileMapping { source }, dest -> @FileMapping { source, dest }
 
 Input := [
     FromProjectSource (List FileMapping),
