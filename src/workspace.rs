@@ -130,8 +130,11 @@ mod tests {
             inputs: RocList::from_slice(&[glue::U1::FromProjectSource(
                 files
                     .iter()
-                    .map(|name| (*name).into())
-                    .collect::<RocList<RocStr>>(),
+                    .map(|name| glue::FileMapping {
+                        source: (*name).into(),
+                        dest: (*name).into(),
+                    })
+                    .collect(),
             )]),
             outputs: RocList::empty(),
             env: RocDict::with_capacity(0),

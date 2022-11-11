@@ -96,8 +96,8 @@ impl Job {
                     let key = glue_job_to_key.get(glue_job).context("could not get job key to determine build order. This indicates an internal bug in the coordinator module and should be reported.")?;
                     let mut job_files = HashSet::new();
 
-                    for file in files {
-                        let path = sanitize_file_path(file)
+                    for glue::FileMapping { source, .. } in files {
+                        let path = sanitize_file_path(source)
                             .context("got an unnacceptable input file path")?;
 
                         // TODO: when we have mapped filenames, both components
@@ -110,8 +110,10 @@ impl Job {
                     input_jobs.insert(*key, job_files);
                 }
                 glue::discriminant_U1::FromProjectSource => {
-                    for file in unsafe { input.as_FromProjectSource() }.iter().sorted() {
-                        let path = sanitize_file_path(file)
+                    for glue::FileMapping { source, .. } in
+                        unsafe { input.as_FromProjectSource() }.iter().sorted()
+                    {
+                        let path = sanitize_file_path(source)
                             .context("got an unacceptable input file path")?;
 
                         path.hash(&mut hasher);
@@ -330,7 +332,10 @@ mod test {
             },
             env: RocDict::with_capacity(0),
             inputs: RocList::from_slice(&[glue::U1::FromProjectSource(RocList::from([
-                "input_file".into(),
+                glue::FileMapping {
+                    source: "input_file".into(),
+                    dest: "input_file".into(),
+                },
             ]))]),
             outputs: RocList::from_slice(&["output_file".into()]),
         });

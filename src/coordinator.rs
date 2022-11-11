@@ -65,8 +65,9 @@ impl<'roc> Builder<'roc> {
         for glue_job in &self.roots {
             for input in &glue_job.as_Job().inputs {
                 if input.discriminant() == glue::discriminant_U1::FromProjectSource {
-                    for file in unsafe { input.as_FromProjectSource() } {
-                        input_files.insert(job::sanitize_file_path(file)?);
+                    for glue::FileMapping { source, .. } in unsafe { input.as_FromProjectSource() }
+                    {
+                        input_files.insert(job::sanitize_file_path(source)?);
                     }
                 }
             }
