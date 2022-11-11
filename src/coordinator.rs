@@ -306,6 +306,8 @@ impl<'roc> Coordinator {
             .await
             .context("could not start immediately-ready jobs")?;
 
+        let mut failed = false;
+
         log::trace!("starting coordinator loop");
         while let Some(join_res) = self.running.next().await {
             match join_res {
@@ -313,12 +315,25 @@ impl<'roc> Coordinator {
                     .handle_done(done_msg)
                     .await
                     .context("could not finish job")?,
-                Ok(Err(err)) => return Err(err).context("job failed"),
-                Err(err) => return Err(err).context("could not join async task"),
+                Ok(Err(err)) => {
+                    log::error!("{:?}", err.context("job failed"));
+                    failed = true
+                }
+                Err(err) => {
+                    log::error!(
+                        "{:?}",
+                        anyhow::Error::new(err).context("could not join async task")
+                    );
+                    failed = true
+                }
             }
         }
 
-        Ok(())
+        if failed {
+            anyhow::bail!("there was a failure while building; see logs for details")
+        } else {
+            Ok(())
+        }
     }
 
     /// Start any outstanding work according to our scheduling rules. Right
