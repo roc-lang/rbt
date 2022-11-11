@@ -132,17 +132,19 @@ impl<'roc> Builder<'roc> {
 
         for (path, cache_key) in path_to_meta.iter() {
             let key = cache_key.to_db_key();
-            if let Some(hash) = self
+            if let Some(value) = self
                 .meta_to_hash
                 .get(key)
                 .context("could not read file hash from database")?
             {
-                coordinator.path_to_hash.insert(
-                    path.to_path_buf(),
-                    std::str::from_utf8(hash.as_ref())
-                        .with_context(|| format!("could not convert hash `{:?}` from UTF-8", hash))?
-                        .into(),
-                );
+                let bytes: [u8; 32] = value
+                    .as_ref()
+                    .try_into()
+                    .context("value was not exactly 32 bytes")?;
+
+                coordinator
+                    .path_to_hash
+                    .insert(path.to_path_buf(), blake3::Hash::from(bytes));
 
                 continue;
             }
@@ -166,13 +168,12 @@ impl<'roc> Builder<'roc> {
             let hash = hasher.finalize();
 
             log::debug!("hash of `{}` was {}", path.display(), hash);
+            log::trace!("bytes of hash: {:?}", hash.as_bytes());
             self.meta_to_hash
                 .insert(key, hash.as_bytes())
                 .context("could not write file hash to database")?;
 
-            coordinator
-                .path_to_hash
-                .insert(path.to_path_buf(), hash.to_string());
+            coordinator.path_to_hash.insert(path.to_path_buf(), hash);
         }
 
         ///////////////////////////////////////////////////////////////////////////
@@ -279,7 +280,7 @@ pub struct Coordinator {
     max_local_jobs: usize,
 
     // caches
-    path_to_hash: HashMap<PathBuf, String>,
+    path_to_hash: HashMap<PathBuf, blake3::Hash>,
     final_keys: HashMap<job::Key<job::Base>, job::Key<job::Final>>,
 
     // note:  this mapping is only safe to use in the context of a single
