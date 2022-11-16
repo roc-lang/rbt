@@ -102,12 +102,14 @@ impl<'job> ItemBuilder<'job> {
                 None => anyhow::bail!("got a non-unicode path `{}`, but Roc should never have produced a Str with invalid unicode.", path.display()),
             };
 
-            let mut file = File::open(&workspace.join(path)).await.with_context(|| {
-                format!(
-                    "couldn't open `{}` for hashing. Did the build produce it?",
-                    path.display()
-                )
-            })?;
+            let mut file = File::open(&workspace.join_build(path))
+                .await
+                .with_context(|| {
+                    format!(
+                        "couldn't open `{}` for hashing. Did the build produce it?",
+                        path.display()
+                    )
+                })?;
 
             // Blake3 is designed to take advantage of SIMD instructions when
             // buffer size is 16KiB or more
@@ -214,7 +216,7 @@ impl<'job> ItemBuilder<'job> {
             // we'll be removing everything in it shortly anyway!
             log::trace!("moving `{}` into store path", &output.display());
             let out = temp.join(output);
-            fs::rename(self.workspace.join(output), &out)
+            fs::rename(self.workspace.join_build(output), &out)
                 .await
                 .with_context(|| {
                     format!(

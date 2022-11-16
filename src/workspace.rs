@@ -11,15 +11,24 @@ use std::os::windows::fs::symlink_file;
 #[derive(Debug)]
 pub struct Workspace {
     root: PathBuf,
+    build_dir: PathBuf,
+    home_dir: PathBuf,
 }
 
 impl Workspace {
     pub async fn create<Finality>(root: &Path, key: &job::Key<Finality>) -> Result<Self> {
+        let root = root.join(key.to_string());
         let workspace = Workspace {
-            root: root.join(key.to_string()),
+            build_dir: root.join("build"),
+            home_dir: root.join("home"),
+            root,
         };
 
-        std::fs::create_dir_all(&workspace.root).context("could not create workspace")?;
+        std::fs::create_dir_all(&workspace.build_dir)
+            .context("could not create workspace build directory")?;
+
+        std::fs::create_dir(&workspace.home_dir)
+            .context("could not create workspace home directory")?;
 
         Ok(workspace)
     }
@@ -50,13 +59,13 @@ impl Workspace {
         Ok(())
     }
 
-    async fn set_up_path(&self, src: &Path, dest: &Path) -> Result<()> {
-        log::trace!("symlinking {} to {}", src.display(), dest.display());
+    async fn set_up_path(&self, src: &Path, local_dest: &Path) -> Result<()> {
+        log::trace!("symlinking {} to {}", src.display(), local_dest.display());
 
         // validate that the path exists and is a file
         let meta = fs::metadata(src)
             .await
-            .with_context(|| format!("`{}` does not exist", dest.display()))?;
+            .with_context(|| format!("`{}` does not exist", src.display()))?;
 
         if meta.is_dir() {
             anyhow::bail!(
@@ -65,13 +74,14 @@ impl Workspace {
             )
         }
 
-        if let Some(parent_base) = dest.parent() {
-            let parent = self.join(parent_base);
+        if let Some(parent_base) = local_dest.parent() {
+            let parent = self.join_build(parent_base);
+            log::trace!("making parent {parent:?}");
 
             if !parent.exists() {
-                fs::create_dir_all(parent)
-                    .await
-                    .with_context(|| format!("could not create parent for `{}`", dest.display()))?;
+                fs::create_dir_all(parent).await.with_context(|| {
+                    format!("could not create parent for `{}`", local_dest.display())
+                })?;
             }
         }
 
@@ -79,21 +89,34 @@ impl Workspace {
             format!("could not convert `{}` to an absolute path", src.display())
         })?;
 
+        let final_dest = self.join_build(local_dest);
+        log::trace!("symlinking to {final_dest:?}");
+
         #[cfg(target_family = "unix")]
-        fs::symlink(absolute_src, self.join(dest))
+        fs::symlink(absolute_src, &final_dest)
             .await
-            .with_context(|| format!("could not symlink `{}` into workspace", dest.display()))?;
+            .with_context(|| {
+                format!(
+                    "could not symlink `{}` into workspace",
+                    final_dest.display()
+                )
+            })?;
 
         #[cfg(target_family = "windows")]
-        fs::symlink_file(absolute_src, workspace.join(dest))
+        fs::symlink_file(absolute_src, &final_dest)
             .await
-            .with_context(|| format!("could not symlink `{}` into workspace", file.display()))?;
+            .with_context(|| {
+                format!(
+                    "could not symlink `{}` into workspace",
+                    final_file.display()
+                )
+            })?;
 
         Ok(())
     }
 
-    pub fn join<P: AsRef<Path>>(&self, other: P) -> PathBuf {
-        self.root.join(other)
+    pub fn join_build<P: AsRef<Path>>(&self, other: P) -> PathBuf {
+        self.build_dir.join(other)
     }
 }
 
@@ -178,7 +201,7 @@ mod tests {
             .await
             .expect("failed to set up files");
 
-        let path = workspace.join(file!());
+        let path = workspace.join_build(file!());
 
         assert!(path.is_symlink());
         assert_eq!(
