@@ -9,13 +9,17 @@ use tokio::fs;
 use std::os::windows::fs::symlink_file;
 
 #[derive(Debug)]
-pub struct Workspace(PathBuf);
+pub struct Workspace {
+    root: PathBuf,
+}
 
 impl Workspace {
     pub async fn create<Finality>(root: &Path, key: &job::Key<Finality>) -> Result<Self> {
-        let workspace = Workspace(root.join(key.to_string()));
+        let workspace = Workspace {
+            root: root.join(key.to_string()),
+        };
 
-        std::fs::create_dir_all(&workspace.0).context("could not create workspace")?;
+        std::fs::create_dir_all(&workspace.root).context("could not create workspace")?;
 
         Ok(workspace)
     }
@@ -89,7 +93,7 @@ impl Workspace {
     }
 
     pub fn join<P: AsRef<Path>>(&self, other: P) -> PathBuf {
-        self.0.join(other)
+        self.root.join(other)
     }
 }
 
@@ -98,7 +102,7 @@ impl Drop for Workspace {
     // performance, and consider moving this to a cleanup function that we call
     // by hand.
     fn drop(&mut self) {
-        if let Err(problem) = std::fs::remove_dir_all(&self.0) {
+        if let Err(problem) = std::fs::remove_dir_all(&self.root) {
             log::warn!("problem removing workspace dir: {}", problem);
         };
     }
@@ -106,7 +110,7 @@ impl Drop for Workspace {
 
 impl AsRef<Path> for Workspace {
     fn as_ref(&self) -> &Path {
-        &self.0
+        &self.root
     }
 }
 
