@@ -11,7 +11,7 @@ use std::os::windows::fs::symlink_file;
 #[derive(Debug)]
 pub struct Workspace {
     root: PathBuf,
-    build_dir: PathBuf,
+    build_root: PathBuf,
     home_dir: PathBuf,
 }
 
@@ -19,12 +19,12 @@ impl Workspace {
     pub async fn create<Finality>(root: &Path, key: &job::Key<Finality>) -> Result<Self> {
         let root = root.join(key.to_string());
         let workspace = Workspace {
-            build_dir: root.join("build"),
+            build_root: root.join("build"),
             home_dir: root.join("home"),
             root,
         };
 
-        std::fs::create_dir_all(&workspace.build_dir)
+        std::fs::create_dir_all(&workspace.build_root)
             .context("could not create workspace build directory")?;
 
         std::fs::create_dir(&workspace.home_dir)
@@ -116,7 +116,7 @@ impl Workspace {
     }
 
     pub fn join_build<P: AsRef<Path>>(&self, other: P) -> PathBuf {
-        self.build_dir.join(other)
+        self.build_root.join(other)
     }
 }
 
