@@ -14,6 +14,7 @@ helloWorld =
             "-euo",
             "pipefail",
             "-c",
+            
             """
             GREETING="$(cat greeting)"
             SUBJECT="$(cat subject)"

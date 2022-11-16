@@ -14,6 +14,7 @@ hello =
             "-euo",
             "pipefail",
             "-c",
+            
             """
             WHAT=$(cat what)
             WHO=$(cat who)
