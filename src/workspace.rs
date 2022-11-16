@@ -118,6 +118,10 @@ impl Workspace {
     pub fn join_build<P: AsRef<Path>>(&self, other: P) -> PathBuf {
         self.build_root.join(other)
     }
+
+    pub fn home_dir(&self) -> &Path {
+        &self.home_dir
+    }
 }
 
 impl Drop for Workspace {
