@@ -160,7 +160,7 @@ impl Job {
 
     pub fn final_key(
         &self,
-        path_to_hash: &HashMap<PathBuf, String>,
+        path_to_hash: &HashMap<PathBuf, blake3::Hash>,
         job_to_content_hash: &HashMap<Key<Base>, store::Item>,
     ) -> Result<Key<Final>> {
         let mut hasher = Xxh3::new();
