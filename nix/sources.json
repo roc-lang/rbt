@@ -29,10 +29,10 @@
         "homepage": "https://roc-lang.org",
         "owner": "roc-lang",
         "repo": "roc",
-        "rev": "58ea07f14f69a9ac9d4ad64b559842c1c7e24466",
-        "sha256": "03vjyg9f6whdzw8yn7iv46zqb9l3pb2m6dfdrz0wl3v4kd78h5qc",
+        "rev": "0920fb4227248c74114bb2cd536ac93fea7ecf15",
+        "sha256": "0ary9xmwk5higzqls32carja3ml8675wx7dak3j8p12vs0fh3rjn",
         "type": "tarball",
-        "url": "https://github.com/roc-lang/roc/archive/58ea07f14f69a9ac9d4ad64b559842c1c7e24466.tar.gz",
+        "url": "https://github.com/roc-lang/roc/archive/0920fb4227248c74114bb2cd536ac93fea7ecf15.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
