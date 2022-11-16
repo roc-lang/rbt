@@ -57,9 +57,15 @@ impl Default for Key<Final> {
 pub struct Job {
     pub base_key: Key<Base>,
     pub command: Command,
-    pub input_files: HashSet<PathBuf>,
-    pub input_jobs: HashMap<Key<Base>, HashSet<PathBuf>>,
+    pub input_files: HashSet<FileMapping>,
+    pub input_jobs: HashMap<Key<Base>, HashSet<FileMapping>>,
     pub outputs: HashSet<PathBuf>,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct FileMapping {
+    pub source: PathBuf,
+    pub dest: PathBuf,
 }
 
 impl Job {
@@ -79,8 +85,8 @@ impl Job {
         // for this.
         unwrapped.command.hash(&mut hasher);
 
-        let mut input_files: HashSet<PathBuf> = HashSet::new();
-        let mut input_jobs: HashMap<Key<Base>, HashSet<PathBuf>> = HashMap::new();
+        let mut input_files: HashSet<FileMapping> = HashSet::new();
+        let mut input_jobs: HashMap<Key<Base>, HashSet<FileMapping>> = HashMap::new();
 
         for input in unwrapped.inputs.iter().sorted() {
             match input.discriminant() {
@@ -96,26 +102,45 @@ impl Job {
                     let key = glue_job_to_key.get(glue_job).context("could not get job key to determine build order. This indicates an internal bug in the coordinator module and should be reported.")?;
                     let mut job_files = HashSet::new();
 
-                    for file in files {
-                        let path = sanitize_file_path(file)
-                            .context("got an unnacceptable input file path")?;
+                    for glue::FileMapping { source, dest } in files {
+                        let source_path = sanitize_file_path(source)
+                            .context("got an unacceptable source file path")?;
 
-                        // TODO: when we have mapped filenames, both components
-                        // of the mapped file name should be added to the hash
-                        // here. (See ADR 008)
-                        path.hash(&mut hasher);
-                        job_files.insert(path);
+                        let dest_path = sanitize_file_path(dest)
+                            .context("got an unacceptable destination file path")?;
+
+                        source_path.hash(&mut hasher);
+                        if source_path != dest_path {
+                            dest_path.hash(&mut hasher);
+                        }
+
+                        job_files.insert(FileMapping {
+                            source: source_path,
+                            dest: dest_path,
+                        });
                     }
 
                     input_jobs.insert(*key, job_files);
                 }
                 glue::discriminant_U1::FromProjectSource => {
-                    for file in unsafe { input.as_FromProjectSource() }.iter().sorted() {
-                        let path = sanitize_file_path(file)
+                    for glue::FileMapping { source, dest } in
+                        unsafe { input.as_FromProjectSource() }.iter().sorted()
+                    {
+                        let source_path = sanitize_file_path(source)
                             .context("got an unacceptable input file path")?;
 
-                        path.hash(&mut hasher);
-                        input_files.insert(path);
+                        let dest_path = sanitize_file_path(dest)
+                            .context("got an unacceptable destination file path")?;
+
+                        source_path.hash(&mut hasher);
+                        if source_path != dest_path {
+                            dest_path.hash(&mut hasher);
+                        }
+
+                        input_files.insert(FileMapping {
+                            source: source_path,
+                            dest: dest_path,
+                        });
                     }
                 }
             }
@@ -168,12 +193,12 @@ impl Job {
         self.base_key.hash(&mut hasher);
 
         for path in &self.input_files {
-            match path_to_hash.get(path) {
+            match path_to_hash.get(&path.source) {
                 Some(hash) => {
                     // we don't need to hash the path, as we already have it in the base key
                     hash.hash(&mut hasher);
                 },
-                None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.display()),
+                None => anyhow::bail!("`{}` was specified as a file dependency, but I didn't have a hash for it! This is a bug in rbt's coordinator, please file it!", path.source.display()),
             }
         }
 
@@ -330,7 +355,10 @@ mod test {
             },
             env: RocDict::with_capacity(0),
             inputs: RocList::from_slice(&[glue::U1::FromProjectSource(RocList::from([
-                "input_file".into(),
+                glue::FileMapping {
+                    source: "input_file".into(),
+                    dest: "input_file".into(),
+                },
             ]))]),
             outputs: RocList::from_slice(&["output_file".into()]),
         });

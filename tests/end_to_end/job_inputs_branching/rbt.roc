@@ -14,6 +14,7 @@ helloWorld =
             "-euo",
             "pipefail",
             "-c",
+            
             """
             GREETING="$(cat greeting)"
             SUBJECT="$(cat subject)"
@@ -35,6 +36,7 @@ greeting =
             "-euo",
             "pipefail",
             "-c",
+            
             """
             H=$(cat H)
             E=$(cat e)
@@ -61,6 +63,7 @@ subject =
             "-euo",
             "pipefail",
             "-c",
+            
             """
             W=$(cat W)
             O=$(cat o)

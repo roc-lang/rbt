@@ -46,8 +46,22 @@ impl core::fmt::Debug for discriminant_U1 {
 #[repr(C)]
 pub union U1 {
     FromJob: core::mem::ManuallyDrop<U1_FromJob>,
-    FromProjectSource: core::mem::ManuallyDrop<roc_std::RocList<roc_std::RocStr>>,
+    FromProjectSource: core::mem::ManuallyDrop<roc_std::RocList<FileMapping>>,
     _sizer: [u8; 20],
+}
+
+#[cfg(any(
+    target_arch = "arm",
+    target_arch = "aarch64",
+    target_arch = "wasm32",
+    target_arch = "x86",
+    target_arch = "x86_64"
+))]
+#[derive(Clone, Debug, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
+#[repr(C)]
+pub struct FileMapping {
+    pub dest: roc_std::RocStr,
+    pub source: roc_std::RocStr,
 }
 
 #[cfg(any(
@@ -127,7 +141,7 @@ pub struct R1 {
 #[repr(C)]
 struct U1_FromJob {
     pub f0: Job,
-    pub f1: roc_std::RocList<roc_std::RocStr>,
+    pub f1: roc_std::RocList<FileMapping>,
 }
 
 #[cfg(any(
@@ -174,7 +188,7 @@ pub struct SystemToolPayload {
 #[repr(C)]
 pub union U1 {
     FromJob: core::mem::ManuallyDrop<U1_FromJob>,
-    FromProjectSource: core::mem::ManuallyDrop<roc_std::RocList<roc_std::RocStr>>,
+    FromProjectSource: core::mem::ManuallyDrop<roc_std::RocList<FileMapping>>,
     _sizer: [u8; 40],
 }
 
@@ -207,7 +221,7 @@ impl U1 {
         target_arch = "x86_64"
     ))]
     /// Construct a tag named `FromJob`, with the appropriate payload
-    pub fn FromJob(arg0: Job, arg1: roc_std::RocList<roc_std::RocStr>) -> Self {
+    pub fn FromJob(arg0: Job, arg1: roc_std::RocList<FileMapping>) -> Self {
         let mut answer = Self {
             FromJob: core::mem::ManuallyDrop::new(U1_FromJob { f0: arg0, f1: arg1 }),
         };
@@ -227,7 +241,7 @@ impl U1 {
     /// Unsafely assume the given `U1` has a `.discriminant()` of `FromJob` and convert it to `FromJob`'s payload.
     /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
     /// Panics in debug builds if the `.discriminant()` doesn't return `FromJob`.
-    pub unsafe fn into_FromJob(mut self) -> (Job, roc_std::RocList<roc_std::RocStr>) {
+    pub unsafe fn into_FromJob(mut self) -> (Job, roc_std::RocList<FileMapping>) {
         debug_assert_eq!(self.discriminant(), discriminant_U1::FromJob);
         let payload = {
             let mut uninitialized = core::mem::MaybeUninit::uninit();
@@ -256,7 +270,7 @@ impl U1 {
     /// Unsafely assume the given `U1` has a `.discriminant()` of `FromJob` and return its payload.
     /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
     /// Panics in debug builds if the `.discriminant()` doesn't return `FromJob`.
-    pub unsafe fn as_FromJob(&self) -> (&Job, &roc_std::RocList<roc_std::RocStr>) {
+    pub unsafe fn as_FromJob(&self) -> (&Job, &roc_std::RocList<FileMapping>) {
         debug_assert_eq!(self.discriminant(), discriminant_U1::FromJob);
         let payload = &self.FromJob;
 
@@ -271,7 +285,7 @@ impl U1 {
         target_arch = "x86_64"
     ))]
     /// Construct a tag named `FromProjectSource`, with the appropriate payload
-    pub fn FromProjectSource(arg: roc_std::RocList<roc_std::RocStr>) -> Self {
+    pub fn FromProjectSource(arg: roc_std::RocList<FileMapping>) -> Self {
         let mut answer = Self {
             FromProjectSource: core::mem::ManuallyDrop::new(arg),
         };
@@ -291,7 +305,7 @@ impl U1 {
     /// Unsafely assume the given `U1` has a `.discriminant()` of `FromProjectSource` and convert it to `FromProjectSource`'s payload.
     /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
     /// Panics in debug builds if the `.discriminant()` doesn't return `FromProjectSource`.
-    pub unsafe fn into_FromProjectSource(mut self) -> roc_std::RocList<roc_std::RocStr> {
+    pub unsafe fn into_FromProjectSource(mut self) -> roc_std::RocList<FileMapping> {
         debug_assert_eq!(self.discriminant(), discriminant_U1::FromProjectSource);
         let payload = {
             let mut uninitialized = core::mem::MaybeUninit::uninit();
@@ -320,7 +334,7 @@ impl U1 {
     /// Unsafely assume the given `U1` has a `.discriminant()` of `FromProjectSource` and return its payload.
     /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
     /// Panics in debug builds if the `.discriminant()` doesn't return `FromProjectSource`.
-    pub unsafe fn as_FromProjectSource(&self) -> &roc_std::RocList<roc_std::RocStr> {
+    pub unsafe fn as_FromProjectSource(&self) -> &roc_std::RocList<FileMapping> {
         debug_assert_eq!(self.discriminant(), discriminant_U1::FromProjectSource);
         let payload = &self.FromProjectSource;
 

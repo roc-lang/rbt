@@ -17,22 +17,22 @@
         "homepage": "",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "ef2f213d9659a274985778bff4ca322f3ef3ac68",
-        "sha256": "06mis36j5g1lz9ahzy7pcbdlnhw45l6gn2zj605ab3ssim88x17c",
+        "rev": "72d8853228c9758820c39b8659415b6d89279493",
+        "sha256": "10r5zh0052apd90riimaly2xc9d4w5p9g81s9nhjk12kirf6ihcs",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/ef2f213d9659a274985778bff4ca322f3ef3ac68.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/72d8853228c9758820c39b8659415b6d89279493.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "roc": {
-        "branch": "fix-nix-packaging-macos",
+        "branch": "main",
         "description": "Roc is a language for making delightful software.",
         "homepage": "https://roc-lang.org",
         "owner": "roc-lang",
         "repo": "roc",
-        "rev": "db8955d6b58345e318e90d232fa22cf48913bbdd",
-        "sha256": "101y42fyjc2mp3pnv0vfnz2qrjckvpdgidrx4vxpdp67ddpw87mx",
+        "rev": "0920fb4227248c74114bb2cd536ac93fea7ecf15",
+        "sha256": "0ary9xmwk5higzqls32carja3ml8675wx7dak3j8p12vs0fh3rjn",
         "type": "tarball",
-        "url": "https://github.com/roc-lang/roc/archive/db8955d6b58345e318e90d232fa22cf48913bbdd.tar.gz",
+        "url": "https://github.com/roc-lang/roc/archive/0920fb4227248c74114bb2cd536ac93fea7ecf15.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

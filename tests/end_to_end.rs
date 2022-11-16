@@ -49,6 +49,21 @@ fn test_file_inputs() {
 }
 
 #[test]
+fn test_file_inputs_renaming() {
+    let root = TempDir::new().unwrap();
+
+    let store_path = output_of_default_job(
+        &root,
+        &PathBuf::from("tests/end_to_end/file_inputs_renaming/rbt.roc"),
+    )
+    .unwrap();
+
+    let greeting = std::fs::read_to_string(store_path.join("out")).unwrap();
+
+    assert_eq!(String::from("Hello, World!\n"), greeting)
+}
+
+#[test]
 fn test_env() {
     let root = TempDir::new().unwrap();
 

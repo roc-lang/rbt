@@ -65,8 +65,9 @@ impl<'roc> Builder<'roc> {
         for glue_job in &self.roots {
             for input in &glue_job.as_Job().inputs {
                 if input.discriminant() == glue::discriminant_U1::FromProjectSource {
-                    for file in unsafe { input.as_FromProjectSource() } {
-                        input_files.insert(job::sanitize_file_path(file)?);
+                    for glue::FileMapping { source, .. } in unsafe { input.as_FromProjectSource() }
+                    {
+                        input_files.insert(job::sanitize_file_path(source)?);
                     }
                 }
             }
@@ -305,6 +306,8 @@ impl<'roc> Coordinator {
             .await
             .context("could not start immediately-ready jobs")?;
 
+        let mut failed = false;
+
         log::trace!("starting coordinator loop");
         while let Some(join_res) = self.running.next().await {
             match join_res {
@@ -312,12 +315,25 @@ impl<'roc> Coordinator {
                     .handle_done(done_msg)
                     .await
                     .context("could not finish job")?,
-                Ok(Err(err)) => todo!("handle jobs that return in failure. Error was: #{err:#?}"),
-                Err(err) => todo!("handle jobs that cannot be joined. Error was: #{err:#?}"),
+                Ok(Err(err)) => {
+                    log::error!("{:?}", err.context("job failed"));
+                    failed = true
+                }
+                Err(err) => {
+                    log::error!(
+                        "{:?}",
+                        anyhow::Error::new(err).context("could not join async task")
+                    );
+                    failed = true
+                }
             }
         }
 
-        Ok(())
+        if failed {
+            anyhow::bail!("there was a failure while building; see logs for details")
+        } else {
+            Ok(())
+        }
     }
 
     /// Start any outstanding work according to our scheduling rules. Right
@@ -384,8 +400,7 @@ impl<'roc> Coordinator {
                     .context("could not prepare job to run")?;
 
                 tokio::spawn(async move {
-                    // TODO: allow sending errors from this closure
-                    let workspace = runner.run().await.context("could not run job").unwrap();
+                    let workspace = runner.run().await.context("could not run job")?;
 
                     Ok((id, Some(workspace)))
                 })

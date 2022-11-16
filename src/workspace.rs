@@ -26,7 +26,7 @@ impl Workspace {
         job_to_store_path: &HashMap<job::Key<job::Base>, store::Item>,
     ) -> Result<()> {
         for file in &job.input_files {
-            self.set_up_path(file, file).await?
+            self.set_up_path(&file.source, &file.dest).await?
         }
 
         for (key, files) in &job.input_jobs {
@@ -38,7 +38,8 @@ impl Workspace {
             // but creating parent directories in parallel may cause contention
             // issues.
             for file in files {
-                self.set_up_path(&store_item.join(file), file).await?
+                self.set_up_path(&store_item.join(&file.source), &file.dest)
+                    .await?
             }
         }
 
@@ -46,6 +47,8 @@ impl Workspace {
     }
 
     async fn set_up_path(&self, src: &Path, dest: &Path) -> Result<()> {
+        log::trace!("symlinking {} to {}", src.display(), dest.display());
+
         // validate that the path exists and is a file
         let meta = fs::metadata(src)
             .await
@@ -130,8 +133,11 @@ mod tests {
             inputs: RocList::from_slice(&[glue::U1::FromProjectSource(
                 files
                     .iter()
-                    .map(|name| (*name).into())
-                    .collect::<RocList<RocStr>>(),
+                    .map(|name| glue::FileMapping {
+                        source: (*name).into(),
+                        dest: (*name).into(),
+                    })
+                    .collect(),
             )]),
             outputs: RocList::empty(),
             env: RocDict::with_capacity(0),
