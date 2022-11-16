@@ -99,7 +99,7 @@ fn test_cleanup() {
 
     // This are built-ins environment variables from the shell, and are generated every time we run a command
     // Once we add support to save a command's stdout instead of using a shell for everything, this can be removed from the tests
-    let expected_variables = HashSet::from(["_", "PWD", "SHLVL"]);
+    let expected_variables = HashSet::from(["_", "PWD", "SHLVL", "HOME"]);
 
     assert_eq!(expected_variables, variables)
 }
