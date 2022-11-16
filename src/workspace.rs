@@ -133,7 +133,7 @@ impl Drop for Workspace {
 
 impl AsRef<Path> for Workspace {
     fn as_ref(&self) -> &Path {
-        &self.root
+        &self.build_root
     }
 }
 
