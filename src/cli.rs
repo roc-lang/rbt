@@ -4,8 +4,10 @@ use crate::store::Store;
 use anyhow::{Context, Result};
 use clap::Parser;
 use core::mem::MaybeUninit;
+use path_absolutize::Absolutize;
+use std::borrow::Cow;
 use std::num::NonZeroUsize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::runtime;
 
 #[derive(Debug, Parser)]
@@ -37,7 +39,7 @@ impl Cli {
         let store = Store::new(
             db.open_tree("store")
                 .context("could not open the store database")?,
-            self.root_dir.join("store"),
+            self.root_dir()?.join("store"),
         )
         .context("could not open store")?;
 
@@ -45,7 +47,7 @@ impl Cli {
             store,
             db.open_tree("file_hashes")
                 .context("could not open file hashes database")?,
-            self.root_dir.join("workspaces"),
+            self.root_dir()?.join("workspaces"),
             self.max_local_jobs()?,
         );
         builder.add_root(&rbt.default);
@@ -93,7 +95,7 @@ impl Cli {
 
     pub fn open_db(&self) -> Result<sled::Db> {
         sled::Config::default()
-            .path(self.root_dir.join("db"))
+            .path(self.root_dir()?.join("db"))
             .mode(sled::Mode::HighThroughput)
             .open()
             .context("could not open sled database")
@@ -106,6 +108,12 @@ impl Cli {
 
         std::thread::available_parallelism()
             .context("could not determine a reasonable number of local jobs to run simultaneously")
+    }
+
+    fn root_dir(&self) -> Result<Cow<'_, Path>> {
+        self.root_dir
+            .absolutize()
+            .context("could not find absolute path to root dir")
     }
 }
 
