@@ -477,7 +477,7 @@ impl<'roc> Coordinator {
         {
             // TODO: eventually, we'll collect these and report them per-job
             log::warn!(
-                "there was a leftover file ({}) in the home directory",
+                "there was a leftover file in the home directory. (`{}`) Did your job write to $HOME?",
                 entry.context("could not read entry")?.path().display()
             );
         }
