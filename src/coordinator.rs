@@ -423,7 +423,7 @@ impl<'roc> Coordinator {
             .context("could not retrieve final cache key; was it calculated in `start`?")?;
 
         if let Some(workspace) = workspace_opt {
-            self.check_nothing_was_in_home(&workspace.home_dir())
+            self.check_nothing_was_in_home(workspace.home_dir())
                 .await
                 .context("could not check for leftover files in HOME")?;
 
