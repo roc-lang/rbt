@@ -34,6 +34,7 @@ impl RunnerBuilder {
 
         let mut command = Command::from(&job.command);
         command.current_dir(&workspace);
+        command.env("HOME", workspace.home_dir());
 
         Ok(Runner { command, workspace })
     }

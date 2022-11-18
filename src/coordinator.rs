@@ -8,10 +8,10 @@ use anyhow::{Context, Result};
 use core::convert::TryInto;
 use futures::stream::{FuturesUnordered, StreamExt};
 use std::collections::{HashMap, HashSet};
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Read;
 use std::num::NonZeroUsize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::task::JoinHandle;
 use xxhash_rust::xxh3::Xxh3Builder;
 
@@ -423,6 +423,10 @@ impl<'roc> Coordinator {
             .context("could not retrieve final cache key; was it calculated in `start`?")?;
 
         if let Some(workspace) = workspace_opt {
+            self.check_nothing_was_in_home(workspace.home_dir())
+                .await
+                .context("could not check for leftover files in HOME")?;
+
             self.job_to_content_hash.insert(
                 job.base_key,
                 self.store
@@ -465,5 +469,19 @@ impl<'roc> Coordinator {
 
     pub fn store_path(&self, key: &job::Key<job::Base>) -> Option<&store::Item> {
         self.job_to_content_hash.get(key)
+    }
+
+    async fn check_nothing_was_in_home(&self, home_dir: &Path) -> Result<()> {
+        for entry in fs::read_dir(home_dir)
+            .with_context(|| format!("could not read `{}`", home_dir.display()))?
+        {
+            // TODO: eventually, we'll collect these and report them per-job
+            log::warn!(
+                "there was a leftover file in the home directory. (`{}`) Did your job write to $HOME?",
+                entry.context("could not read entry")?.path().display()
+            );
+        }
+
+        Ok(())
     }
 }
