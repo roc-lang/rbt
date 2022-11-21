@@ -161,7 +161,7 @@ mod tests {
                 }),
                 args: RocList::empty(),
             },
-            inputs: RocList::from_slice(&[glue::U1::FromProjectSource(
+            inputs: RocList::from_slice(&[glue::Input::FromProjectSource(
                 files
                     .iter()
                     .map(|name| glue::FileMapping {

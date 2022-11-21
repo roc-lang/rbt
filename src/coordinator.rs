@@ -64,7 +64,7 @@ impl<'roc> Builder<'roc> {
         let mut input_files: HashSet<PathBuf> = HashSet::new();
         for glue_job in &self.roots {
             for input in &glue_job.as_Job().inputs {
-                if input.discriminant() == glue::discriminant_U1::FromProjectSource {
+                if input.discriminant() == glue::discriminant_Input::FromProjectSource {
                     for glue::FileMapping { source, .. } in unsafe { input.as_FromProjectSource() }
                     {
                         input_files.insert(job::sanitize_file_path(source)?);
@@ -210,7 +210,7 @@ impl<'roc> Builder<'roc> {
                 .as_Job()
                 .inputs
                 .iter()
-                .filter(|item| item.discriminant() == glue::discriminant_U1::FromJob)
+                .filter(|item| item.discriminant() == glue::discriminant_Input::FromJob)
                 .for_each(|item| {
                     let job = unsafe { item.as_FromJob() }.0;
 

@@ -90,7 +90,7 @@ impl Job {
 
         for input in unwrapped.inputs.iter().sorted() {
             match input.discriminant() {
-                glue::discriminant_U1::FromJob => {
+                glue::discriminant_Input::FromJob => {
                     let (glue_job, files) = unsafe { input.as_FromJob() };
 
                     // note that we're not hashing this key. We'll hash the
@@ -122,7 +122,7 @@ impl Job {
 
                     input_jobs.insert(*key, job_files);
                 }
-                glue::discriminant_U1::FromProjectSource => {
+                glue::discriminant_Input::FromProjectSource => {
                     for glue::FileMapping { source, dest } in
                         unsafe { input.as_FromProjectSource() }.iter().sorted()
                     {
@@ -354,7 +354,7 @@ mod test {
                 args: RocList::from_slice(&["-c".into(), "Hello, World".into()]),
             },
             env: RocDict::with_capacity(0),
-            inputs: RocList::from_slice(&[glue::U1::FromProjectSource(RocList::from([
+            inputs: RocList::from_slice(&[glue::Input::FromProjectSource(RocList::from([
                 glue::FileMapping {
                     source: "input_file".into(),
                     dest: "input_file".into(),
