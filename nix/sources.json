@@ -24,15 +24,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "roc": {
-        "branch": "main",
+        "branch": "fix-fixpoint-fixing",
         "description": "Roc is a language for making delightful software.",
         "homepage": "https://roc-lang.org",
         "owner": "roc-lang",
         "repo": "roc",
-        "rev": "f32e329798b6f2e23a5c36d74d096ee9e853575d",
-        "sha256": "1ihhbd1700414f2pr0y72vn74n1pi9a5kcjpw56lfz34qaf8dwg8",
+        "rev": "e1afd964c7b7ddac3582945528756c9d7d204550",
+        "sha256": "0xwwbzavc9p2bbknjr2dw47m774605biff9g7qc079bd0l47f279",
         "type": "tarball",
-        "url": "https://github.com/roc-lang/roc/archive/f32e329798b6f2e23a5c36d74d096ee9e853575d.tar.gz",
+        "url": "https://github.com/roc-lang/roc/archive/e1afd964c7b7ddac3582945528756c9d7d204550.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
