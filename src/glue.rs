@@ -28,24 +28,24 @@
 ))]
 #[derive(Clone, Copy, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[repr(u8)]
-pub enum discriminant_U1 {
+pub enum discriminant_Input {
     FromJob = 0,
     FromProjectSource = 1,
 }
 
-impl core::fmt::Debug for discriminant_U1 {
+impl core::fmt::Debug for discriminant_Input {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::FromJob => f.write_str("discriminant_U1::FromJob"),
-            Self::FromProjectSource => f.write_str("discriminant_U1::FromProjectSource"),
+            Self::FromJob => f.write_str("discriminant_Input::FromJob"),
+            Self::FromProjectSource => f.write_str("discriminant_Input::FromProjectSource"),
         }
     }
 }
 
 #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
 #[repr(C)]
-pub union U1 {
-    FromJob: core::mem::ManuallyDrop<U1_FromJob>,
+pub union Input {
+    FromJob: core::mem::ManuallyDrop<Input_FromJob>,
     FromProjectSource: core::mem::ManuallyDrop<roc_std::RocList<FileMapping>>,
     _sizer: [u8; 20],
 }
@@ -126,7 +126,7 @@ struct Job_Job {
 pub struct R1 {
     pub command: Command,
     pub env: roc_std::RocDict<roc_std::RocStr, roc_std::RocStr>,
-    pub inputs: roc_std::RocList<U1>,
+    pub inputs: roc_std::RocList<Input>,
     pub outputs: roc_std::RocList<roc_std::RocStr>,
 }
 
@@ -139,7 +139,7 @@ pub struct R1 {
 ))]
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[repr(C)]
-struct U1_FromJob {
+struct Input_FromJob {
     pub f0: Job,
     pub f1: roc_std::RocList<FileMapping>,
 }
@@ -186,27 +186,27 @@ pub struct SystemToolPayload {
 
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[repr(C)]
-pub union U1 {
-    FromJob: core::mem::ManuallyDrop<U1_FromJob>,
+pub union Input {
+    FromJob: core::mem::ManuallyDrop<Input_FromJob>,
     FromProjectSource: core::mem::ManuallyDrop<roc_std::RocList<FileMapping>>,
     _sizer: [u8; 40],
 }
 
-impl U1 {
+impl Input {
     #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
     /// Returns which variant this tag union holds. Note that this never includes a payload!
-    pub fn discriminant(&self) -> discriminant_U1 {
+    pub fn discriminant(&self) -> discriminant_Input {
         unsafe {
             let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
 
-            core::mem::transmute::<u8, discriminant_U1>(*bytes.as_ptr().add(16))
+            core::mem::transmute::<u8, discriminant_Input>(*bytes.as_ptr().add(16))
         }
     }
 
     #[cfg(any(target_arch = "arm", target_arch = "wasm32", target_arch = "x86"))]
     /// Internal helper
-    fn set_discriminant(&mut self, discriminant: discriminant_U1) {
-        let discriminant_ptr: *mut discriminant_U1 = (self as *mut U1).cast();
+    fn set_discriminant(&mut self, discriminant: discriminant_Input) {
+        let discriminant_ptr: *mut discriminant_Input = (self as *mut Input).cast();
 
         unsafe {
             *(discriminant_ptr.add(16)) = discriminant;
@@ -223,10 +223,10 @@ impl U1 {
     /// Construct a tag named `FromJob`, with the appropriate payload
     pub fn FromJob(arg0: Job, arg1: roc_std::RocList<FileMapping>) -> Self {
         let mut answer = Self {
-            FromJob: core::mem::ManuallyDrop::new(U1_FromJob { f0: arg0, f1: arg1 }),
+            FromJob: core::mem::ManuallyDrop::new(Input_FromJob { f0: arg0, f1: arg1 }),
         };
 
-        answer.set_discriminant(discriminant_U1::FromJob);
+        answer.set_discriminant(discriminant_Input::FromJob);
 
         answer
     }
@@ -238,11 +238,11 @@ impl U1 {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Unsafely assume the given `U1` has a `.discriminant()` of `FromJob` and convert it to `FromJob`'s payload.
+    /// Unsafely assume the given `Input` has a `.discriminant()` of `FromJob` and convert it to `FromJob`'s payload.
     /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
     /// Panics in debug builds if the `.discriminant()` doesn't return `FromJob`.
     pub unsafe fn into_FromJob(mut self) -> (Job, roc_std::RocList<FileMapping>) {
-        debug_assert_eq!(self.discriminant(), discriminant_U1::FromJob);
+        debug_assert_eq!(self.discriminant(), discriminant_Input::FromJob);
         let payload = {
             let mut uninitialized = core::mem::MaybeUninit::uninit();
             let swapped = unsafe {
@@ -267,11 +267,11 @@ impl U1 {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Unsafely assume the given `U1` has a `.discriminant()` of `FromJob` and return its payload.
+    /// Unsafely assume the given `Input` has a `.discriminant()` of `FromJob` and return its payload.
     /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
     /// Panics in debug builds if the `.discriminant()` doesn't return `FromJob`.
     pub unsafe fn as_FromJob(&self) -> (&Job, &roc_std::RocList<FileMapping>) {
-        debug_assert_eq!(self.discriminant(), discriminant_U1::FromJob);
+        debug_assert_eq!(self.discriminant(), discriminant_Input::FromJob);
         let payload = &self.FromJob;
 
         (&payload.f0, &payload.f1)
@@ -290,7 +290,7 @@ impl U1 {
             FromProjectSource: core::mem::ManuallyDrop::new(arg),
         };
 
-        answer.set_discriminant(discriminant_U1::FromProjectSource);
+        answer.set_discriminant(discriminant_Input::FromProjectSource);
 
         answer
     }
@@ -302,11 +302,11 @@ impl U1 {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Unsafely assume the given `U1` has a `.discriminant()` of `FromProjectSource` and convert it to `FromProjectSource`'s payload.
+    /// Unsafely assume the given `Input` has a `.discriminant()` of `FromProjectSource` and convert it to `FromProjectSource`'s payload.
     /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
     /// Panics in debug builds if the `.discriminant()` doesn't return `FromProjectSource`.
     pub unsafe fn into_FromProjectSource(mut self) -> roc_std::RocList<FileMapping> {
-        debug_assert_eq!(self.discriminant(), discriminant_U1::FromProjectSource);
+        debug_assert_eq!(self.discriminant(), discriminant_Input::FromProjectSource);
         let payload = {
             let mut uninitialized = core::mem::MaybeUninit::uninit();
             let swapped = unsafe {
@@ -331,11 +331,11 @@ impl U1 {
         target_arch = "x86",
         target_arch = "x86_64"
     ))]
-    /// Unsafely assume the given `U1` has a `.discriminant()` of `FromProjectSource` and return its payload.
+    /// Unsafely assume the given `Input` has a `.discriminant()` of `FromProjectSource` and return its payload.
     /// (Always examine `.discriminant()` first to make sure this is the correct variant!)
     /// Panics in debug builds if the `.discriminant()` doesn't return `FromProjectSource`.
     pub unsafe fn as_FromProjectSource(&self) -> &roc_std::RocList<FileMapping> {
-        debug_assert_eq!(self.discriminant(), discriminant_U1::FromProjectSource);
+        debug_assert_eq!(self.discriminant(), discriminant_Input::FromProjectSource);
         let payload = &self.FromProjectSource;
 
         &payload
@@ -343,18 +343,18 @@ impl U1 {
 
     #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
     /// Returns which variant this tag union holds. Note that this never includes a payload!
-    pub fn discriminant(&self) -> discriminant_U1 {
+    pub fn discriminant(&self) -> discriminant_Input {
         unsafe {
             let bytes = core::mem::transmute::<&Self, &[u8; core::mem::size_of::<Self>()]>(self);
 
-            core::mem::transmute::<u8, discriminant_U1>(*bytes.as_ptr().add(32))
+            core::mem::transmute::<u8, discriminant_Input>(*bytes.as_ptr().add(32))
         }
     }
 
     #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
     /// Internal helper
-    fn set_discriminant(&mut self, discriminant: discriminant_U1) {
-        let discriminant_ptr: *mut discriminant_U1 = (self as *mut U1).cast();
+    fn set_discriminant(&mut self, discriminant: discriminant_Input) {
+        let discriminant_ptr: *mut discriminant_Input = (self as *mut Input).cast();
 
         unsafe {
             *(discriminant_ptr.add(32)) = discriminant;
@@ -362,7 +362,7 @@ impl U1 {
     }
 }
 
-impl Drop for U1 {
+impl Drop for Input {
     #[cfg(any(
         target_arch = "arm",
         target_arch = "aarch64",
@@ -373,17 +373,19 @@ impl Drop for U1 {
     fn drop(&mut self) {
         // Drop the payloads
         match self.discriminant() {
-            discriminant_U1::FromJob => unsafe { core::mem::ManuallyDrop::drop(&mut self.FromJob) },
-            discriminant_U1::FromProjectSource => unsafe {
+            discriminant_Input::FromJob => unsafe {
+                core::mem::ManuallyDrop::drop(&mut self.FromJob)
+            },
+            discriminant_Input::FromProjectSource => unsafe {
                 core::mem::ManuallyDrop::drop(&mut self.FromProjectSource)
             },
         }
     }
 }
 
-impl Eq for U1 {}
+impl Eq for Input {}
 
-impl PartialEq for U1 {
+impl PartialEq for Input {
     #[cfg(any(
         target_arch = "arm",
         target_arch = "aarch64",
@@ -398,8 +400,8 @@ impl PartialEq for U1 {
 
         unsafe {
             match self.discriminant() {
-                discriminant_U1::FromJob => self.FromJob == other.FromJob,
-                discriminant_U1::FromProjectSource => {
+                discriminant_Input::FromJob => self.FromJob == other.FromJob,
+                discriminant_Input::FromProjectSource => {
                     self.FromProjectSource == other.FromProjectSource
                 }
             }
@@ -407,7 +409,7 @@ impl PartialEq for U1 {
     }
 }
 
-impl PartialOrd for U1 {
+impl PartialOrd for Input {
     #[cfg(any(
         target_arch = "arm",
         target_arch = "aarch64",
@@ -423,8 +425,8 @@ impl PartialOrd for U1 {
 
         unsafe {
             match self.discriminant() {
-                discriminant_U1::FromJob => self.FromJob.partial_cmp(&other.FromJob),
-                discriminant_U1::FromProjectSource => {
+                discriminant_Input::FromJob => self.FromJob.partial_cmp(&other.FromJob),
+                discriminant_Input::FromProjectSource => {
                     self.FromProjectSource.partial_cmp(&other.FromProjectSource)
                 }
             }
@@ -432,7 +434,7 @@ impl PartialOrd for U1 {
     }
 }
 
-impl Ord for U1 {
+impl Ord for Input {
     #[cfg(any(
         target_arch = "arm",
         target_arch = "aarch64",
@@ -448,8 +450,8 @@ impl Ord for U1 {
 
         unsafe {
             match self.discriminant() {
-                discriminant_U1::FromJob => self.FromJob.cmp(&other.FromJob),
-                discriminant_U1::FromProjectSource => {
+                discriminant_Input::FromJob => self.FromJob.cmp(&other.FromJob),
+                discriminant_Input::FromProjectSource => {
                     self.FromProjectSource.cmp(&other.FromProjectSource)
                 }
             }
@@ -457,7 +459,7 @@ impl Ord for U1 {
     }
 }
 
-impl Clone for U1 {
+impl Clone for Input {
     #[cfg(any(
         target_arch = "arm",
         target_arch = "aarch64",
@@ -468,10 +470,10 @@ impl Clone for U1 {
     fn clone(&self) -> Self {
         let mut answer = unsafe {
             match self.discriminant() {
-                discriminant_U1::FromJob => Self {
+                discriminant_Input::FromJob => Self {
                     FromJob: self.FromJob.clone(),
                 },
-                discriminant_U1::FromProjectSource => Self {
+                discriminant_Input::FromProjectSource => Self {
                     FromProjectSource: self.FromProjectSource.clone(),
                 },
             }
@@ -483,7 +485,7 @@ impl Clone for U1 {
     }
 }
 
-impl core::hash::Hash for U1 {
+impl core::hash::Hash for Input {
     #[cfg(any(
         target_arch = "arm",
         target_arch = "aarch64",
@@ -493,19 +495,19 @@ impl core::hash::Hash for U1 {
     ))]
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         match self.discriminant() {
-            discriminant_U1::FromJob => unsafe {
-                discriminant_U1::FromJob.hash(state);
+            discriminant_Input::FromJob => unsafe {
+                discriminant_Input::FromJob.hash(state);
                 self.FromJob.hash(state);
             },
-            discriminant_U1::FromProjectSource => unsafe {
-                discriminant_U1::FromProjectSource.hash(state);
+            discriminant_Input::FromProjectSource => unsafe {
+                discriminant_Input::FromProjectSource.hash(state);
                 self.FromProjectSource.hash(state);
             },
         }
     }
 }
 
-impl core::fmt::Debug for U1 {
+impl core::fmt::Debug for Input {
     #[cfg(any(
         target_arch = "arm",
         target_arch = "aarch64",
@@ -514,16 +516,16 @@ impl core::fmt::Debug for U1 {
         target_arch = "x86_64"
     ))]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_str("U1::")?;
+        f.write_str("Input::")?;
 
         unsafe {
             match self.discriminant() {
-                discriminant_U1::FromJob => f
+                discriminant_Input::FromJob => f
                     .debug_tuple("FromJob")
                     .field(&(&*self.FromJob).f0)
                     .field(&(&*self.FromJob).f1)
                     .finish(),
-                discriminant_U1::FromProjectSource => f
+                discriminant_Input::FromProjectSource => f
                     .debug_tuple("FromProjectSource")
                     .field(&*self.FromProjectSource)
                     .finish(),
