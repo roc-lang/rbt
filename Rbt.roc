@@ -54,10 +54,7 @@ Job := [
             command : Command,
             # eventually we want this to be `List Input` but there's a bug.
             # see https://github.com/roc-lang/roc/issues/4077
-            inputs : List [
-                FromProjectSource (List FileMapping),
-                FromJob Job (List FileMapping),
-            ],
+            inputs : List Input,
             outputs : List Str,
             env : Dict Str Str,
         },
@@ -67,9 +64,7 @@ Job := [
 # TODO: destructuring is broken, see https://github.com/rtfeldman/roc/issues/2512
 job : { command : Command, inputs : List Input, outputs : List Str, env : Dict Str Str } -> Job
 job = \{ command, inputs, outputs, env } ->
-    unwrappedInputs = List.map inputs (\@Input input -> input)
-
-    @Job (Job { command, inputs: unwrappedInputs, outputs, env })
+    @Job (Job { command, inputs, outputs, env })
 
 Rbt := { default : Job }
 
