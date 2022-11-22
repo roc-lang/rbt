@@ -18,7 +18,7 @@ fi
 
 RELEASE_FILES="$(echo "$RELEASE_JSON" | jq --raw-output '.assets | map(.browser_download_url) | join("\n")')"
 
-for DAYS_AGO in 0 1 2 3 4; do
+for DAYS_AGO in $(seq 0 14); do
   case "$(uname -s)" in
     Darwin) TARGET_DATE="$(date -v "-${DAYS_AGO}d" '+%Y-%m-%d')";;
     *) TARGET_DATE="$(date --date "${DAYS_AGO} days ago" '+%Y-%m-%d')";;
